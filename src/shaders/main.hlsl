@@ -4,6 +4,9 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 inverseTransposedModel;
 };
 
+Texture2D textureSampler : register(t0);
+SamplerState samplerState : register(s0);
+
 struct VertexInputType
 {
 	float3 position : POSITION;
@@ -29,5 +32,7 @@ PixelInputType VS(VertexInputType input)
 
 float4 PS(PixelInputType input) : SV_TARGET
 {
-	return float4(input.texCoord, 0.0f, 1.0f);
+	float4 color = textureSampler.Sample(samplerState, input.texCoord);
+	
+	return color;
 }

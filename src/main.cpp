@@ -21,6 +21,7 @@
 #include "dxDevice.hpp"
 #include "gltfImporter.hpp"
 #include "sceneManager.hpp"
+#include "stb_image.h"
 
 using namespace Microsoft::WRL;
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
@@ -143,6 +144,81 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		HRESULT hr = dxDevice.getDevice()->CreateBuffer(&constantBufferDesc, &constantBufferResourceData, &constantbuffer);
 		assert(SUCCEEDED(hr));
 	}
+	std::string texname = std::string("..\\..\\res\\pattern.jpg");
+	if (!std::filesystem::exists(texname))
+	{
+		std::cerr << "Texture file not found: " << texname << std::endl;
+	}
+	int twidth, theight;
+	unsigned char* data = stbi_load(texname.c_str(), &twidth, &theight, nullptr, 4);
+	if (!data)
+	{
+		std::cerr << "Failed to load texture: " << texname << std::endl;
+	}
+
+
+	D3D11_TEXTURE2D_DESC t2ddesc;
+	t2ddesc.Width = twidth;
+	t2ddesc.Height = theight;
+	t2ddesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	t2ddesc.MipLevels = 1;
+	t2ddesc.ArraySize = 1;
+	t2ddesc.Usage = D3D11_USAGE_DEFAULT;
+	t2ddesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	t2ddesc.CPUAccessFlags = 0;
+	t2ddesc.MiscFlags = 0;
+	t2ddesc.SampleDesc.Count = 1;
+	t2ddesc.SampleDesc.Quality = 0;
+
+
+	D3D11_SUBRESOURCE_DATA mipData;
+	mipData.pSysMem = static_cast<void*>(data);
+	mipData.SysMemPitch = twidth * 4;
+	mipData.SysMemSlicePitch = 0;
+
+	ComPtr<ID3D11Texture2D> tex;
+
+	{
+		HRESULT hr = dxDevice.getDevice()->CreateTexture2D(&t2ddesc, &mipData, &tex);
+		if (FAILED(hr))
+		{
+			std::cerr << "Failed to create texture: HRESULT = " << hr << std::endl;
+		}
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = t2ddesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = t2ddesc.MipLevels;
+	ComPtr<ID3D11ShaderResourceView> srv4t2d;
+	{
+		HRESULT hr = dxDevice.getDevice()->CreateShaderResourceView(tex.Get(), &srvDesc, &srv4t2d);
+		if (FAILED(hr))
+		{
+			std::cerr << "Failed to create SRV: HRESULT = " << hr << std::endl;
+		}
+	}
+
+	D3D11_SAMPLER_DESC sdesc;
+	sdesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sdesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sdesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sdesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sdesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	sdesc.MinLOD = -FLT_MAX;
+	sdesc.MaxLOD = FLT_MAX;
+	sdesc.MipLODBias = 0.0f;
+	sdesc.MaxAnisotropy = 0;
+
+	ComPtr<ID3D11SamplerState> sampler;
+	{
+		HRESULT hr = dxDevice.getDevice()->CreateSamplerState(&sdesc, &sampler);
+		if (FAILED(hr))
+		{
+			std::cerr << "Failed to create sampler: HRESULT = " << hr << std::endl;
+		}
+	}
 
 	D3D11_VIEWPORT viewport;
 	viewport.Width = static_cast<float>(window.width);
@@ -157,7 +233,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	std::chrono::system_clock::time_point prevTime = std::chrono::system_clock::now();
 	std::chrono::duration<double> deltaTime;
 
-	GLTFModel gltfModel(std::filesystem::absolute("..\\..\\res\\Knight.glb").string(), dxDevice.getDevice());
+	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), dxDevice.getDevice());
 
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 
@@ -262,9 +338,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		dxDevice.getContext()->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		dxDevice.getContext()->VSSetShader(shaderManager.getVertexShader("main"), nullptr, 0);
+		dxDevice.getContext()->PSSetShader(shaderManager.getPixelShader("main"), nullptr, 0);
+
 		dxDevice.getContext()->VSSetConstantBuffers(0, 1, constantbuffer.GetAddressOf());
 
-		dxDevice.getContext()->PSSetShader(shaderManager.getPixelShader("main"), nullptr, 0);
+		dxDevice.getContext()->PSSetSamplers(0, 1, sampler.GetAddressOf());
+		dxDevice.getContext()->PSSetShaderResources(0, 1, srv4t2d.GetAddressOf());
 
 		dxDevice.getContext()->IASetInputLayout(inputLayout.Get());
 		dxDevice.getContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

@@ -19,6 +19,9 @@ public:
 private:
 	tinygltf::Model readGlb(const std::string& path);
 	void processGlb(const tinygltf::Model& model);
+	void processTextures(const tinygltf::Model& model);
+	void processImages(const tinygltf::Model& model);
+	void processMaterials(const tinygltf::Model& model);
 	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies);
 	void processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<TexCoords>& texCoords);
 	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies);

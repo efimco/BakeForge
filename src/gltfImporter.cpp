@@ -48,7 +48,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 
 	for (const auto mesh : model.meshes)
 	{
-		std::cout << "Processing mesh: " << mesh.name << " with " << mesh.primitives.size() << " primitives" << std::endl;
 
 		for (const auto gltfPrimitive : mesh.primitives)
 		{
@@ -63,9 +62,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			processIndexAttrib(model, mesh, gltfPrimitive, indices);
 			processNormalsAttribute(model, mesh, gltfPrimitive, normalBuffer);
 
-			std::cout << "Vertex buffer size: " << posBuffer.size() << std::endl;
-			std::cout << "TexCoord buffer size: " << texCoordsBuffer.size() << std::endl;
-			std::cout << "Index buffer size: " << indices.size() << std::endl;
 
 			std::vector<InterleavedData> vertexData;
 			const auto numVert = posBuffer.size();
@@ -78,8 +74,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				vertexData.push_back(interData);
 			}
 
-			std::cout << "Creating primitive with " << vertexData.size() << " vertices and " << indices.size() << " indices" << std::endl;
-
 			Primitive primitive(m_device);
 			primitive.setVertexData(std::move(vertexData));
 			primitive.setIndexData(std::move(indices));
@@ -89,6 +83,77 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 		}
 	}
 }
+
+// void GLTFModel::processTextures(const tinygltf::Model& model)
+// {
+// 	for (int i = 0; i < model.textures.size(); i++)
+// 	{
+// 		texturesIndex[i] = model.textures[i].source;
+// 	}
+// }
+
+// void GLTFModel::processImages(const tinygltf::Model& model)
+// {
+// 	for (int i = 0; i < model.images.size(); i++)
+// 	{
+// 		std::string name = model.images[i].name;
+// 		if (SceneManager::getTexture(name) == nullptr)
+// 		{
+// 			SceneManager::addTexture(name, std::make_shared<Tex>(model.images[i]));
+// 		}
+// 		imageIndex[i] = SceneManager::getTexture(name);
+// 	}
+// }
+
+// void GLTFModel::processMaterials(const tinygltf::Model& model)
+// {
+// 	for (int i = 0; i < model.materials.size(); i++)
+// 	{
+// 		auto& material = model.materials[i];
+// 		std::shared_ptr<Mat> mat = std::make_shared<Mat>();
+// 		if (material.pbrMetallicRoughness.baseColorTexture.index != -1)
+// 		{
+// 			mat->tDiffuse = imageIndex[texturesIndex[material.pbrMetallicRoughness.baseColorTexture.index]];
+// 		}
+
+// 		if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
+// 		{
+// 			mat->tSpecular = imageIndex[texturesIndex[material.pbrMetallicRoughness.metallicRoughnessTexture.index]];
+// 		}
+// 		if (material.normalTexture.index != -1)
+// 		{
+// 			mat->tNormal = imageIndex[texturesIndex[material.normalTexture.index]];
+// 		}
+// 		mat->name = material.name;
+// 		if (material.pbrMetallicRoughness.baseColorFactor.size() == 4)
+// 		{
+// 			mat->albedo = glm::vec4(
+// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]),
+// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]),
+// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]),
+// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3])
+// 			);
+// 		}
+
+// 		mat->roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+// 		mat->metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+// 		std::hash<std::string> hasher;
+// 		uint32_t uid = (uint32_t)hasher(model.materials[i].name);
+// 		if (SceneManager::getMaterial(uid) == nullptr)
+// 		{
+// 			SceneManager::addMaterial(mat, uid);
+// 		}
+// 		materialsIndex[i] = SceneManager::getMaterial(uid);
+// 	}
+// 	if (model.materials.empty())
+// 	{
+// 		std::cerr << "No materials found in the model." << std::endl;
+// 	}
+// 	else
+// 	{
+// 		std::cout << "Processed " << model.materials.size() << " materials." << std::endl;
+// 	}
+// }
 
 void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies)
 {
