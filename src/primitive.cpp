@@ -37,6 +37,11 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
 	assert(SUCCEEDED(hr));
 }
 
+void Primitive::setMaterial(std::shared_ptr<Material> material)
+{
+	m_material = material;
+}
+
 
 std::vector<Primitive::Triangle> Primitive::getTriangles() const
 {

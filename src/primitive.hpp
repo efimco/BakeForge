@@ -1,8 +1,9 @@
 #pragma once
 #include <vector>
+#include <wrl.h>
+#include <d3d11.h>
 #include "primitiveData.hpp"
-#include "wrl.h"
-#include "d3d11.h"
+#include "material.hpp"
 
 using namespace Microsoft::WRL;
 
@@ -18,7 +19,7 @@ public:
 
 	void setVertexData(std::vector<InterleavedData>&& vertexData);
 	void setIndexData(std::vector<uint32_t>&& indexData);
-
+	void setMaterial(std::shared_ptr<Material> material);
 
 	struct Triangle
 	{
@@ -30,12 +31,13 @@ public:
 	const std::vector<uint32_t>& getIndexData() const { return m_indexData; }
 	const ComPtr<ID3D11Buffer>& getIndexBuffer() const { return m_indexBuffer; };
 	const ComPtr<ID3D11Buffer>& getVertexBuffer() const { return m_vertexBuffer; };
+	std::shared_ptr<Material>& getMaterial() { return m_material; };
 
 private:
 	std::vector<InterleavedData> m_vertexData;
 	std::vector<uint32_t> m_indexData;
 	ComPtr<ID3D11Device> m_device;
-
+	std::shared_ptr<Material> m_material;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 };

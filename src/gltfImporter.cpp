@@ -1,10 +1,8 @@
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "gltfImporter.hpp"
 #include <iostream>
+#include "gltfImporter.hpp"
 #include "primitive.hpp"
 #include "sceneManager.hpp"
+#include "material.hpp"
 GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device) : m_device(device)
 {
 	const tinygltf::Model model = readGlb(path);
@@ -56,11 +54,14 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			std::vector<Normals> normalBuffer;
 			std::vector<Tangents> tangentBuffer;
 			std::vector<uint32_t> indices;
-
+			processTextures(model);
+			processImages(model);
+			processMaterials(model);
 			processPosAttribute(model, mesh, gltfPrimitive, posBuffer);
 			processTexCoordAttribute(model, mesh, gltfPrimitive, texCoordsBuffer);
 			processIndexAttrib(model, mesh, gltfPrimitive, indices);
 			processNormalsAttribute(model, mesh, gltfPrimitive, normalBuffer);
+			processTangentAttribute(model, mesh, gltfPrimitive, tangentBuffer);
 
 
 			std::vector<InterleavedData> vertexData;
@@ -71,12 +72,14 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				interData.vertex = posBuffer[i];
 				interData.texCoords = texCoordsBuffer[i];
 				interData.normals = normalBuffer[i];
+				interData.tangents = tangentBuffer[i];
 				vertexData.push_back(interData);
 			}
 
 			Primitive primitive(m_device);
 			primitive.setVertexData(std::move(vertexData));
 			primitive.setIndexData(std::move(indices));
+			primitive.setMaterial(m_materialIndex[gltfPrimitive.material]);
 			SceneManager::addPrimitive(std::move(primitive));
 
 			std::cout << "Added primitive. Total primitives now: " << SceneManager::getPrimitiveCount() << std::endl;
@@ -84,76 +87,77 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 	}
 }
 
-// void GLTFModel::processTextures(const tinygltf::Model& model)
-// {
-// 	for (int i = 0; i < model.textures.size(); i++)
-// 	{
-// 		texturesIndex[i] = model.textures[i].source;
-// 	}
-// }
+void GLTFModel::processTextures(const tinygltf::Model& model)
+{
+	for (int i = 0; i < model.textures.size(); i++)
+	{
+		m_textureIndex[i] = model.textures[i].source;
+	}
+}
 
-// void GLTFModel::processImages(const tinygltf::Model& model)
-// {
-// 	for (int i = 0; i < model.images.size(); i++)
-// 	{
-// 		std::string name = model.images[i].name;
-// 		if (SceneManager::getTexture(name) == nullptr)
-// 		{
-// 			SceneManager::addTexture(name, std::make_shared<Tex>(model.images[i]));
-// 		}
-// 		imageIndex[i] = SceneManager::getTexture(name);
-// 	}
-// }
+void GLTFModel::processImages(const tinygltf::Model& model)
+{
+	for (int i = 0; i < model.images.size(); i++)
+	{
+		std::string name = model.images[i].name;
+		if (SceneManager::getTexture(name) == nullptr)
+		{
+			std::shared_ptr<Texture> texture = std::make_shared<Texture>(model.images[i], m_device);
+			SceneManager::addTexture(std::move(texture));
+		}
+		m_imageIndex[i] = SceneManager::getTexture(name);
+	}
+}
 
-// void GLTFModel::processMaterials(const tinygltf::Model& model)
-// {
-// 	for (int i = 0; i < model.materials.size(); i++)
-// 	{
-// 		auto& material = model.materials[i];
-// 		std::shared_ptr<Mat> mat = std::make_shared<Mat>();
-// 		if (material.pbrMetallicRoughness.baseColorTexture.index != -1)
-// 		{
-// 			mat->tDiffuse = imageIndex[texturesIndex[material.pbrMetallicRoughness.baseColorTexture.index]];
-// 		}
+void GLTFModel::processMaterials(const tinygltf::Model& model)
+{
+	for (int i = 0; i < model.materials.size(); i++)
+	{
+		auto& material = model.materials[i];
+		std::shared_ptr<Material> mat = std::make_shared<Material>();
+		if (material.pbrMetallicRoughness.baseColorTexture.index != -1)
+		{
+			mat->albedo = m_imageIndex[m_textureIndex[material.pbrMetallicRoughness.baseColorTexture.index]];
+		}
 
-// 		if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
-// 		{
-// 			mat->tSpecular = imageIndex[texturesIndex[material.pbrMetallicRoughness.metallicRoughnessTexture.index]];
-// 		}
-// 		if (material.normalTexture.index != -1)
-// 		{
-// 			mat->tNormal = imageIndex[texturesIndex[material.normalTexture.index]];
-// 		}
-// 		mat->name = material.name;
-// 		if (material.pbrMetallicRoughness.baseColorFactor.size() == 4)
-// 		{
-// 			mat->albedo = glm::vec4(
-// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]),
-// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]),
-// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]),
-// 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3])
-// 			);
-// 		}
+		if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
+		{
+			mat->metallicRoughness = m_imageIndex[m_textureIndex[material.pbrMetallicRoughness.metallicRoughnessTexture.index]];
+		}
+		if (material.normalTexture.index != -1)
+		{
+			mat->normal = m_imageIndex[m_textureIndex[material.normalTexture.index]];
+		}
+		mat->name = material.name;
+		if (material.pbrMetallicRoughness.baseColorFactor.size() == 4)
+		{
+			mat->albedoColor = glm::vec4(
+				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]),
+				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]),
+				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]),
+				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3])
+			);
+		}
 
-// 		mat->roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
-// 		mat->metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-// 		std::hash<std::string> hasher;
-// 		uint32_t uid = (uint32_t)hasher(model.materials[i].name);
-// 		if (SceneManager::getMaterial(uid) == nullptr)
-// 		{
-// 			SceneManager::addMaterial(mat, uid);
-// 		}
-// 		materialsIndex[i] = SceneManager::getMaterial(uid);
-// 	}
-// 	if (model.materials.empty())
-// 	{
-// 		std::cerr << "No materials found in the model." << std::endl;
-// 	}
-// 	else
-// 	{
-// 		std::cout << "Processed " << model.materials.size() << " materials." << std::endl;
-// 	}
-// }
+		mat->roughnessValue = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+		mat->metallicValue = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+
+		auto name = material.name;
+		if (SceneManager::getMaterial(name) == nullptr)
+		{
+			SceneManager::addMaterial(std::move(mat));
+		}
+		m_materialIndex[i] = SceneManager::getMaterial(name);
+	}
+	if (model.materials.empty())
+	{
+		std::cerr << "No materials found in the model." << std::endl;
+	}
+	else
+	{
+		std::cout << "Processed " << model.materials.size() << " materials." << std::endl;
+	}
+}
 
 void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies)
 {
@@ -238,6 +242,35 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tiny
 			else if (j == 2) normal.nz = floatPtr[i * components + j];
 		}
 		normals.push_back(normal);
+	}
+}
+
+void GLTFModel::processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Tangents>& tangents)
+{
+	if (primitive.attributes.find("TANGENT") == primitive.attributes.end())
+	{
+		std::cerr << "No TANGENT attribute found in primitive " << mesh.name << std::endl;
+		return;
+	}
+	const tinygltf::Accessor& accessor = model.accessors[primitive.attributes.at("TANGENT")];
+	const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+	const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+
+	const unsigned char* dataPtr = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+	const float* floatPtr = reinterpret_cast<const float*>(dataPtr);
+	size_t vertexCount = accessor.count;
+	int components = (accessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
+
+	for (size_t i = 0; i < vertexCount; i++)
+	{
+		Tangents tangent(-INFINITY, -INFINITY, -INFINITY);
+		for (int j = 0; j < components; j++)
+		{
+			if (j == 0) tangent.tx = floatPtr[i * components + j];
+			else if (j == 1) tangent.ty = floatPtr[i * components + j];
+			else if (j == 2) tangent.tz = floatPtr[i * components + j];
+		}
+		tangents.push_back(tangent);
 	}
 }
 

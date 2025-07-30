@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <stb_image.h>
 
 #include "window.hpp"
 #include "camera.hpp"
@@ -21,7 +22,6 @@
 #include "dxDevice.hpp"
 #include "gltfImporter.hpp"
 #include "sceneManager.hpp"
-#include "stb_image.h"
 
 using namespace Microsoft::WRL;
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
@@ -144,6 +144,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		HRESULT hr = dxDevice.getDevice()->CreateBuffer(&constantBufferDesc, &constantBufferResourceData, &constantbuffer);
 		assert(SUCCEEDED(hr));
 	}
+
 	std::string texname = std::string("..\\..\\res\\pattern.jpg");
 	if (!std::filesystem::exists(texname))
 	{
@@ -191,6 +192,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = t2ddesc.MipLevels;
+
 	ComPtr<ID3D11ShaderResourceView> srv4t2d;
 	{
 		HRESULT hr = dxDevice.getDevice()->CreateShaderResourceView(tex.Get(), &srvDesc, &srv4t2d);
@@ -343,18 +345,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		dxDevice.getContext()->VSSetConstantBuffers(0, 1, constantbuffer.GetAddressOf());
 
 		dxDevice.getContext()->PSSetSamplers(0, 1, sampler.GetAddressOf());
-		dxDevice.getContext()->PSSetShaderResources(0, 1, srv4t2d.GetAddressOf());
+
 
 		dxDevice.getContext()->IASetInputLayout(inputLayout.Get());
 		dxDevice.getContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		UINT stride = sizeof(InterleavedData);
 		UINT offset = 0;
-		for (const auto& prim : SceneManager::getPrimitives())
+		for (auto& prim : SceneManager::getPrimitives())
 		{
 			dxDevice.getContext()->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
 			dxDevice.getContext()->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
+			auto& material = prim.getMaterial();
+			dxDevice.getContext()->PSSetShaderResources(0, 1, material->albedo->srv.GetAddressOf());
 			dxDevice.getContext()->DrawIndexed(static_cast<UINT>(prim.getIndexData().size()), 0, 0);
 		}
 
