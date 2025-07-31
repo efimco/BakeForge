@@ -6,8 +6,11 @@ set(CMAKE_CXX_STANDARD 20)
 file(GLOB_RECURSE SOURCE_FILES 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
+file(GLOB_RECURSE IMGUI_FILES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui/*.cpp"
+)
 
-add_executable(TimeToDX ${SOURCE_FILES})
+add_executable(TimeToDX ${SOURCE_FILES} ${IMGUI_FILES})
 
 target_link_libraries(TimeToDX
     d3d11
@@ -19,6 +22,7 @@ target_include_directories(TimeToDX
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
 )
 
 set_target_properties(TimeToDX PROPERTIES

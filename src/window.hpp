@@ -7,9 +7,7 @@ public:
 	Window(HINSTANCE hInstance);
 	~Window() = default;
 
-	HWND& getHandle();
-	static int width;
-	static int height;
+	const HWND& getHandle() const;
 
 
 private:

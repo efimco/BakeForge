@@ -1,8 +1,7 @@
 #include "window.hpp"
 #include <iostream>
-
-int Window::width = 0;
-int Window::height = 0;
+#include "appConfig.hpp"
+#include "imgui.h"
 
 Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
 {
@@ -36,14 +35,18 @@ Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
 	}
 }
 
-HWND& Window::getHandle()
+const HWND& Window::getHandle() const
 {
 	return m_hWindow;
 }
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+		return true;
+
 	switch (uMsg)
 	{
 	case WM_DESTROY:
@@ -53,8 +56,10 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	case WM_SIZE:
 	{
-		width = LOWORD(lParam) % 2 == 0 ? LOWORD(lParam) : LOWORD(lParam) + 1;
-		height = HIWORD(lParam) % 2 == 0 ? HIWORD(lParam) : HIWORD(lParam) + 1;
+		int width = LOWORD(lParam) % 2 == 0 ? LOWORD(lParam) : LOWORD(lParam) + 1;
+		int height = HIWORD(lParam) % 2 == 0 ? HIWORD(lParam) : HIWORD(lParam) + 1;
+		AppConfig::setWindowHeight(height);
+		AppConfig::setWindowWidth(width);
 		break;
 	}
 
