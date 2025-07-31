@@ -1,6 +1,6 @@
 #include "DXDevice.hpp"
 #include <assert.h>
-DXDevice::DXDevice(HWND &hWindow)
+DXDevice::DXDevice(const HWND &hWindow)
 
 {
 	D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_12_1};

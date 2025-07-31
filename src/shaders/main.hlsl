@@ -5,7 +5,8 @@ cbuffer ConstantBuffer : register(b0)
 };
 
 Texture2D textureSampler : register(t0);
-SamplerState samplerState : register(s0);
+
+SamplerState samplerState :register(s0);
 
 struct VertexInputType
 {
@@ -33,6 +34,6 @@ PixelInputType VS(VertexInputType input)
 float4 PS(PixelInputType input) : SV_TARGET
 {
 	float4 color = textureSampler.Sample(samplerState, input.texCoord);
-	
+
 	return color;
 }

@@ -7,7 +7,7 @@ using namespace Microsoft::WRL;
 class DXDevice
 {
 public:
-	DXDevice(HWND &hWindow);
+	DXDevice(const HWND &hWindow);
 	~DXDevice() = default;
 
 	ComPtr<ID3D11DeviceContext> &getContext();
