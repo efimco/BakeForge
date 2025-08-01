@@ -64,6 +64,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		int height = HIWORD(lParam) % 2 == 0 ? HIWORD(lParam) : HIWORD(lParam) + 1;
 		AppConfig::setWindowHeight(height);
 		AppConfig::setWindowWidth(width);
+		AppConfig::setNeedsResize(true);
 		break;
 	}
 

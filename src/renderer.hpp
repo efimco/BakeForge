@@ -16,6 +16,7 @@ public:
 	Renderer(const Renderer& other) = delete;
 
 	void draw();
+	void resize();
 
 private:
 	std::chrono::system_clock::time_point m_prevTime;
