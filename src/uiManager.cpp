@@ -40,6 +40,22 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	ImGui_ImplWin32_Init(hwnd);
 	ImGui_ImplDX11_Init(m_device.Get(), m_deviceContext.Get());
 
+	// сonfigure ImGui multi-viewport support to use modern flip model swap chains
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		DXGI_SWAP_CHAIN_DESC flipDesc = {};
+		flipDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		flipDesc.SampleDesc.Count = 1;
+		flipDesc.SampleDesc.Quality = 0;
+		flipDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		flipDesc.BufferCount = 2;  
+		flipDesc.Windowed = TRUE;
+		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  
+		flipDesc.Flags = 0;
+		
+		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count);
+		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
+	}
 }
 
 UIManager::~UIManager()
@@ -47,7 +63,6 @@ UIManager::~UIManager()
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-	DestroyWindow(m_hwnd);
 }
 
 void simpleWindow();

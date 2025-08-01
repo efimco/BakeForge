@@ -25,6 +25,7 @@ private:
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
+	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11RenderTargetView> m_renderTargetView;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
 	glm::mat4 m_view;

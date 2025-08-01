@@ -1,4 +1,3 @@
-
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include <glm/glm.hpp>
@@ -134,9 +133,8 @@ Renderer::Renderer(const HWND &hwnd)
 	sdesc.MipLODBias = 0.0f;
 	sdesc.MaxAnisotropy = 0;
 
-	ComPtr<ID3D11SamplerState> sampler;
 	{
-		HRESULT hr = m_device->getDevice()->CreateSamplerState(&sdesc, &sampler);
+		HRESULT hr = m_device->getDevice()->CreateSamplerState(&sdesc, &m_samplerState);
 		if (FAILED(hr))
 		{
 			std::cerr << "Failed to create sampler: HRESULT = " << hr << std::endl;
@@ -209,6 +207,7 @@ void Renderer::draw()
 
 	m_device->getContext()->VSSetShader(m_shaderManager->getVertexShader("main"), nullptr, 0);
 	m_device->getContext()->PSSetShader(m_shaderManager->getPixelShader("main"), nullptr, 0);
+	m_device->getContext()->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	m_device->getContext()->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
 

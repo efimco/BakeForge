@@ -6,13 +6,7 @@ cbuffer ConstantBuffer : register(b0)
 
 Texture2D textureSampler : register(t0);
 
-SamplerState samplerState
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = WRAP;
-	AddressV = WRAP;
-	AddressW = WRAP;
-};
+SamplerState samplerState :register(s0);
 
 struct VertexInputType
 {
