@@ -2,9 +2,13 @@
 #include <iostream>
 #include "appConfig.hpp"
 #include "imgui.h"
+#include <ShellScalingApi.h>
 
 Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
 {
+	// Set DPI awareness to per-monitor DPI aware (version 2)
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	LPCSTR CLASS_NAME = "Sample Window Class";
 	LPCSTR WINDOW_NAME = "TimeToDX";
 	m_windClass = {};
