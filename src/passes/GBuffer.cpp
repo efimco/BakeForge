@@ -1,13 +1,32 @@
 #include "GBuffer.hpp"
 #include "appConfig.hpp"
 #include <iostream>
-#include "sceneManager.hpp"s
+#include "sceneManager.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+
+struct alignas(16) ConstantBufferData
+{
+	glm::mat4 modelViewProjection;
+	glm::mat4 inverseTransposedModel;
+	glm::mat4 model;
+};
 
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.DepthBias = 0;
+	rasterizerDesc.DepthBiasClamp = 0;
+	rasterizerDesc.SlopeScaledDepthBias = 0;
+	rasterizerDesc.AntialiasedLineEnable = false;
+	rasterizerDesc.FrontCounterClockwise = false;
+	rasterizerDesc.MultisampleEnable = false;
+	rasterizerDesc.DepthClipEnable = false;
+	rasterizerDesc.ScissorEnable = false;
+
+
+
 
 	{
 		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
@@ -65,11 +84,25 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 		if (FAILED(hr))
 			std::cerr << "Failed to create Sampler: HRESULT = " << hr << std::endl;
 	}
+
+
+	D3D11_BUFFER_DESC constantBufferDesc;
+	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
+	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	constantBufferDesc.StructureByteStride = 0;
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	constantBufferDesc.MiscFlags = 0;
+	{
+		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &m_constantbuffer);
+		assert(SUCCEEDED(hr));
+	}
 }
 
 
-void GBuffer::draw(glm::mat4 view, glm::mat4 projection)
+void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
 {
+	update(view, projection, m_deltaTime);
 
 	m_context->RSSetState(m_rasterizerState.Get());
 
@@ -86,10 +119,10 @@ void GBuffer::draw(glm::mat4 view, glm::mat4 projection)
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_context->VSSetShader(m_shaderManager->getVertexShader("main"), nullptr, 0);
+	m_context->VSSetShader(m_shaderManager->getVertexShader("gBuffer"), nullptr, 0);
 	m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
 
-	m_context->PSSetShader(m_shaderManager->getPixelShader("main"), nullptr, 0);
+	m_context->PSSetShader(m_shaderManager->getPixelShader("gBuffer"), nullptr, 0);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	UINT stride = sizeof(InterleavedData);
@@ -102,7 +135,29 @@ void GBuffer::draw(glm::mat4 view, glm::mat4 projection)
 		m_context->PSSetShaderResources(0, 1, material->albedo->srv.GetAddressOf());
 		m_context->DrawIndexed(static_cast<UINT>(prim.getIndexData().size()), 0, 0);
 	}
+	ID3D11RenderTargetView* nullRTVs[4] = { nullptr, nullptr, nullptr, nullptr };
+	m_context->OMSetRenderTargets(4, nullRTVs, nullptr);
 
+}
+
+
+
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
+{
+	static float rotationY = 0.0f;
+	rotationY += static_cast<float>(m_deltaTime);
+	glm::mat4 model = glm::rotate(glm::mat4(1.0f), rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 mvp = projection * view * model;
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (SUCCEEDED(hr))
+	{
+		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
+		cbData->modelViewProjection = glm::transpose(mvp);
+		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
+		cbData->model = glm::transpose(model);
+		m_context->Unmap(m_constantbuffer.Get(), 0);
+	}
 }
 
 void GBuffer::createOrResize()
@@ -143,7 +198,7 @@ void GBuffer::createOrResize()
 	albedoDesc.SampleDesc.Quality = 0;
 	albedoDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC albedoSRVDesc = {};
+	D3D11_SHADER_RESOURCE_VIEW_DESC albedoSRVDesc;
 	albedoSRVDesc.Format = albedoDesc.Format;
 	albedoSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	albedoSRVDesc.Texture2D.MostDetailedMip = 0;
@@ -180,10 +235,10 @@ void GBuffer::createOrResize()
 	metallicRoughnessDesc.Usage = D3D11_USAGE_DEFAULT;
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC metallicRoughnessSRVDesc = {};
-	metallicRoughnessSRVDesc.Format = albedoDesc.Format;
+	metallicRoughnessSRVDesc.Format = metallicRoughnessDesc.Format;
 	metallicRoughnessSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	metallicRoughnessSRVDesc.Texture2D.MostDetailedMip = 0;
-	metallicRoughnessSRVDesc.Texture2D.MipLevels = albedoDesc.MipLevels;
+	metallicRoughnessSRVDesc.Texture2D.MipLevels = metallicRoughnessDesc.MipLevels;
 
 	{
 		HRESULT hr = m_device->CreateTexture2D(&metallicRoughnessDesc, nullptr, &t_metallicRoughness);
@@ -216,7 +271,7 @@ void GBuffer::createOrResize()
 	normalDesc.SampleDesc.Quality = 0;
 	normalDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC normalSRVDesc = {};
+	D3D11_SHADER_RESOURCE_VIEW_DESC normalSRVDesc;
 	normalSRVDesc.Format = normalDesc.Format;
 	normalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	normalSRVDesc.Texture2D.MostDetailedMip = 0;
@@ -252,11 +307,11 @@ void GBuffer::createOrResize()
 	positionDesc.SampleDesc.Quality = 0;
 	positionDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC positionSRVDesc = {};
-	positionSRVDesc.Format = normalDesc.Format;
+	D3D11_SHADER_RESOURCE_VIEW_DESC positionSRVDesc;
+	positionSRVDesc.Format = positionDesc.Format;
 	positionSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	positionSRVDesc.Texture2D.MostDetailedMip = 0;
-	positionSRVDesc.Texture2D.MipLevels = normalDesc.MipLevels;
+	positionSRVDesc.Texture2D.MipLevels = positionDesc.MipLevels;
 
 	{
 		HRESULT hr = m_device->CreateTexture2D(&positionDesc, nullptr, &t_position);
@@ -269,7 +324,7 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating Position RTV: " << hr << std::endl;
 	}
 	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_position.Get(), &positionSRVDesc, &srv_normal);
+		HRESULT hr = m_device->CreateShaderResourceView(t_position.Get(), &positionSRVDesc, &srv_position);
 		if (FAILED(hr))
 			std::cerr << "Error Creating Position SRV: " << hr << std::endl;
 	}
@@ -278,8 +333,8 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC depthDesc;
 	depthDesc.ArraySize = 1;
 	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-	depthDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	depthDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	depthDesc.CPUAccessFlags = 0;
+	depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
 	depthDesc.Height = AppConfig::getWindowHeight();
 	depthDesc.Width = AppConfig::getWindowWidth();
 	depthDesc.MipLevels = 1;
@@ -291,7 +346,14 @@ void GBuffer::createOrResize()
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Flags = 0;
 	dsvDesc.Texture2D.MipSlice = 0;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc;
+	depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	depthSRVDesc.Texture2D.MostDetailedMip = 0;
+	depthSRVDesc.Texture2D.MipLevels = depthDesc.MipLevels;
 
 	{
 		HRESULT hr = m_device->CreateTexture2D(&depthDesc, nullptr, &t_depth);
@@ -304,9 +366,24 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating DepthSrencil DSV: " << hr << std::endl;
 	}
 	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_depth.Get(), &positionSRVDesc, &srv_normal);
+		HRESULT hr = m_device->CreateShaderResourceView(t_depth.Get(), &depthSRVDesc, &srv_depth);
 		if (FAILED(hr))
 			std::cerr << "Error Creating PosDepthSrencilition SRV: " << hr << std::endl;
 	}
+
+	D3D11_VIEWPORT viewport;
+	viewport.Width = static_cast<float>(AppConfig::getWindowWidth());
+	viewport.Height = static_cast<float>(AppConfig::getWindowHeight());
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.MaxDepth = 1.0f;
+	viewport.MinDepth = 0.0f;
+
+	m_context->RSSetViewports(1, &viewport);
+
+	m_rtvs[0] = rtv_albedo.Get();
+	m_rtvs[1] = rtv_metallicRoughness.Get();
+	m_rtvs[2] = rtv_normal.Get();
+	m_rtvs[3] = rtv_position.Get();
 
 }

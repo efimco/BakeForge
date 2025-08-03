@@ -5,7 +5,7 @@
 #include "shaderManager.hpp"
 #include "uiManager.hpp"
 #include "camera.hpp"
-
+#include "GBuffer.hpp"
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -38,4 +38,5 @@ private:
 	DXDevice* m_device;
 	ShaderManager* m_shaderManager;
 	UIManager* m_uiManager;
+	GBuffer* m_gBuffer;
 };

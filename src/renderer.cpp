@@ -8,7 +8,6 @@
 #include "gltfImporter.hpp"
 #include "sceneManager.hpp"
 #include "appConfig.hpp"
-#include "GBuffer.hpp"
 
 struct alignas(16) ConstantBufferData
 {
@@ -176,6 +175,8 @@ Renderer::Renderer(const HWND& hwnd)
 
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice());
 
+	m_gBuffer = new GBuffer(m_device->getDevice(), m_device->getContext());
+
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 }
 
@@ -189,9 +190,17 @@ void Renderer::draw()
 	if (AppConfig::getNeedsResize())
 	{
 		resize();
+		m_gBuffer->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
+	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+	m_deltaTime = currentTime - m_prevTime;
+	m_prevTime = currentTime;
 
+	static float rotationY = 0.0f;
+	rotationY += static_cast<float>(m_deltaTime.count());
+
+	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count());
 	m_uiManager->beginDraw();
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
@@ -199,12 +208,6 @@ void Renderer::draw()
 		m_shaderManager->checkForChanges();
 	}
 
-	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
-	m_deltaTime = currentTime - m_prevTime;
-	m_prevTime = currentTime;
-
-	static float rotationY = 0.0f;
-	rotationY += static_cast<float>(m_deltaTime.count());
 
 	glm::mat4 model = glm::rotate(glm::mat4(1.0f), rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 mvp = m_projection * m_view * model;
@@ -253,7 +256,7 @@ void Renderer::resize()
 	m_depthStencilView.Reset();
 	m_backBuffer.Reset();
 
-	float aspectRatio = (float)AppConfig::getWindowWidth() / (float)AppConfig::getWindowHeight();
+	float aspectRatio = (float)AppConfig::getWindowWidth() / ((float)AppConfig::getWindowHeight() != 0.0f ? (float)AppConfig::getWindowHeight() : 1.0f);
 	m_projection = glm::perspectiveLH(glm::radians(m_camera->zoom), aspectRatio, 0.1f, 100.0f);
 
 	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight(), DXGI_FORMAT_UNKNOWN, 0);

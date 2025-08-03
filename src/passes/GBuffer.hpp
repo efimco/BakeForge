@@ -13,12 +13,12 @@ public:
 	GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
 	~GBuffer();
 
-	void draw(glm::mat4 view, glm::mat4 projection);
-	void update(glm::mat4 view, glm::mat4 projection);
+	void draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime);
+	void update(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime);
+	void createOrResize();
 
 private:
 
-	void createOrResize();
 
 	ComPtr<ID3D11Texture2D> t_albedo;
 	ComPtr<ID3D11Texture2D> t_metallicRoughness;
