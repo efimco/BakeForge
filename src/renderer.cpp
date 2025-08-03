@@ -8,11 +8,24 @@
 #include "gltfImporter.hpp"
 #include "sceneManager.hpp"
 #include "appConfig.hpp"
+#include "GBuffer.hpp"
 
 struct alignas(16) ConstantBufferData
 {
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
+};
+
+static const float g_fsQuadData[] =
+{
+	// positions   // texCoords
+	-1.0f, 1.0f, 0.0f, 1.0f,
+	-1.0f, -1.0f, 0.0f, 0.0f,
+	1.0f, -1.0f, 1.0f, 0.0f,
+
+	-1.0f, 1.0f, 0.0f, 1.0f,
+	1.0f, -1.0f, 1.0f, 0.0f,
+	1.0f, 1.0f,  1.0f, 1.0f
 };
 
 Renderer::Renderer(const HWND& hwnd)

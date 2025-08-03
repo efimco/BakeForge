@@ -13,7 +13,7 @@ using namespace Microsoft::WRL;
 class ShaderManager
 {
 public:
-	ShaderManager(ComPtr<ID3D11Device>& device);
+	ShaderManager(const ComPtr<ID3D11Device>& device);
 
 	bool LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "VS");
 	bool LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "PS");
@@ -31,7 +31,7 @@ public:
 	std::filesystem::file_time_type getFileModifiedTime(const std::wstring& filename);
 
 private:
-	ComPtr<ID3D11Device>& m_device;
+	const ComPtr<ID3D11Device>& m_device;
 	static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
 	static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
 	static std::unordered_map<std::string, ShaderInfo> m_computeShaders;
