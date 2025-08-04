@@ -47,6 +47,15 @@ Renderer::Renderer(const HWND& hwnd)
 	resize();
 }
 
+Renderer::~Renderer()
+{
+	delete m_device;
+	delete m_shaderManager;
+	delete m_uiManager;
+	delete m_camera;
+	delete m_gBuffer;
+}
+
 
 void Renderer::draw()
 {
@@ -80,9 +89,10 @@ void Renderer::draw()
 
 void Renderer::resize()
 {
-	m_backBufferRTV.Reset();
-	m_depthStencilView.Reset();
 	m_backBuffer.Reset();
+	m_backBufferRTV.Reset();
+	m_depthStencilBuffer.Reset();
+	m_depthStencilView.Reset();
 
 	float aspectRatio = (float)AppConfig::getViewportWidth() / ((float)AppConfig::getViewportHeight() != 0.0f ? (float)AppConfig::getViewportHeight() : 1.0f);
 	m_projection = glm::perspectiveLH(glm::radians(m_camera->zoom), aspectRatio, 0.1f, 100.0f);

@@ -12,7 +12,7 @@ class Renderer
 {
 public:
 	Renderer(const HWND& hwnd);
-	~Renderer() = default;
+	~Renderer();
 	Renderer(const Renderer& other) = delete;
 
 	void draw();
