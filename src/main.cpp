@@ -31,16 +31,24 @@ using namespace Microsoft::WRL;
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
 	Window window(hInstance);
-	Renderer renderer(window.getHandle());	
+	Renderer renderer(window.getHandle());
 	MSG message = {};
-	while (message.message != WM_QUIT)
+	bool running = true;
+	while (running)
 	{
 		if (PeekMessage(&message, NULL, 0, 0, PM_REMOVE))
 		{
+			if (message.message == WM_QUIT)
+			{
+				running = false;
+				break;
+			}
+
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
-		renderer.draw();
+		if (running)
+			renderer.draw();
 	}
 	return 0;
 }

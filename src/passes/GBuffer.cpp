@@ -99,6 +99,11 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	}
 }
 
+GBuffer::~GBuffer()
+{
+	delete m_shaderManager;
+}
+
 
 void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
 {
