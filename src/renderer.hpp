@@ -12,7 +12,7 @@ class Renderer
 {
 public:
 	Renderer(const HWND& hwnd);
-	~Renderer();
+	~Renderer() = default;
 	Renderer(const Renderer& other) = delete;
 
 	void draw();
@@ -30,6 +30,7 @@ private:
 	ComPtr<ID3D11RenderTargetView> m_backBufferRTV;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
 	ComPtr<ID3D11Texture2D> m_backBuffer;
+	ComPtr<ID3D11Texture2D> m_depthStencilBuffer;
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
 
