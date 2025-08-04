@@ -1,7 +1,9 @@
 #include "uiManager.hpp"
+#define IM_VEC2_CLASS_EXTRA
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
+#include "appConfig.hpp"
 
 UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const ComPtr<ID3D11DeviceContext>& deviceContext,
@@ -48,12 +50,12 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 		flipDesc.SampleDesc.Count = 1;
 		flipDesc.SampleDesc.Quality = 0;
 		flipDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		flipDesc.BufferCount = 2;  
+		flipDesc.BufferCount = 2;
 		flipDesc.Windowed = TRUE;
-		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  
+		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		flipDesc.Flags = 0;
-		
-		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count);
+
+		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC * desc_templates, int desc_templates_count);
 		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
 	}
 }
@@ -65,20 +67,27 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void simpleWindow();
+
 
 void UIManager::beginDraw()
 {
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	ImGui::ShowDemoWindow();
-
-	simpleWindow();
 }
 
-void UIManager::endDraw()
+void simpleWindow();
+void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
+void showInvisibleDockWindow();
+
+void UIManager::endDraw(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
+	showInvisibleDockWindow();
+	simpleWindow();
+	showViewport(srv);
+
+
+
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -88,6 +97,53 @@ void UIManager::endDraw()
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
+}
+
+void showInvisibleDockWindow()
+{
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->Pos);
+	ImGui::SetNextWindowSize(viewport->Size);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("InvisibleDockSpaceWindow", nullptr, window_flags);
+	ImGui::PopStyleVar(3);
+
+	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGui::End();
+}
+
+
+void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
+{
+	ImGui::Begin("Viewport");
+
+	ImVec2 uv0 = ImVec2(0, 0);
+	ImVec2 uv1 = ImVec2(1, 1);
+	static ImVec2 prevSize = ImGui::GetContentRegionAvail();
+	ImVec2 size = ImGui::GetContentRegionAvail();
+
+	AppConfig::setViewportWidth(static_cast<int>(size.x));
+	AppConfig::setViewportHeight(static_cast<int>(size.y));
+
+	if (size.x != prevSize.x || size.y != prevSize.y)
+	{
+		AppConfig::setNeedsResize(true);
+		prevSize = size;
+	}
+
+	ImTextureRef tex = srv.Get();
+
+	ImGui::Image(tex, size, uv0, uv1);
+	ImGui::End();
 }
 
 

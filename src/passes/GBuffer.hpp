@@ -17,6 +17,8 @@ public:
 	void update(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime);
 	void createOrResize();
 
+	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV();
+
 private:
 
 

@@ -190,8 +190,8 @@ void GBuffer::createOrResize()
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	albedoDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	albedoDesc.Height = AppConfig::getWindowHeight();
-	albedoDesc.Width = AppConfig::getWindowWidth();
+	albedoDesc.Height = AppConfig::getViewportHeight();
+	albedoDesc.Width = AppConfig::getViewportWidth();
 	albedoDesc.MipLevels = 1;
 	albedoDesc.MiscFlags = 0;
 	albedoDesc.SampleDesc.Count = 1;
@@ -226,8 +226,8 @@ void GBuffer::createOrResize()
 	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	metallicRoughnessDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	metallicRoughnessDesc.Format = DXGI_FORMAT_R8G8_UNORM;
-	metallicRoughnessDesc.Height = AppConfig::getWindowHeight();
-	metallicRoughnessDesc.Width = AppConfig::getWindowWidth();
+	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
+	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
 	metallicRoughnessDesc.MipLevels = 1;
 	metallicRoughnessDesc.MiscFlags = 0;
 	metallicRoughnessDesc.SampleDesc.Count = 1;
@@ -263,8 +263,8 @@ void GBuffer::createOrResize()
 	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	normalDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	normalDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	normalDesc.Height = AppConfig::getWindowHeight();
-	normalDesc.Width = AppConfig::getWindowWidth();
+	normalDesc.Height = AppConfig::getViewportHeight();
+	normalDesc.Width = AppConfig::getViewportWidth();
 	normalDesc.MipLevels = 1;
 	normalDesc.MiscFlags = 0;
 	normalDesc.SampleDesc.Count = 1;
@@ -299,8 +299,8 @@ void GBuffer::createOrResize()
 	positionDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	positionDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	positionDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	positionDesc.Height = AppConfig::getWindowHeight();
-	positionDesc.Width = AppConfig::getWindowWidth();
+	positionDesc.Height = AppConfig::getViewportHeight();
+	positionDesc.Width = AppConfig::getViewportWidth();
 	positionDesc.MipLevels = 1;
 	positionDesc.MiscFlags = 0;
 	positionDesc.SampleDesc.Count = 1;
@@ -335,8 +335,8 @@ void GBuffer::createOrResize()
 	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	depthDesc.CPUAccessFlags = 0;
 	depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	depthDesc.Height = AppConfig::getWindowHeight();
-	depthDesc.Width = AppConfig::getWindowWidth();
+	depthDesc.Height = AppConfig::getViewportHeight();
+	depthDesc.Width = AppConfig::getViewportWidth();
 	depthDesc.MipLevels = 1;
 	depthDesc.MiscFlags = 0;
 	depthDesc.SampleDesc.Count = 1;
@@ -372,8 +372,8 @@ void GBuffer::createOrResize()
 	}
 
 	D3D11_VIEWPORT viewport;
-	viewport.Width = static_cast<float>(AppConfig::getWindowWidth());
-	viewport.Height = static_cast<float>(AppConfig::getWindowHeight());
+	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
+	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MaxDepth = 1.0f;
@@ -386,4 +386,9 @@ void GBuffer::createOrResize()
 	m_rtvs[2] = rtv_normal.Get();
 	m_rtvs[3] = rtv_position.Get();
 
+}
+
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV()
+{
+	return srv_albedo;
 }

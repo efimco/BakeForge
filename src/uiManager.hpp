@@ -13,7 +13,7 @@ public:
 	~UIManager();
 	
 	void beginDraw();
-	void endDraw();
+	void endDraw(const ComPtr<ID3D11ShaderResourceView>& srv);
 
 private:
 	const ComPtr<ID3D11Device>& m_device;
