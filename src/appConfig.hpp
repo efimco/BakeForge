@@ -11,6 +11,7 @@ namespace AppConfig
 	void setViewportHeight(int height);
 	void setWindowWidth(int width);
 	void setWindowHeight(int height);
+	void setWindowMinimized(bool isMnimized);
 
 	float* getClearColor();
 	void setClearColor(float r, float g, float b, float a);

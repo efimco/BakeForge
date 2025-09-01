@@ -3,7 +3,7 @@
 DXDevice::DXDevice(const HWND &hWindow)
 
 {
-	D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_12_1};
+	D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_1};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 	UINT deviceCreationFlags = 0;
 #if defined(_DEBUG)
