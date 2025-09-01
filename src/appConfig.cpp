@@ -6,6 +6,7 @@ static int viewportWidth = 2;
 static int viewportHeight = 2;
 static bool needsResize = false;
 static float clearColor[4] = { 0.4f, 0.6f, 0.9f, 1.0f };
+static bool isMinimized = false;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -40,6 +41,11 @@ const int& AppConfig::getViewportHeight()
 void AppConfig::setWindowHeight(int height)
 {
 	windowHeight = height;
+}
+
+void AppConfig::setWindowMinimized(bool _isMnimized)
+{
+	isMinimized = _isMnimized;
 }
 
 void AppConfig::setWindowWidth(int width)

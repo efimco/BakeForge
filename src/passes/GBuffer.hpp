@@ -1,3 +1,4 @@
+#pragma once
 #include <d3d11.h>
 #include <wrl.h>
 #include "camera.hpp"
@@ -17,7 +18,7 @@ public:
 	void update(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime);
 	void createOrResize();
 
-	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV();
+	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;
 
 private:
 

@@ -14,7 +14,7 @@ struct alignas(16) ConstantBufferData
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.DepthBias = 0;
 	rasterizerDesc.DepthBiasClamp = 0;
@@ -24,9 +24,6 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	rasterizerDesc.MultisampleEnable = false;
 	rasterizerDesc.DepthClipEnable = false;
 	rasterizerDesc.ScissorEnable = false;
-
-
-
 
 	{
 		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
@@ -194,7 +191,7 @@ void GBuffer::createOrResize()
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	albedoDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	albedoDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	albedoDesc.Height = AppConfig::getViewportHeight();
 	albedoDesc.Width = AppConfig::getViewportWidth();
 	albedoDesc.MipLevels = 1;
@@ -230,7 +227,7 @@ void GBuffer::createOrResize()
 	metallicRoughnessDesc.ArraySize = 1;
 	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	metallicRoughnessDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	metallicRoughnessDesc.Format = DXGI_FORMAT_R8G8_UNORM;
+	metallicRoughnessDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
 	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
 	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
 	metallicRoughnessDesc.MipLevels = 1;
@@ -267,7 +264,7 @@ void GBuffer::createOrResize()
 	normalDesc.ArraySize = 1;
 	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	normalDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	normalDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	normalDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	normalDesc.Height = AppConfig::getViewportHeight();
 	normalDesc.Width = AppConfig::getViewportWidth();
 	normalDesc.MipLevels = 1;
@@ -303,7 +300,7 @@ void GBuffer::createOrResize()
 	positionDesc.ArraySize = 1;
 	positionDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	positionDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	positionDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	positionDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	positionDesc.Height = AppConfig::getViewportHeight();
 	positionDesc.Width = AppConfig::getViewportWidth();
 	positionDesc.MipLevels = 1;
@@ -393,7 +390,7 @@ void GBuffer::createOrResize()
 
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV()
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV() const
 {
 	return srv_albedo;
 }

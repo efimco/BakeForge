@@ -52,15 +52,23 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_DESTROY:
 	{
 		PostQuitMessage(0);
-		break;
+		return 0;
 	}
 	case WM_SIZE:
 	{
 		int width = LOWORD(lParam);
 		int height = HIWORD(lParam);
-		AppConfig::setWindowHeight(height);
-		AppConfig::setWindowWidth(width);
-		AppConfig::setNeedsResize(true);
+		if (wParam == SIZE_MINIMIZED)
+		{
+			AppConfig::setWindowMinimized(true);
+		}
+		else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
+		{
+			AppConfig::setWindowMinimized(false);
+			AppConfig::setWindowHeight(height);
+			AppConfig::setWindowWidth(width);
+			AppConfig::setNeedsResize(true);
+		}
 		break;
 	}
 
@@ -77,8 +85,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		{
 			DestroyWindow(hwnd);
 		}
-		// Else: User canceled. Do nothing.
-		break;
+		return 0;
 	}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

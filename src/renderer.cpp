@@ -49,11 +49,11 @@ Renderer::Renderer(const HWND& hwnd)
 
 Renderer::~Renderer()
 {
-	delete m_device;
-	delete m_shaderManager;
 	delete m_uiManager;
-	delete m_camera;
 	delete m_gBuffer;
+	delete m_camera;
+	delete m_shaderManager;
+	delete m_device;
 }
 
 
@@ -83,7 +83,7 @@ void Renderer::draw()
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	m_uiManager->endDraw(m_gBuffer->getAlbedoSRV());
+	m_uiManager->endDraw(m_gBuffer->getAlbedoSRV(), *m_gBuffer);
 	m_device->getSwapChain()->Present(1, 0);
 }
 

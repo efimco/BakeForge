@@ -1,7 +1,7 @@
 #pragma once
 #include <d3d11.h>
 #include <wrl.h>
-
+#include "GBuffer.hpp"
 using namespace Microsoft::WRL;
 
 class UIManager
@@ -11,9 +11,9 @@ public:
 		const ComPtr<ID3D11DeviceContext>& deviceContext,
 		const HWND& hwnd);
 	~UIManager();
-	
+
 	void beginDraw();
-	void endDraw(const ComPtr<ID3D11ShaderResourceView>& srv);
+	void endDraw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer);
 
 private:
 	const ComPtr<ID3D11Device>& m_device;

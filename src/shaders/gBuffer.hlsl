@@ -47,6 +47,8 @@ PSOutput PS(VertexOutput input)
 {
 	PSOutput output;
 	output.albedo = textureSampler.Sample(samplerState, input.texCoord);
+	if (output.albedo.a < 0.1f)
+		discard;
 	output.metallicRoughness = float2(0.0f, 0.0f);
 	output.normal = float4(input.normal, 0.0f);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);

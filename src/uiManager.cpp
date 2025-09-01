@@ -46,7 +46,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		DXGI_SWAP_CHAIN_DESC flipDesc = {};
-		flipDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		flipDesc.BufferDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		flipDesc.SampleDesc.Count = 1;
 		flipDesc.SampleDesc.Quality = 0;
 		flipDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -79,12 +79,18 @@ void UIManager::beginDraw()
 void simpleWindow();
 void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 void showInvisibleDockWindow();
+void showGBufferImage(const GBuffer& gbuffer);
 
-void UIManager::endDraw(const ComPtr<ID3D11ShaderResourceView>& srv)
+void UIManager::endDraw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer)
 {
+	if (!IsWindow(m_hwnd))
+	{
+		return;
+	}
 	showInvisibleDockWindow();
 	simpleWindow();
 	showViewport(srv);
+	showGBufferImage(gbuffer);
 
 
 
@@ -124,6 +130,9 @@ void showInvisibleDockWindow()
 
 void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Viewport");
 
 	ImVec2 uv0 = ImVec2(0, 0);
@@ -144,6 +153,39 @@ void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 	ImGui::Image(tex, size, uv0, uv1);
 	ImGui::End();
+	ImGui::PopStyleVar(3);
+}
+
+void showGBufferImage(const GBuffer& gbuffer)
+{
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("GBuffer");
+
+	ImVec2 uv0 = ImVec2(0, 0);
+	ImVec2 uv1 = ImVec2(1, 1);
+	ImVec2 contentSize = ImGui::GetContentRegionAvail();
+	float aspectRatio = static_cast<float>(AppConfig::getViewportWidth()) / static_cast<float>(AppConfig::getViewportHeight());
+
+	ImVec2 size;
+	if (contentSize.x / contentSize.y > aspectRatio)
+	{
+		// Content is wider than needed, fit by height
+		size.y = contentSize.y;
+		size.x = size.y * aspectRatio;
+	}
+	else
+	{
+		// Content is taller than needed, fit by width
+		size.x = contentSize.x;
+		size.y = size.x / aspectRatio;
+	}
+	ImTextureRef tex = gbuffer.getAlbedoSRV().Get();
+	ImGui::Image(tex, size, uv0, uv1);
+
+	ImGui::End();
+	ImGui::PopStyleVar(3);
 }
 
 
