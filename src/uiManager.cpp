@@ -46,7 +46,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		DXGI_SWAP_CHAIN_DESC flipDesc = {};
-		flipDesc.BufferDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		flipDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		flipDesc.SampleDesc.Count = 1;
 		flipDesc.SampleDesc.Quality = 0;
 		flipDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;

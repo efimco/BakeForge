@@ -51,8 +51,8 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 
 	m_shaderManager = new ShaderManager(device);
 
-	m_shaderManager->LoadPixelShader("gBuffer", L"../../src/shaders/GBuffer.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("gBuffer", L"../../src/shaders/GBuffer.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "PS");
+	m_shaderManager->LoadVertexShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "VS");
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(

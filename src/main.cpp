@@ -15,6 +15,32 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stb_image.h>
+#include <windows.h>
+#include <ShellScalingAPI.h>
+
+// No manifest approach: set process DPI awareness at runtime
+// Tries Per-Monitor v2 first, then Per-Monitor, then System-aware as last resort.
+static void SetHighDpiAwarenessAtRuntime()
+{
+	HMODULE user32 = GetModuleHandleW(L"user32.dll");
+	if (user32)
+	{
+		typedef BOOL(WINAPI* SetProcessDpiAwarenessContext_t)(HANDLE);
+		auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContext_t>(
+			GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
+
+		// Define constant if headers are older
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((HANDLE)-4)
+#endif
+
+		if (pSetProcessDpiAwarenessContext)
+		{
+			if (pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))
+				return; // Success
+		}
+	}
+}
 
 #include "window.hpp"
 #include "camera.hpp"
@@ -30,6 +56,9 @@ using namespace Microsoft::WRL;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
+	// Ensure high-DPI awareness without a manifest, before any window is created
+	SetHighDpiAwarenessAtRuntime();
+
 	Window window(hInstance);
 	Renderer renderer(window.getHandle());
 	MSG message = {};
