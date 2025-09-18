@@ -8,11 +8,11 @@ inline static const D3D11_INPUT_ELEMENT_DESC genericInputLayoutDesc[] =
 	{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 };
 
-struct Vertex
+struct Position
 {
 	float x, y, z;
-	Vertex() = default;
-	Vertex(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
+	Position() = default;
+	Position(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
 };
 
 struct TexCoords
@@ -38,16 +38,16 @@ struct Tangents
 
 struct InterleavedData
 {
-	Vertex vertex;
+	Position position;
 	TexCoords texCoords;
 	Normals normals;
 	Tangents tangents;
 	InterleavedData() = default;
-	InterleavedData(Vertex _vertex,
+	InterleavedData(Position _position,
 		TexCoords _texCoords,
 		Normals _normals,
 		Tangents _tangents)
-		: vertex(_vertex),
+		: position(_position),
 		texCoords(_texCoords),
 		normals(_normals),
 		tangents(_tangents) {

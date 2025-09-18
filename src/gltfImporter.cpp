@@ -11,6 +11,7 @@ GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device) : m_device(
 
 GLTFModel::~GLTFModel()
 {
+	std::cout << "GLTFModel Destructor Called" << std::endl;
 }
 
 tinygltf::Model GLTFModel::readGlb(const std::string& path)
@@ -49,7 +50,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 
 		for (const auto gltfPrimitive : mesh.primitives)
 		{
-			std::vector<Vertex> posBuffer;
+			std::vector<Position> posBuffer;
 			std::vector<TexCoords> texCoordsBuffer;
 			std::vector<Normals> normalBuffer;
 			std::vector<Tangents> tangentBuffer;
@@ -69,7 +70,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			for (int i = 0; i < numVert; i++)
 			{
 				InterleavedData interData;
-				interData.vertex = posBuffer[i];
+				interData.position = posBuffer[i];
 				interData.texCoords = texCoordsBuffer[i];
 				interData.normals = normalBuffer[i];
 				interData.tangents = tangentBuffer[i];
@@ -159,7 +160,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 	}
 }
 
-void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies)
+void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Position>& verticies)
 {
 	if (primitive.attributes.find("POSITION") == primitive.attributes.end())
 	{
@@ -177,14 +178,14 @@ void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
-		Vertex vertex(-INFINITY, -INFINITY, -INFINITY);
+		Position position(-INFINITY, -INFINITY, -INFINITY);
 		for (int j = 0; j < components; j++)
 		{
-			if (j == 0) vertex.x = posFloatPtr[i * components + j];
-			else if (j == 1) vertex.y = posFloatPtr[i * components + j];
-			else if (j == 2) vertex.z = posFloatPtr[i * components + j];
+			if (j == 0) position.x = posFloatPtr[i * components + j];
+			else if (j == 1) position.y = posFloatPtr[i * components + j];
+			else if (j == 2) position.z = posFloatPtr[i * components + j];
 		}
-		verticies.push_back(vertex);
+		verticies.push_back(position);
 	}
 }
 

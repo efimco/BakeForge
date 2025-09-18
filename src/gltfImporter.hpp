@@ -9,6 +9,7 @@
 #include <wrl.h>
 #include <d3d11.h>
 #include <memory>
+#include <unordered_map>
 
 
 using namespace Microsoft::WRL;
@@ -25,7 +26,7 @@ private:
 	void processTextures(const tinygltf::Model& model);
 	void processImages(const tinygltf::Model& model);
 	void processMaterials(const tinygltf::Model& model);
-	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies);
+	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Position>& verticies);
 	void processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<TexCoords>& texCoords);
 	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies);
 	void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals);

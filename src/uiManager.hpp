@@ -12,8 +12,7 @@ public:
 		const HWND& hwnd);
 	~UIManager();
 
-	void beginDraw();
-	void endDraw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer);
+	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer);
 
 private:
 	const ComPtr<ID3D11Device>& m_device;

@@ -68,21 +68,16 @@ UIManager::~UIManager()
 }
 
 
-
-void UIManager::beginDraw()
-{
-	ImGui_ImplDX11_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-}
-
 void simpleWindow();
 void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 void showInvisibleDockWindow();
 void showGBufferImage(const GBuffer& gbuffer);
 
-void UIManager::endDraw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer)
 {
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
 	if (!IsWindow(m_hwnd))
 	{
 		return;
