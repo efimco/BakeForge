@@ -127,8 +127,8 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 	m_context->PSSetShader(m_shaderManager->getPixelShader("gBuffer"), nullptr, 0);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
-	UINT stride = sizeof(InterleavedData);
-	UINT offset = 0;
+	static const UINT stride = sizeof(InterleavedData);
+	static const UINT offset = 0;
 	for (auto& prim : SceneManager::getPrimitives())
 	{
 		m_context->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);

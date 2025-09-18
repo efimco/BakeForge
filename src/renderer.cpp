@@ -10,17 +10,7 @@
 #include "appConfig.hpp"
 
 
-static const float g_fsQuadData[] =
-{
-	// positions   // texCoords
-	-1.0f, 1.0f, 0.0f, 1.0f,
-	-1.0f, -1.0f, 0.0f, 0.0f,
-	1.0f, -1.0f, 1.0f, 0.0f,
 
-	-1.0f, 1.0f, 0.0f, 1.0f,
-	1.0f, -1.0f, 1.0f, 0.0f,
-	1.0f, 1.0f,  1.0f, 1.0f
-};
 
 Renderer::Renderer(const HWND& hwnd)
 {
@@ -41,9 +31,7 @@ Renderer::Renderer(const HWND& hwnd)
 
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice());
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
-
 	m_gBuffer = new GBuffer(m_device->getDevice(), m_device->getContext());
-
 	resize();
 }
 
@@ -71,7 +59,6 @@ void Renderer::draw()
 
 
 	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count());
-	m_uiManager->beginDraw();
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
 	{
@@ -83,9 +70,10 @@ void Renderer::draw()
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	m_uiManager->endDraw(m_gBuffer->getAlbedoSRV(), *m_gBuffer);
+	m_uiManager->draw(m_gBuffer->getAlbedoSRV(), *m_gBuffer);
 	m_device->getSwapChain()->Present(1, 0);
 }
+
 
 void Renderer::resize()
 {
