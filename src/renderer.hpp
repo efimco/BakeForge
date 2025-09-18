@@ -6,6 +6,7 @@
 #include "uiManager.hpp"
 #include "camera.hpp"
 #include "GBuffer.hpp"
+#include "FSQuad.hpp"
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -40,4 +41,5 @@ private:
 	ShaderManager* m_shaderManager;
 	UIManager* m_uiManager;
 	GBuffer* m_gBuffer;
+	FSQuad* m_fsquad;
 };

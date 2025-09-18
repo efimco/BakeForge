@@ -32,6 +32,7 @@ Renderer::Renderer(const HWND& hwnd)
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice());
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 	m_gBuffer = new GBuffer(m_device->getDevice(), m_device->getContext());
+	m_fsquad = new FSQuad(m_device->getDevice(), m_device->getContext());
 	resize();
 }
 
@@ -51,6 +52,7 @@ void Renderer::draw()
 	{
 		resize();
 		m_gBuffer->createOrResize();
+		m_fsquad->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
@@ -64,13 +66,15 @@ void Renderer::draw()
 	{
 		m_shaderManager->checkForChanges();
 	}
-
+	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	m_uiManager->draw(m_gBuffer->getAlbedoSRV(), *m_gBuffer);
+
+
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer);
 	m_device->getSwapChain()->Present(1, 0);
 }
 
