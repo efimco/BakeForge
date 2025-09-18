@@ -11,7 +11,11 @@ ShaderManager::ShaderManager(const ComPtr<ID3D11Device>& device) : m_device(devi
 
 bool ShaderManager::LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
 {
-
+	if (m_vertexShaders.find(name) != m_vertexShaders.end())
+	{
+		std::wcout << L"Vertex shader already exists: " << name.c_str() << std::endl;
+		return true;
+	}
 	ShaderInfo info;
 	info.filename = filename;
 
