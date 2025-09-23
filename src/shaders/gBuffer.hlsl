@@ -3,6 +3,8 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 modelViewProjection;
 	float4x4 inverseTransposedModel;
 	float4x4 model;
+	int objectID;
+	float3 _pad; // align to 16 bytes
 };
 
 Texture2D textureSampler : register(t0);
@@ -31,6 +33,7 @@ struct PSOutput
 	float2 metallicRoughness : SV_TARGET1;
 	float4 normal : SV_TARGET2;
 	float4 fragPos : SV_TARGET3;
+	int objectID : SV_TARGET4;
 };
 
 VertexOutput VS(VertexInput input)
@@ -52,5 +55,6 @@ PSOutput PS(VertexOutput input)
 	output.metallicRoughness = float2(0.0f, 0.0f);
 	output.normal = float4(input.normal, 0.0f);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
+	output.objectID = objectID;
 	return output;
 }

@@ -89,7 +89,8 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 #ifdef _DEBUG
 	ComPtr<ID3DUserDefinedAnnotation> annotation;
 	m_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), &annotation);
-	if (annotation) {
+	if (annotation)
+	{
 		annotation->BeginEvent(L"FSQuad Draw");
 	}
 #endif
