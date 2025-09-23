@@ -4,11 +4,14 @@
 #include "sceneManager.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+
 struct alignas(16) ConstantBufferData
 {
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
+	int objectID;
+	float padding[3]; // Align to 16 bytes
 };
 
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
@@ -43,11 +46,6 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	}
 
 	createOrResize();
-
-	m_rtvs[0] = rtv_albedo.Get();
-	m_rtvs[1] = rtv_metallicRoughness.Get();
-	m_rtvs[2] = rtv_normal.Get();
-	m_rtvs[3] = rtv_position.Get();
 
 	m_shaderManager = new ShaderManager(device);
 
@@ -101,15 +99,27 @@ GBuffer::~GBuffer()
 	delete m_shaderManager;
 }
 
-
+static float rotationY = 0.0f;
+void updateRotation(double deltaTime)
+{
+	rotationY += static_cast<float>(deltaTime);
+}
 void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
 {
-	update(view, projection, m_deltaTime);
 
+#ifdef _DEBUG
+	ComPtr<ID3DUserDefinedAnnotation> annotation;
+	m_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), &annotation);
+	if (annotation)
+	{
+		annotation->BeginEvent(L"GBuffer Draw");
+	}
+#endif
+	updateRotation(m_deltaTime);
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
-	m_context->OMSetRenderTargets(4, m_rtvs, dsv.Get());
+	m_context->OMSetRenderTargets(5, m_rtvs, dsv.Get());
 
 	for (auto rtv : m_rtvs)
 	{
@@ -125,29 +135,34 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 	m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
 
 	m_context->PSSetShader(m_shaderManager->getPixelShader("gBuffer"), nullptr, 0);
+	m_context->PSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
-	for (auto& prim : SceneManager::getPrimitives())
+	for (int i = 0; i < SceneManager::getPrimitiveCount(); i++)
 	{
+		auto& prim = SceneManager::getPrimitives()[i];
+		update(view, projection, i);
 		m_context->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		auto& material = prim.getMaterial();
 		m_context->PSSetShaderResources(0, 1, material->albedo->srv.GetAddressOf());
 		m_context->DrawIndexed(static_cast<UINT>(prim.getIndexData().size()), 0, 0);
 	}
-	ID3D11RenderTargetView* nullRTVs[4] = { nullptr, nullptr, nullptr, nullptr };
-	m_context->OMSetRenderTargets(4, nullRTVs, nullptr);
+	ID3D11RenderTargetView* nullRTVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
+	m_context->OMSetRenderTargets(5, nullRTVs, nullptr);
+#ifdef _DEBUG
+	if (annotation)
+	{
+		annotation->EndEvent();
+	}
+#endif
 
 }
 
-
-
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID)
 {
-	static float rotationY = 0.0f;
-	rotationY += static_cast<float>(m_deltaTime);
 	glm::mat4 model = glm::rotate(glm::mat4(1.0f), rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 mvp = projection * view * model;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -158,6 +173,7 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, double 
 		cbData->modelViewProjection = glm::transpose(mvp);
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
+		cbData->objectID = objectID + 1;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
 }
@@ -373,6 +389,43 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating PosDepthSrencilition SRV: " << hr << std::endl;
 	}
 
+	//objectID
+	D3D11_TEXTURE2D_DESC objectIDDesc;
+	objectIDDesc.ArraySize = 1;
+	objectIDDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	objectIDDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	objectIDDesc.Format = DXGI_FORMAT_R16_UINT;
+	objectIDDesc.Height = AppConfig::getViewportHeight();
+	objectIDDesc.Width = AppConfig::getViewportWidth();
+	objectIDDesc.MipLevels = 1;
+	objectIDDesc.MiscFlags = 0;
+	objectIDDesc.SampleDesc.Count = 1;
+	objectIDDesc.SampleDesc.Quality = 0;
+	objectIDDesc.Usage = D3D11_USAGE_DEFAULT;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC objectIDSRVDesc;
+	depthSRVDesc.Format = objectIDDesc.Format;
+	depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	depthSRVDesc.Texture2D.MostDetailedMip = 0;
+	depthSRVDesc.Texture2D.MipLevels = objectIDDesc.MipLevels;
+
+	{
+		HRESULT hr = m_device->CreateTexture2D(&objectIDDesc, nullptr, &t_objectID);
+		if (FAILED(hr))
+			std::cerr << "Error Creating ObjectID Texture: " << hr << std::endl;
+	}
+	{
+		HRESULT hr = m_device->CreateRenderTargetView(t_objectID.Get(), nullptr, &rtv_objectID);
+		if (FAILED(hr))
+			std::cerr << "Error Creating ObjectID RTV: " << hr << std::endl;
+	}
+	{
+		HRESULT hr = m_device->CreateShaderResourceView(t_objectID.Get(), &objectIDSRVDesc, &srv_objectID);
+		if (FAILED(hr))
+			std::cerr << "Error Creating ObjectID SRV: " << hr << std::endl;
+	}
+
+	//viewport
 	D3D11_VIEWPORT viewport;
 	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
 	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
@@ -383,10 +436,12 @@ void GBuffer::createOrResize()
 
 	m_context->RSSetViewports(1, &viewport);
 
+	// rtv assignment
 	m_rtvs[0] = rtv_albedo.Get();
 	m_rtvs[1] = rtv_metallicRoughness.Get();
 	m_rtvs[2] = rtv_normal.Get();
 	m_rtvs[3] = rtv_position.Get();
+	m_rtvs[4] = rtv_objectID.Get();
 
 }
 
