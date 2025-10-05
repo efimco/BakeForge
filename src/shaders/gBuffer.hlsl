@@ -33,7 +33,7 @@ struct PSOutput
 	float2 metallicRoughness : SV_TARGET1;
 	float4 normal : SV_TARGET2;
 	float4 fragPos : SV_TARGET3;
-	int objectID : SV_TARGET4;
+	uint objectID : SV_TARGET4;
 };
 
 VertexOutput VS(VertexInput input)

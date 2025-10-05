@@ -63,10 +63,12 @@ FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceCon
 	hr = m_device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
 	assert(SUCCEEDED(hr));
 
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = samplerDesc.AddressV = samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	samplerDesc.MinLOD = 0.0f;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
@@ -108,6 +110,9 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 
 	m_context->DrawIndexed(6, 0, 0);
+	if (!m_samplerState) {
+		std::cerr << "Sampler missing\n";
+	}
 	ID3D11ShaderResourceView* nullSRV = nullptr;
 	ID3D11RenderTargetView* nullRTV = nullptr;
 	m_context->PSSetShaderResources(0, 1, &nullSRV);

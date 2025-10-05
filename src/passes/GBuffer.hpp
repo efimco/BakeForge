@@ -19,6 +19,7 @@ public:
 	void createOrResize();
 
 	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;
+	const ComPtr<ID3D11ShaderResourceView>& getObjectIDSRV() const;
 
 private:
 
