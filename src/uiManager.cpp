@@ -1,9 +1,10 @@
 #include "uiManager.hpp"
 #define IM_VEC2_CLASS_EXTRA
-#include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include "appConfig.hpp"
+#include <iostream>
+#include "inputEventsHandler.hpp"
 
 UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const ComPtr<ID3D11DeviceContext>& deviceContext,
@@ -17,22 +18,22 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+	m_io = &ImGui::GetIO(); (void*)m_io;
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+	m_io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
 	ImGui::StyleColorsDark();
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
 	style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
-	io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-	io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+	m_io->ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+	m_io->ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		style.WindowRounding = 0.0f;
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
@@ -43,7 +44,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	ImGui_ImplDX11_Init(m_device.Get(), m_deviceContext.Get());
 
 	// сonfigure ImGui multi-viewport support to use modern flip model swap chains
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		DXGI_SWAP_CHAIN_DESC flipDesc = {};
 		flipDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -58,6 +59,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC * desc_templates, int desc_templates_count);
 		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
 	}
+	m_isMouseInViewport = false;
 }
 
 UIManager::~UIManager()
@@ -66,12 +68,6 @@ UIManager::~UIManager()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 }
-
-
-void simpleWindow();
-void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
-void showInvisibleDockWindow();
-void showGBufferImage(const GBuffer& gbuffer);
 
 void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer)
 {
@@ -87,20 +83,22 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	showViewport(srv);
 	showGBufferImage(gbuffer);
 
-
-
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-	const ImGuiIO& io = ImGui::GetIO();
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
 }
 
-void showInvisibleDockWindow()
+uint32_t* UIManager::getMousePos()
+{
+	return m_mousePos;
+}
+
+void UIManager::showInvisibleDockWindow()
 {
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
@@ -123,12 +121,14 @@ void showInvisibleDockWindow()
 }
 
 
-void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
+void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Viewport");
+	m_isMouseInViewport = ImGui::IsWindowHovered();
+
 
 	ImVec2 uv0 = ImVec2(0, 0);
 	ImVec2 uv1 = ImVec2(1, 1);
@@ -145,13 +145,16 @@ void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	}
 
 	ImTextureRef tex = srv.Get();
-
+	ImVec2 mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x, m_io->MousePos.y - ImGui::GetWindowPos().y);
+	m_mousePos[0] = static_cast<uint32_t>(mousePos.x);
+	m_mousePos[1] = static_cast<uint32_t>(mousePos.y);
 	ImGui::Image(tex, size, uv0, uv1);
+
 	ImGui::End();
 	ImGui::PopStyleVar(3);
 }
 
-void showGBufferImage(const GBuffer& gbuffer)
+void UIManager::showGBufferImage(const GBuffer& gbuffer)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -183,10 +186,15 @@ void showGBufferImage(const GBuffer& gbuffer)
 	ImGui::PopStyleVar(3);
 }
 
-
-void simpleWindow()
+void UIManager::processInputEvents()
 {
-	ImGuiIO& io = ImGui::GetIO();
+	InputEvents::setMouseInViewport(m_isMouseInViewport);
+	InputEvents::setMouseClicked(m_io->MouseClicked);
+}
+
+
+void UIManager::simpleWindow()
+{
 	static float f = 0.0f;
 	static int counter = 0;
 
@@ -201,7 +209,7 @@ void simpleWindow()
 	ImGui::SameLine();
 	ImGui::Text("counter = %d", counter);
 
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 	ImGui::End();
 
 }

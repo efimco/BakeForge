@@ -17,6 +17,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_device = new DXDevice(hwnd);
 	m_shaderManager = new ShaderManager(m_device->getDevice());
 	m_uiManager = new UIManager(m_device->getDevice(), m_device->getContext(), hwnd);
+	m_objectPicker = new ObjectPicker(m_device->getDevice(), m_device->getContext());
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
 	m_camera = new Camera(cameraPosition);
@@ -75,6 +76,7 @@ void Renderer::draw()
 
 
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer);
+	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(1, 0);
 }
 

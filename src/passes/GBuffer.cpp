@@ -63,7 +63,7 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	};
 
 
-	D3D11_SAMPLER_DESC samplerDesc;
+	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -203,7 +203,7 @@ void GBuffer::createOrResize()
 	}
 
 	//albedo
-	D3D11_TEXTURE2D_DESC albedoDesc;
+	D3D11_TEXTURE2D_DESC albedoDesc = {};
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	albedoDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
@@ -404,25 +404,22 @@ void GBuffer::createOrResize()
 	objectIDDesc.Usage = D3D11_USAGE_DEFAULT;
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC objectIDSRVDesc;
-	depthSRVDesc.Format = objectIDDesc.Format;
-	depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	depthSRVDesc.Texture2D.MostDetailedMip = 0;
-	depthSRVDesc.Texture2D.MipLevels = objectIDDesc.MipLevels;
+	objectIDSRVDesc.Format = objectIDDesc.Format;
+	objectIDSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	objectIDSRVDesc.Texture2D.MostDetailedMip = 0;
+	objectIDSRVDesc.Texture2D.MipLevels = objectIDDesc.MipLevels;
 
 	{
 		HRESULT hr = m_device->CreateTexture2D(&objectIDDesc, nullptr, &t_objectID);
-		if (FAILED(hr))
-			std::cerr << "Error Creating ObjectID Texture: " << hr << std::endl;
+		assert(SUCCEEDED(hr));
 	}
 	{
 		HRESULT hr = m_device->CreateRenderTargetView(t_objectID.Get(), nullptr, &rtv_objectID);
-		if (FAILED(hr))
-			std::cerr << "Error Creating ObjectID RTV: " << hr << std::endl;
+		assert(SUCCEEDED(hr));
 	}
 	{
 		HRESULT hr = m_device->CreateShaderResourceView(t_objectID.Get(), &objectIDSRVDesc, &srv_objectID);
-		if (FAILED(hr))
-			std::cerr << "Error Creating ObjectID SRV: " << hr << std::endl;
+		assert(SUCCEEDED(hr));
 	}
 
 	//viewport
@@ -448,4 +445,9 @@ void GBuffer::createOrResize()
 const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV() const
 {
 	return srv_albedo;
+}
+
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getObjectIDSRV() const
+{
+	return srv_objectID;
 }

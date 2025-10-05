@@ -9,6 +9,12 @@
 #include "shaderInfo.hpp"
 
 using namespace Microsoft::WRL;
+enum ShaderType
+{
+	COMPUTE,
+	VERTEX,
+	PIXEL
+};
 
 class ShaderManager
 {
@@ -17,6 +23,7 @@ public:
 
 	bool LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "VS");
 	bool LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "PS");
+	bool LoadComputeShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "CS");
 
 	ID3D11VertexShader* getVertexShader(const std::string& name);
 	ID3D11PixelShader* getPixelShader(const std::string& name);
@@ -27,7 +34,7 @@ public:
 
 	void recompileAll();
 
-	bool compileShader(ShaderInfo& info, bool isVertexShader);
+	bool compileShader(ShaderInfo& info, ShaderType shaderType);
 	std::filesystem::file_time_type getFileModifiedTime(const std::wstring& filename);
 
 private:

@@ -7,6 +7,7 @@
 #include "camera.hpp"
 #include "GBuffer.hpp"
 #include "FSQuad.hpp"
+#include "objectPicker.hpp"
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -42,4 +43,5 @@ private:
 	UIManager* m_uiManager;
 	GBuffer* m_gBuffer;
 	FSQuad* m_fsquad;
+	ObjectPicker* m_objectPicker;
 };
