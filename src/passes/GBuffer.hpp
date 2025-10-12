@@ -15,7 +15,7 @@ public:
 	~GBuffer();
 
 	void draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime);
-	void update(const glm::mat4& view, const glm::mat4& projection, int objectID);
+	void update(const glm::mat4& view, const glm::mat4& projection, int objectID, Primitive& prim);
 	void createOrResize();
 
 	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;

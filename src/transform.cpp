@@ -11,7 +11,8 @@ void Transform::updateMatrix()
 
 	// Create transformation matrix: Scale -> Rotate -> Translate
 	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
-	glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0, 0, 1)) *
+	glm::mat4 rotationMatrix =
+		glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0, 0, 1)) *
 		glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), glm::vec3(0, 1, 0)) *
 		glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), glm::vec3(1, 0, 0));
 	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);

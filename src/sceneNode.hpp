@@ -24,10 +24,4 @@ public:
 
 	void addChild(std::unique_ptr<SceneNode>&& child);
 	void removeChild(SceneNode* child);
-
-	glm::mat4 getWorldMatrix() const;
-	void markDirty();
-	void updateTransform();
-
-	std::pair<glm::vec3, glm::vec3> getWorldBounds() const;
 };
