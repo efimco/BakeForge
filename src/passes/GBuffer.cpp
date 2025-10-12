@@ -142,8 +142,9 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 	static const UINT offset = 0;
 	for (int i = 0; i < SceneManager::getPrimitiveCount(); i++)
 	{
+		auto objectID = i;
 		auto& prim = SceneManager::getPrimitives()[i];
-		update(view, projection, i);
+		update(view, projection, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		auto& material = prim.getMaterial();
@@ -161,18 +162,19 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, Primitive& prim)
 {
-	glm::mat4 model = glm::rotate(glm::mat4(1.0f), rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
-	glm::mat4 mvp = projection * view * model;
+	glm::vec3 rotation = glm::vec3(0, rotationY, 0);
+	prim.transform.rotate(rotation);
+	glm::mat4 mvp = projection * view * prim.transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
-		cbData->model = glm::transpose(model);
+		cbData->inverseTransposedModel = glm::transpose(prim.transform.getWorldMatrix());
+		cbData->model = glm::transpose(prim.transform.getWorldMatrix());
 		cbData->objectID = objectID + 1;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}

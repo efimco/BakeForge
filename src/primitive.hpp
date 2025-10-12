@@ -4,10 +4,11 @@
 #include <d3d11.h>
 #include "primitiveData.hpp"
 #include "material.hpp"
+#include "sceneNode.hpp"
 
 using namespace Microsoft::WRL;
 
-class Primitive
+class Primitive : public SceneNode
 {
 public:
 	explicit Primitive(ComPtr<ID3D11Device> device);

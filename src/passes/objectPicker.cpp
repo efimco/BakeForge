@@ -84,7 +84,6 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		HRESULT hr = m_context->Map(m_stagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
 		assert(SUCCEEDED(hr));
 		readBackID = *reinterpret_cast<uint32_t*>(mapped.pData);
-		std::cout << readBackID << std::endl;
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
 	}
 }
