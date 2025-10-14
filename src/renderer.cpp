@@ -29,8 +29,8 @@ Renderer::Renderer(const HWND& hwnd)
 
 
 	m_prevTime = std::chrono::system_clock::now();
-
-	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice());
+	m_scene = new SceneNode();
+	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 	m_gBuffer = new GBuffer(m_device->getDevice(), m_device->getContext());
 	m_fsquad = new FSQuad(m_device->getDevice(), m_device->getContext());

@@ -76,7 +76,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 			DispatchMessage(&message);
 		}
 		if (running)
+		{
 			renderer.draw();
+		}
+
 	}
 	return 0;
 }

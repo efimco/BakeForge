@@ -99,12 +99,7 @@ GBuffer::~GBuffer()
 	delete m_shaderManager;
 }
 
-static float rotationY = 0.0f;
-void updateRotation(double deltaTime)
-{
-	rotationY += static_cast<float>(deltaTime);
-}
-void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_deltaTime)
+void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime)
 {
 
 #ifdef _DEBUG
@@ -115,7 +110,6 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 		annotation->BeginEvent(L"GBuffer Draw");
 	}
 #endif
-	updateRotation(m_deltaTime);
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -144,7 +138,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 	{
 		auto objectID = i;
 		auto& prim = SceneManager::getPrimitives()[i];
-		update(view, projection, objectID, prim);
+		update(view, projection, objectID, prim, deltaTime);
 		m_context->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		auto& material = prim.getMaterial();
@@ -162,9 +156,9 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double m_
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, Primitive& prim)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, Primitive& prim, double deltaTime)
 {
-	glm::vec3 rotation = glm::vec3(0, rotationY, 0);
+	glm::vec3 rotation = glm::vec3(0, deltaTime * 100, 0);
 	prim.transform.rotate(rotation);
 	glm::mat4 mvp = projection * view * prim.transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;

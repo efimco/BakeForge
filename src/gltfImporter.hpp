@@ -2,14 +2,15 @@
 #include "texture.hpp"
 #include "primitiveData.hpp"
 #include "material.hpp"
+#include "sceneNode.hpp"
 #include <tiny_gltf.h>
 #include <string>
 #include <vector>
 
 #include <wrl.h>
 #include <d3d11.h>
-#include <memory>
 #include <unordered_map>
+
 
 
 using namespace Microsoft::WRL;
@@ -17,7 +18,7 @@ class GLTFModel
 {
 public:
 	std::string path;
-	GLTFModel(std::string path, ComPtr<ID3D11Device>& device);
+	GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene);
 	~GLTFModel();
 
 private:
@@ -31,8 +32,9 @@ private:
 	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies);
 	void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals);
 	void processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Tangents>& tangents);
+	Transform getTransformFromNode(size_t meshIndex, const tinygltf::Model& model);
 	ComPtr<ID3D11Device>& m_device;
-
+	SceneNode* m_scene;
 	std::unordered_map<uint32_t, uint32_t> m_textureIndex;
 	std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_imageIndex;
 	std::unordered_map<uint32_t, std::shared_ptr<Material>> m_materialIndex;
