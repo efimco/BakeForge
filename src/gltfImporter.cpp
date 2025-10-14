@@ -3,10 +3,14 @@
 #include "primitive.hpp"
 #include "sceneManager.hpp"
 #include "material.hpp"
-GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device) : m_device(device)
+#include <memory>
+#include <glm/gtc/type_ptr.hpp>
+
+GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene) : m_device(device)
 {
 	const tinygltf::Model model = readGlb(path);
 	processGlb(model);
+	m_scene = scene;
 }
 
 GLTFModel::~GLTFModel()
@@ -45,10 +49,10 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 {
 	std::cout << "Processing GLTF model with " << model.meshes.size() << " meshes" << std::endl;
 
-	for (const auto mesh : model.meshes)
+	for (const auto& mesh : model.meshes)
 	{
 
-		for (const auto gltfPrimitive : mesh.primitives)
+		for (const auto& gltfPrimitive : mesh.primitives)
 		{
 			std::vector<Position> posBuffer;
 			std::vector<TexCoords> texCoordsBuffer;
@@ -76,11 +80,13 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				interData.tangents = tangentBuffer[i];
 				vertexData.push_back(interData);
 			}
-
+			size_t meshIndex = &mesh - &model.meshes[0];
+			Transform transform = getTransformFromNode(meshIndex, model);
 			Primitive primitive(m_device);
 			primitive.setVertexData(std::move(vertexData));
 			primitive.setIndexData(std::move(indices));
 			primitive.setMaterial(m_materialIndex[gltfPrimitive.material]);
+			primitive.transform = transform;
 			SceneManager::addPrimitive(std::move(primitive));
 
 			std::cout << "Added primitive. Total primitives now: " << SceneManager::getPrimitiveCount() << std::endl;
@@ -274,6 +280,37 @@ void GLTFModel::processTangentAttribute(const tinygltf::Model& model, const tiny
 		tangents.push_back(tangent);
 	}
 }
+
+Transform GLTFModel::getTransformFromNode(size_t meshIndex, const tinygltf::Model& model)
+{
+	Transform transform;
+	transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+	if (model.nodes[meshIndex].translation.size() != 0)
+	{
+		transform.position = glm::vec3(model.nodes[meshIndex].translation[0], model.nodes[meshIndex].translation[1],
+			model.nodes[meshIndex].translation[2]);
+	}
+
+	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+	if (model.nodes[meshIndex].rotation.size() != 0)
+	{
+		glm::quat quatRot(static_cast<float>(model.nodes[meshIndex].rotation[3]),
+			static_cast<float>(model.nodes[meshIndex].rotation[0]),
+			static_cast<float>(model.nodes[meshIndex].rotation[1]),
+			static_cast<float>(model.nodes[meshIndex].rotation[2]));
+		transform.rotation = glm::eulerAngles(quatRot);
+	}
+
+	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
+	if (model.nodes[meshIndex].scale.size() != 0)
+	{
+		transform.scale = glm::vec3(model.nodes[meshIndex].scale[0], model.nodes[meshIndex].scale[1], model.nodes[meshIndex].scale[2]);
+	}
+	transform.matrix = glm::mat4(1.0f);
+	transform.updateMatrix();
+	return transform;
+}
+
 
 void GLTFModel::processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies)
 {
