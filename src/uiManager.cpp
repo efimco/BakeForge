@@ -6,6 +6,8 @@
 #include <iostream>
 #include "inputEventsHandler.hpp"
 
+const float TEXT_BASE_WIDTH = 1;
+
 UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const ComPtr<ID3D11DeviceContext>& deviceContext,
 	const HWND& hwnd) :
@@ -69,7 +71,7 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, SceneNode* scene)
 {
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
@@ -82,6 +84,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	simpleWindow();
 	showViewport(srv);
 	showGBufferImage(gbuffer);
+	drawSceneGraph(scene);
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -190,6 +193,50 @@ void UIManager::processInputEvents()
 {
 	InputEvents::setMouseInViewport(m_isMouseInViewport);
 	InputEvents::setMouseClicked(m_io->MouseClicked);
+}
+
+void UIManager::drawSceneGraph(SceneNode* scene)
+{
+	ImGui::Begin("Scene Graph");
+	static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_BordersOuterH |
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_NoBordersInBody;
+	if (ImGui::BeginTable("SceneGraph", 1, table_flags))
+	{
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+		ImGui::TableHeadersRow();
+		drawNode(scene);
+		ImGui::EndTable();
+	}
+	ImGui::End();
+}
+
+void UIManager::drawNode(SceneNode* node)
+{
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	const bool isFolder = (node->children.size() > 0);
+	if (isFolder)
+	{
+		bool open = ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_None);
+		if (open)
+		{
+			for (auto& child : node->children)
+			{
+				drawNode(child);
+			}
+			ImGui::TreePop();
+		}
+	}
+	else
+	{
+		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf |
+			ImGuiTreeNodeFlags_Bullet |
+			ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		ImGui::TableNextColumn();
+	}
 }
 
 

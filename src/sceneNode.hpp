@@ -9,7 +9,7 @@ class SceneNode
 {
 public:
 	Transform transform;
-	std::vector<std::unique_ptr<SceneNode>> children;
+	std::vector<SceneNode*> children;
 	SceneNode* parent = nullptr;
 	bool visible = true;
 	bool dirty = false;
@@ -22,6 +22,6 @@ public:
 	SceneNode(SceneNode&& other) noexcept;
 	virtual ~SceneNode();
 
-	void addChild(std::unique_ptr<SceneNode>&& child);
+	void addChild(SceneNode* child);
 	void removeChild(SceneNode* child);
 };

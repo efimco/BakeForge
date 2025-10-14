@@ -75,7 +75,7 @@ void Renderer::draw()
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer);
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(1, 0);
 }

@@ -6,11 +6,14 @@
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 
+static std::unordered_map<std::string, uint32_t> names;
+
 GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene) : m_device(device)
 {
 	const tinygltf::Model model = readGlb(path);
-	processGlb(model);
 	m_scene = scene;
+	processGlb(model);
+
 }
 
 GLTFModel::~GLTFModel()
@@ -82,12 +85,31 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			}
 			size_t meshIndex = &mesh - &model.meshes[0];
 			Transform transform = getTransformFromNode(meshIndex, model);
-			Primitive primitive(m_device);
-			primitive.setVertexData(std::move(vertexData));
-			primitive.setIndexData(std::move(indices));
-			primitive.setMaterial(m_materialIndex[gltfPrimitive.material]);
-			primitive.transform = transform;
-			SceneManager::addPrimitive(std::move(primitive));
+			std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
+			primitive->setVertexData(std::move(vertexData));
+			primitive->setIndexData(std::move(indices));
+			primitive->setMaterial(m_materialIndex[gltfPrimitive.material]);
+			primitive->transform = transform;
+			if (names.find(model.nodes[meshIndex].name) == names.end())
+			{
+				names[model.nodes[meshIndex].name] = 0;
+			}
+			else
+			{
+				names[model.nodes[meshIndex].name]++;
+			}
+
+			if (names[model.nodes[meshIndex].name] == 0)
+			{
+				primitive->name = model.nodes[meshIndex].name;
+			}
+			else
+			{
+				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(names[model.nodes[meshIndex].name]);
+			}
+
+			std::unique_ptr<Primitive>& rPrim = SceneManager::addPrimitive(std::move(primitive));
+			m_scene->addChild(rPrim.get());
 
 			std::cout << "Added primitive. Total primitives now: " << SceneManager::getPrimitiveCount() << std::endl;
 		}

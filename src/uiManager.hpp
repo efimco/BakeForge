@@ -13,7 +13,7 @@ public:
 		const HWND& hwnd);
 	~UIManager();
 
-	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer);
+	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, SceneNode* scene);
 	uint32_t* getMousePos();
 
 private:
@@ -28,5 +28,7 @@ private:
 	void showInvisibleDockWindow();
 	void showGBufferImage(const GBuffer& gbuffer);
 	void processInputEvents();
+	void drawSceneGraph(SceneNode* scene);
+	void drawNode(SceneNode* node);
 
 };

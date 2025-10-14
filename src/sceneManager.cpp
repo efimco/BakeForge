@@ -1,15 +1,16 @@
 #include "sceneManager.hpp"
 
-static std::vector<Primitive> primitives;
+static std::vector<std::unique_ptr<Primitive>> primitives;
 static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // path + actual texture
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 
-void SceneManager::addPrimitive(Primitive&& primitive)
+std::unique_ptr<Primitive>& SceneManager::addPrimitive(std::unique_ptr<Primitive>&& primitive)
 {
 	primitives.push_back(std::move(primitive));
-};
+	return primitives.back();
+}
 
-std::vector<Primitive>& SceneManager::getPrimitives()
+std::vector<std::unique_ptr<Primitive>>& SceneManager::getPrimitives()
 {
 	return primitives;
 }
