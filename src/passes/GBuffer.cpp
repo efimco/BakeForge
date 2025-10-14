@@ -137,13 +137,13 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 	for (int i = 0; i < SceneManager::getPrimitiveCount(); i++)
 	{
 		auto objectID = i;
-		auto& prim = SceneManager::getPrimitives()[i];
+		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
 		update(view, projection, objectID, prim, deltaTime);
-		m_context->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
-		m_context->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-		auto& material = prim.getMaterial();
+		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
+		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		auto& material = prim->getMaterial();
 		m_context->PSSetShaderResources(0, 1, material->albedo->srv.GetAddressOf());
-		m_context->DrawIndexed(static_cast<UINT>(prim.getIndexData().size()), 0, 0);
+		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
 	ID3D11RenderTargetView* nullRTVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
 	m_context->OMSetRenderTargets(5, nullRTVs, nullptr);
@@ -156,19 +156,19 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, Primitive& prim, double deltaTime)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime)
 {
 	glm::vec3 rotation = glm::vec3(0, deltaTime * 100, 0);
-	prim.transform.rotate(rotation);
-	glm::mat4 mvp = projection * view * prim.transform.getWorldMatrix();
+	prim->transform.rotate(rotation);
+	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		cbData->inverseTransposedModel = glm::transpose(prim.transform.getWorldMatrix());
-		cbData->model = glm::transpose(prim.transform.getWorldMatrix());
+		cbData->inverseTransposedModel = glm::transpose(prim->transform.getWorldMatrix());
+		cbData->model = glm::transpose(prim->transform.getWorldMatrix());
 		cbData->objectID = objectID + 1;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}

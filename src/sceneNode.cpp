@@ -19,14 +19,14 @@ SceneNode::SceneNode() : parent(nullptr) {};
 
 SceneNode::~SceneNode() = default;
 
-void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
+void SceneNode::addChild(SceneNode* child)
 {
 	if (child->parent)
 	{
-		child->parent->removeChild(child.get());
+		child->parent->removeChild(child);
 	}
 	child->parent = this;
-	children.push_back(std::move(child));
+	children.push_back(child);
 }
 
 void SceneNode::removeChild(SceneNode* child)
@@ -34,11 +34,10 @@ void SceneNode::removeChild(SceneNode* child)
 	if (child->parent == this)
 	{
 		child->parent = nullptr;
-		auto isDesiredChild = [child](const std::unique_ptr<SceneNode>& ch) {return ch.get() == child;};
-		auto it = std::remove_if(children.begin(), children.end(), isDesiredChild);
+		auto it = std::find(children.begin(), children.end(), child);
 		if (it != children.end())
 		{
-			children.erase(it, children.end());
+			children.erase(it);
 		}
 		else
 		{
