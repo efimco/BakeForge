@@ -18,7 +18,7 @@ public:
 
 private:
 	const ComPtr<ID3D11Device>& m_device;
-	const ComPtr<ID3D11DeviceContext>& m_deviceContext;
+	const ComPtr<ID3D11DeviceContext>& m_context;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
 	uint32_t m_mousePos[2];

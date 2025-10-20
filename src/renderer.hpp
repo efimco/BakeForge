@@ -8,6 +8,7 @@
 #include "GBuffer.hpp"
 #include "FSQuad.hpp"
 #include "objectPicker.hpp"
+#include "ZPrePass.hpp"
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -37,11 +38,12 @@ private:
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
 
-    std::unique_ptr<DXDevice> m_device;
-    std::unique_ptr<ShaderManager> m_shaderManager;
-    std::unique_ptr<UIManager> m_uiManager;
-    std::unique_ptr<ObjectPicker> m_objectPicker;
-    std::unique_ptr<Camera> m_camera;
-    std::unique_ptr<GBuffer> m_gBuffer;
-    std::unique_ptr<FSQuad> m_fsquad;
+	std::unique_ptr<DXDevice> m_device;
+	std::unique_ptr<ShaderManager> m_shaderManager;
+	std::unique_ptr<UIManager> m_uiManager;
+	std::unique_ptr<ObjectPicker> m_objectPicker;
+	std::unique_ptr<Camera> m_camera;
+	std::unique_ptr<GBuffer> m_gBuffer;
+	std::unique_ptr<ZPrePass> m_zPrePass;
+	std::unique_ptr<FSQuad> m_fsquad;
 };

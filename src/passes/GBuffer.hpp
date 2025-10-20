@@ -14,7 +14,7 @@ public:
 	GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
 	~GBuffer();
 
-	void draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime);
+	void draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime, ComPtr<ID3D11DepthStencilView>& dsv);
 	void update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime);
 	void createOrResize();
 
@@ -28,19 +28,16 @@ private:
 	ComPtr<ID3D11Texture2D> t_metallicRoughness;
 	ComPtr<ID3D11Texture2D> t_normal;
 	ComPtr<ID3D11Texture2D> t_position;
-	ComPtr<ID3D11Texture2D> t_depth;
 	ComPtr<ID3D11Texture2D> t_objectID;
 
 	ComPtr<ID3D11RenderTargetView> rtv_albedo;
 	ComPtr<ID3D11RenderTargetView> rtv_metallicRoughness;
-	ComPtr<ID3D11DepthStencilView> dsv;
 	ComPtr<ID3D11RenderTargetView> rtv_normal;
 	ComPtr<ID3D11RenderTargetView> rtv_position;
 	ComPtr<ID3D11RenderTargetView> rtv_objectID;
 
 	ComPtr<ID3D11ShaderResourceView> srv_albedo;
 	ComPtr<ID3D11ShaderResourceView> srv_metallicRoughness;
-	ComPtr<ID3D11ShaderResourceView> srv_depth;
 	ComPtr<ID3D11ShaderResourceView> srv_normal;
 	ComPtr<ID3D11ShaderResourceView> srv_position;
 	ComPtr<ID3D11ShaderResourceView> srv_objectID;
