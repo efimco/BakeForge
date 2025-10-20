@@ -31,13 +31,14 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 	texDesc.SampleDesc.Count = 1;
 	texDesc.SampleDesc.Quality = 0;
 	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	texDesc.MiscFlags = 0;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	texDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
 	D3D11_SUBRESOURCE_DATA subresData;
 	subresData.pSysMem = image.image.data();
 	subresData.SysMemPitch = image.width * image.component;
 	subresData.SysMemSlicePitch = 0;
+	
 
 	{
 		HRESULT hr = device->CreateTexture2D(&texDesc, &subresData, &textureResource);
@@ -52,6 +53,7 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
 	{
 		HRESULT hr = device->CreateShaderResourceView(textureResource.Get(), &srvDesc, &srv);
 		if (FAILED(hr))
@@ -59,4 +61,7 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 			std::cerr << "Failed to create shader resource view = " << hr << std::endl;
 		}
 	}
+	ComPtr<ID3D11DeviceContext> context;
+	device->GetImmediateContext(&context);
+	context->GenerateMips(srv.Get());
 }

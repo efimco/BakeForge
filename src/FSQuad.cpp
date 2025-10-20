@@ -11,7 +11,7 @@ FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceCon
 	m_context(_context)
 {
 
-	m_shaderManager = new ShaderManager(m_device);
+	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	m_shaderManager->LoadPixelShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
 

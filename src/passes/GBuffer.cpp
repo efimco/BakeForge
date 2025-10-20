@@ -48,7 +48,7 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 
 	createOrResize();
 
-	m_shaderManager = new ShaderManager(device);
+	m_shaderManager = std::make_unique<ShaderManager>(device);
 
 	m_shaderManager->LoadPixelShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "VS");
@@ -69,11 +69,11 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
 	samplerDesc.MinLOD = -FLT_MAX;
 	samplerDesc.MaxLOD = FLT_MAX;
 	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.MaxAnisotropy = 16;
 
 	{
 		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
@@ -95,12 +95,7 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	}
 }
 
-GBuffer::~GBuffer()
-{
-	delete m_shaderManager;
-}
-
-void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime, ComPtr<ID3D11DepthStencilView>& dsv)
+void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID3D11DepthStencilView>& dsv)
 {
 
 	DEBUG_PASS_START(L"GBuffer Draw");
@@ -130,7 +125,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 	{
 		auto objectID = i;
 		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
-		update(view, projection, objectID, prim, deltaTime);
+		update(view, projection, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		auto& material = prim->getMaterial();
@@ -143,7 +138,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim)
 {
 	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -186,7 +181,7 @@ void GBuffer::createOrResize()
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	albedoDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	albedoDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	albedoDesc.Height = AppConfig::getViewportHeight();
 	albedoDesc.Width = AppConfig::getViewportWidth();
 	albedoDesc.MipLevels = 1;
@@ -222,7 +217,7 @@ void GBuffer::createOrResize()
 	metallicRoughnessDesc.ArraySize = 1;
 	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	metallicRoughnessDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	metallicRoughnessDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
+	metallicRoughnessDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
 	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
 	metallicRoughnessDesc.MipLevels = 1;
@@ -259,7 +254,7 @@ void GBuffer::createOrResize()
 	normalDesc.ArraySize = 1;
 	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	normalDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	normalDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	normalDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
 	normalDesc.Height = AppConfig::getViewportHeight();
 	normalDesc.Width = AppConfig::getViewportWidth();
 	normalDesc.MipLevels = 1;
@@ -331,7 +326,7 @@ void GBuffer::createOrResize()
 	objectIDDesc.ArraySize = 1;
 	objectIDDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	objectIDDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	objectIDDesc.Format = DXGI_FORMAT_R16_UINT;
+	objectIDDesc.Format = DXGI_FORMAT_R32_UINT;
 	objectIDDesc.Height = AppConfig::getViewportHeight();
 	objectIDDesc.Width = AppConfig::getViewportWidth();
 	objectIDDesc.MipLevels = 1;

@@ -55,6 +55,7 @@ void Renderer::draw()
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
+	AppConfig::setDeltaTime(m_deltaTime.count());
 
 	m_camera->processMovementControls();
 	m_view = m_camera->getViewMatrix();
@@ -66,8 +67,9 @@ void Renderer::draw()
 	}
 
 	// --- GPU Work ---
+
 	m_zPrePass->draw(m_view, m_projection);
-	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count(), m_zPrePass->getDSV());
+	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
 	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
@@ -78,7 +80,7 @@ void Renderer::draw()
 
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
-	m_device->getSwapChain()->Present(1, 0);
+	m_device->getSwapChain()->Present(0, 0);
 }
 
 

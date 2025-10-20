@@ -12,10 +12,10 @@ class GBuffer
 {
 public:
 	GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
-	~GBuffer();
+	~GBuffer() = default;
 
-	void draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime, ComPtr<ID3D11DepthStencilView>& dsv);
-	void update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime);
+	void draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID3D11DepthStencilView>& dsv);
+	void update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim);
 	void createOrResize();
 
 	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;
@@ -54,5 +54,5 @@ private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
 
-	ShaderManager* m_shaderManager;
+	std::unique_ptr<ShaderManager> m_shaderManager;
 };
