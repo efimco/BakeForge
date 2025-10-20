@@ -88,7 +88,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		readBackID = *reinterpret_cast<uint32_t*>(mapped.pData);
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
 	}
-	if (InputEvents::getLMouseClicked())
+	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON))
 	{
 		std::cout << "Picked ID: " << readBackID << std::endl;
 		if (readBackID == 0)

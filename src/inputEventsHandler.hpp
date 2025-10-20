@@ -1,13 +1,15 @@
-
+#pragma once
+enum MouseButtons
+{
+	LEFT_BUTTON,
+	MIDDLE_BUTTON,
+	RIGHT_BUTTON
+};
 
 namespace InputEvents
 {
 	bool getMouseInViewport();
 	void setMouseInViewport(bool state);
-	void setLMouseClicked(bool state);
-	bool getLMouseClicked();
-	void setMMouseClicked(bool state);
-	bool getMMouseClicked();
-	void setRMouseClicked(bool state);
-	bool getRMouseClicked();
+	bool isMouseClicked(MouseButtons button);
+	void setMouseClicked(MouseButtons button, bool state);
 }

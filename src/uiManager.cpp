@@ -193,10 +193,10 @@ void UIManager::showGBufferImage(const GBuffer& gbuffer)
 
 void UIManager::processInputEvents()
 {
+	InputEvents::setMouseClicked(MouseButtons::LEFT_BUTTON, m_io->MouseClicked[0]);
+	InputEvents::setMouseClicked(MouseButtons::MIDDLE_BUTTON, m_io->MouseClicked[2]);
+	InputEvents::setMouseClicked(MouseButtons::RIGHT_BUTTON, m_io->MouseClicked[1]);
 	InputEvents::setMouseInViewport(m_isMouseInViewport);
-	InputEvents::setLMouseClicked(m_io->MouseClicked[0]);
-	InputEvents::setMMouseClicked(m_io->MouseClicked[2]);
-	InputEvents::setRMouseClicked(m_io->MouseClicked[1]);
 }
 
 void UIManager::drawSceneGraph(SceneNode* scene)
