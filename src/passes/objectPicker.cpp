@@ -63,7 +63,6 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		cb->mousePosY = mousePos[1];
 		cb->padding[0] = 0;
 		cb->padding[0] = 0;
-		std::cout << "Mouse X: " << cb->mousePosX << " Mouse Y: " << cb->mousePosY << std::endl;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 

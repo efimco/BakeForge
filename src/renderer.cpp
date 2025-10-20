@@ -14,13 +14,13 @@
 
 Renderer::Renderer(const HWND& hwnd)
 {
-	m_device = new DXDevice(hwnd);
-	m_shaderManager = new ShaderManager(m_device->getDevice());
-	m_uiManager = new UIManager(m_device->getDevice(), m_device->getContext(), hwnd);
-	m_objectPicker = new ObjectPicker(m_device->getDevice(), m_device->getContext());
+	m_device = std::make_unique<DXDevice>(hwnd);
+	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
+	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
+	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
-	m_camera = new Camera(cameraPosition);
+	m_camera = std::make_unique<Camera>(cameraPosition);
 	// Initialize camera matrices
 
 	m_view = m_camera->getViewMatrix();
@@ -32,19 +32,11 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene = new SceneNode();
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
-	m_gBuffer = new GBuffer(m_device->getDevice(), m_device->getContext());
-	m_fsquad = new FSQuad(m_device->getDevice(), m_device->getContext());
+	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
+	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	resize();
 }
 
-Renderer::~Renderer()
-{
-	delete m_uiManager;
-	delete m_gBuffer;
-	delete m_camera;
-	delete m_shaderManager;
-	delete m_device;
-}
 
 
 void Renderer::draw()
@@ -56,27 +48,31 @@ void Renderer::draw()
 		m_fsquad->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
+
+	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
 
+	m_camera->processMovementControls();
+	m_view = m_camera->getViewMatrix();
 
-	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count());
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
 	{
 		m_shaderManager->checkForChanges();
 	}
+
+	// --- GPU Work ---
+	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count());
 	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
-	m_device->getContext()->RSSetState(m_rasterizerState.Get());
-	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
+	m_device->getContext()->RSSetState(m_rasterizerState.Get());
+	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
 	m_device->getSwapChain()->Present(1, 0);
 }
 

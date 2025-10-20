@@ -160,7 +160,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime)
 {
 	glm::vec3 rotation = glm::vec3(0, deltaTime * 100, 0);
-	prim->transform.rotate(rotation);
+	// prim->transform.rotate(rotation);
 	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);

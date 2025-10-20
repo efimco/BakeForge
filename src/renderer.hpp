@@ -14,7 +14,7 @@ class Renderer
 {
 public:
 	Renderer(const HWND& hwnd);
-	~Renderer();
+	~Renderer() = default;
 	Renderer(const Renderer& other) = delete;
 
 	void draw();
@@ -37,12 +37,11 @@ private:
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
 
-	Camera* m_camera;
-
-	DXDevice* m_device;
-	ShaderManager* m_shaderManager;
-	UIManager* m_uiManager;
-	GBuffer* m_gBuffer;
-	FSQuad* m_fsquad;
-	ObjectPicker* m_objectPicker;
+    std::unique_ptr<DXDevice> m_device;
+    std::unique_ptr<ShaderManager> m_shaderManager;
+    std::unique_ptr<UIManager> m_uiManager;
+    std::unique_ptr<ObjectPicker> m_objectPicker;
+    std::unique_ptr<Camera> m_camera;
+    std::unique_ptr<GBuffer> m_gBuffer;
+    std::unique_ptr<FSQuad> m_fsquad;
 };
