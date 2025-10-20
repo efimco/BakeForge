@@ -1,8 +1,10 @@
 #include "sceneManager.hpp"
-
+#include "iostream"
 static std::vector<std::unique_ptr<Primitive>> primitives;
 static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // path + actual texture
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
+
+static std::unordered_map<Primitive*, bool> selectedPrimitives;
 
 std::unique_ptr<Primitive>& SceneManager::addPrimitive(std::unique_ptr<Primitive>&& primitive)
 {
@@ -50,3 +52,48 @@ void SceneManager::addMaterial(std::shared_ptr<Material>&& material)
 	materials[material->name] = std::move(material);
 }
 
+void SceneManager::selectPrimitive(Primitive* primitive)
+{
+	const auto& it = selectedPrimitives.find(primitive);
+	if (it == selectedPrimitives.end())
+	{
+		selectedPrimitives[primitive] = true;
+	}
+}
+
+void SceneManager::selectPrimitive(uint32_t id)
+{
+	const auto& it = selectedPrimitives.find(primitives[id].get());
+	if (it == selectedPrimitives.end())
+	{
+		selectedPrimitives[primitives[id].get()] = true;
+	}
+}
+
+void SceneManager::deselectPrimitive(Primitive* primitive)
+{
+	const auto& it = selectedPrimitives.find(primitive);
+	if (it != selectedPrimitives.end())
+	{
+		selectedPrimitives.erase(it);
+	}
+}
+
+void SceneManager::deselectPrimitive(uint32_t id)
+{
+	const auto& it = selectedPrimitives.find(primitives[id].get());
+	if (it != selectedPrimitives.end())
+	{
+		selectedPrimitives.erase(it);
+	}
+}
+
+bool SceneManager::isPrimitiveSelected(Primitive* primitive)
+{
+	return selectedPrimitives.find(primitive) != selectedPrimitives.end();
+}
+
+void SceneManager::clearSelectedPrimitives()
+{
+	selectedPrimitives.clear();
+}

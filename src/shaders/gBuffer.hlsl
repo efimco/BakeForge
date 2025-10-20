@@ -4,7 +4,8 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 inverseTransposedModel;
 	float4x4 model;
 	int objectID;
-	float3 _pad; // align to 16 bytes
+	bool isSelected;
+	float2 _pad; // align to 16 bytes
 };
 
 Texture2D textureSampler : register(t0);
@@ -51,7 +52,13 @@ PSOutput PS(VertexOutput input)
 	PSOutput output;
 	output.albedo = textureSampler.Sample(samplerState, input.texCoord);
 	if (output.albedo.a < 0.1f)
+	{
 		discard;
+	}
+	if (isSelected)
+	{
+		output.albedo = output.albedo * float4(1.0f, 0.5f, 0.5f, 1.0f);
+	}
 	output.metallicRoughness = float2(0.0f, 0.0f);
 	output.normal = float4(input.normal, 0.0f);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
