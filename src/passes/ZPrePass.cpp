@@ -45,7 +45,7 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 
 	createOrResize();
 
-	m_shaderManager = new ShaderManager(device);
+	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadVertexShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "VS");
 
 	{
@@ -70,11 +70,6 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 		assert(SUCCEEDED(hr));
 	}
 
-}
-
-ZPrePass::~ZPrePass()
-{
-	delete m_shaderManager;
 }
 
 void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)

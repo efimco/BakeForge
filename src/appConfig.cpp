@@ -7,6 +7,8 @@ static int viewportHeight = 2;
 static bool needsResize = false;
 static float clearColor[4] = { 0.4f, 0.6f, 0.9f, 1.0f };
 static bool isMinimized = false;
+static double deltaTime = 0.0;
+
 
 bool& AppConfig::getNeedsResize()
 {
@@ -46,6 +48,15 @@ void AppConfig::setWindowHeight(int height)
 void AppConfig::setWindowMinimized(bool _isMnimized)
 {
 	isMinimized = _isMnimized;
+}
+
+void AppConfig::setDeltaTime(double value)
+{
+	deltaTime = value;
+}
+double AppConfig::getDeltaTime()
+{
+	return deltaTime;
 }
 
 void AppConfig::setWindowWidth(int width)

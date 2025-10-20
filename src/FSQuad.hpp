@@ -2,7 +2,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include "shaderManager.hpp"
-
+#include <memory>
 using namespace Microsoft::WRL;
 
 
@@ -32,6 +32,6 @@ private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
 
-	ShaderManager* m_shaderManager;
+	std::unique_ptr<ShaderManager> m_shaderManager;
 
 };

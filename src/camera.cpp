@@ -2,6 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include "inputEventsHandler.hpp"
+#include "appConfig.hpp"
 
 static const float YAW = 0.0f;
 static const float PITCH = 0.0f;
@@ -36,11 +37,12 @@ void Camera::processMovementControls()
 	{
 		processOrbit();
 	}
+	updateCameraVectors();
 }
 
 glm::mat4 Camera::getViewMatrix()
 {
-	return glm::lookAtLH(position, orbitPivot, up);
+	return glm::lookAtLH(position, orbitPivot, WORLD_UP);
 }
 
 void Camera::processZoom()
@@ -52,7 +54,6 @@ void Camera::processZoom()
 	// Clamp to prevent getting too close or too far
 	float newDistance = glm::clamp(distanceToOrbitPivot / zoomFactor, 0.01f, 1000.0f);
 	distanceToOrbitPivot = newDistance;
-	updateCameraVectors();
 }
 
 void Camera::processPanning()
@@ -60,12 +61,12 @@ void Camera::processPanning()
 	float deltaX = 0;
 	float deltaY = 0;
 	InputEvents::getMouseDelta(deltaX, deltaY);
-	// Blender-style panning: consistent speed regardless of distance
-	float panSpeed = distanceToOrbitPivot * 0.002f; // More consistent scaling
-	glm::vec3 rightMove = -right * deltaX * panSpeed;
-	glm::vec3 upMove = up * deltaY * panSpeed;
+
+	float panSpeed = 0.001f; // Adjust this factor for desired sensitivity
+	glm::vec3 rightMove = -right * deltaX * distanceToOrbitPivot * panSpeed;
+	glm::vec3 upMove = up * deltaY * distanceToOrbitPivot * panSpeed;
+
 	orbitPivot += rightMove + upMove;
-	updateCameraVectors();
 }
 
 void Camera::updateCameraVectors()
@@ -79,6 +80,22 @@ void Camera::updateCameraVectors()
 	front = glm::normalize(orbitPivot - position);
 	right = glm::normalize(glm::cross(WORLD_UP, front));
 	up = glm::normalize(glm::cross(front, right));
+}
+
+void Camera::processOrbit()
+{
+	float deltaX = 0;
+	float deltaY = 0;
+	InputEvents::getMouseDelta(deltaX, deltaY);
+	// Blender-style orbit: consistent angular speed
+	float orbitSensitivity = 0.5f; // Fixed sensitivity like Blender
+	yaw += deltaX * orbitSensitivity;
+	pitch += deltaY * orbitSensitivity;
+
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
 }
 
 // void Camera::focusOn(Primitive* primitive)
@@ -95,22 +112,4 @@ void Camera::updateCameraVectors()
 
 // 	updateCameraVectors();
 // }
-
-void Camera::processOrbit()
-{
-	float deltaX = 0;
-	float deltaY = 0;
-	InputEvents::getMouseDelta(deltaX, deltaY);
-	// Blender-style orbit: consistent angular speed
-	float orbitSensitivity = 0.5f; // Fixed sensitivity like Blender
-	yaw += deltaX * orbitSensitivity;
-	pitch += deltaY * orbitSensitivity;
-
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	updateCameraVectors();
-}
 

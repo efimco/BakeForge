@@ -12,7 +12,7 @@ class ZPrePass
 {
 public:
 	ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
-	~ZPrePass();
+	~ZPrePass() = default;
 
 	void draw(const glm::mat4& view, const glm::mat4& projection);
 	ComPtr<ID3D11DepthStencilView>& getDSV();
@@ -37,5 +37,5 @@ private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
 
-	ShaderManager* m_shaderManager;
+	std::unique_ptr<ShaderManager> m_shaderManager;
 };

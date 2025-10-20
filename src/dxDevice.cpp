@@ -55,7 +55,7 @@ DXDevice::DXDevice(const HWND &hWindow)
 	swapChainDesc.BufferCount = 2;
 	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.Flags = 0;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	swapChainDesc.OutputWindow = hWindow;
 	swapChainDesc.Windowed = true;
 	HRESULT hr = dxgiFactory->CreateSwapChain(m_d3dDevice.Get(), &swapChainDesc, &m_dxgiSwapChain);

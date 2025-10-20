@@ -4,7 +4,7 @@
 #include <wrl.h>
 #include <glm/glm.hpp>
 #include "shaderManager.hpp"
-
+#include <memory>
 using namespace Microsoft::WRL;
 
 
@@ -28,6 +28,6 @@ private:
 	ComPtr<ID3D11Buffer> m_structuredBuffer;
 	ComPtr<ID3D11Buffer> m_stagingBuffer;
 	ComPtr<ID3D11UnorderedAccessView> m_uav;
-	ShaderManager* m_shaderManager;
+	std::unique_ptr<ShaderManager> m_shaderManager;
 
 };
