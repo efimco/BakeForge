@@ -1,6 +1,7 @@
 #include "camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include "inputEventsHandler.hpp"
 
 static const float YAW = 0.0f;
 static const float PITCH = 0.0f;
@@ -24,7 +25,17 @@ Camera::Camera(glm::vec3 pos)
 
 void Camera::processMovementControls()
 {
- return;
+	if (!InputEvents::getMouseInViewport())
+		return;
+	processZoom();
+	if (InputEvents::isMouseDown(MouseButtons::MIDDLE_BUTTON) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
+	{
+		processPanning();
+	}
+	if (InputEvents::isMouseDown(MouseButtons::MIDDLE_BUTTON) && !InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
+	{
+		processOrbit();
+	}
 }
 
 glm::mat4 Camera::getViewMatrix()
@@ -32,11 +43,11 @@ glm::mat4 Camera::getViewMatrix()
 	return glm::lookAtLH(position, orbitPivot, up);
 }
 
-void Camera::processZoom(float yOffset)
+void Camera::processZoom()
 {
 	// Blender-style zoom: more responsive and distance-independent
 	float zoomSpeed = 0.1f;
-	float zoomFactor = 1.0f + (yOffset * zoomSpeed);
+	float zoomFactor = 1.0f + (InputEvents::getMouseWheel() * zoomSpeed);
 
 	// Clamp to prevent getting too close or too far
 	float newDistance = glm::clamp(distanceToOrbitPivot / zoomFactor, 0.01f, 1000.0f);
@@ -44,12 +55,15 @@ void Camera::processZoom(float yOffset)
 	updateCameraVectors();
 }
 
-void Camera::processPanning(float xOffset, float yOffset, glm::vec2 winSize)
+void Camera::processPanning()
 {
+	float deltaX = 0;
+	float deltaY = 0;
+	InputEvents::getMouseDelta(deltaX, deltaY);
 	// Blender-style panning: consistent speed regardless of distance
 	float panSpeed = distanceToOrbitPivot * 0.002f; // More consistent scaling
-	glm::vec3 rightMove = -right * xOffset * panSpeed;
-	glm::vec3 upMove = up * -yOffset * panSpeed;
+	glm::vec3 rightMove = -right * deltaX * panSpeed;
+	glm::vec3 upMove = up * deltaY * panSpeed;
 	orbitPivot += rightMove + upMove;
 	updateCameraVectors();
 }
@@ -82,8 +96,11 @@ void Camera::updateCameraVectors()
 // 	updateCameraVectors();
 // }
 
-void Camera::processOrbit(float deltaX, float deltaY)
+void Camera::processOrbit()
 {
+	float deltaX = 0;
+	float deltaY = 0;
+	InputEvents::getMouseDelta(deltaX, deltaY);
 	// Blender-style orbit: consistent angular speed
 	float orbitSensitivity = 0.5f; // Fixed sensitivity like Blender
 	yaw += deltaX * orbitSensitivity;

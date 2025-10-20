@@ -196,7 +196,24 @@ void UIManager::processInputEvents()
 	InputEvents::setMouseClicked(MouseButtons::LEFT_BUTTON, m_io->MouseClicked[0]);
 	InputEvents::setMouseClicked(MouseButtons::MIDDLE_BUTTON, m_io->MouseClicked[2]);
 	InputEvents::setMouseClicked(MouseButtons::RIGHT_BUTTON, m_io->MouseClicked[1]);
+
+	InputEvents::setMouseDown(MouseButtons::LEFT_BUTTON, ImGui::IsMouseDown(ImGuiMouseButton_Left));
+	InputEvents::setMouseDown(MouseButtons::MIDDLE_BUTTON, ImGui::IsMouseDown(ImGuiMouseButton_Middle));
+	InputEvents::setMouseDown(MouseButtons::RIGHT_BUTTON, ImGui::IsMouseDown(ImGuiMouseButton_Right));
+
 	InputEvents::setMouseInViewport(m_isMouseInViewport);
+
+	InputEvents::setMouseDelta(m_io->MouseDelta.x, m_io->MouseDelta.y);
+	InputEvents::setMouseWheel(m_io->MouseWheel);
+
+	InputEvents::setKeyDown(KeyButtons::KEY_W, ImGui::IsKeyDown(ImGuiKey_W));
+	InputEvents::setKeyDown(KeyButtons::KEY_A, ImGui::IsKeyDown(ImGuiKey_A));
+	InputEvents::setKeyDown(KeyButtons::KEY_S, ImGui::IsKeyDown(ImGuiKey_S));
+	InputEvents::setKeyDown(KeyButtons::KEY_D, ImGui::IsKeyDown(ImGuiKey_D));
+	InputEvents::setKeyDown(KeyButtons::KEY_Q, ImGui::IsKeyDown(ImGuiKey_Q));
+	InputEvents::setKeyDown(KeyButtons::KEY_E, ImGui::IsKeyDown(ImGuiKey_E));
+	InputEvents::setKeyDown(KeyButtons::KEY_LSHIFT, ImGui::IsKeyDown(ImGuiKey_LeftShift));
+
 }
 
 void UIManager::drawSceneGraph(SceneNode* scene)
