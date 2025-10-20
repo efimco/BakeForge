@@ -26,13 +26,14 @@ public:
 	float distanceToOrbitPivot;
 
 	Camera(glm::vec3 pos);
-
+	void processMovementControls();
 	glm::mat4 getViewMatrix();
+	
+private:
 	void processZoom(float yOffset);
 	void processPanning(float xOffset, float yOffset, glm::vec2 winSize);
 	void processOrbit(float deltaX, float deltaY);
 	// void focusOn(Primitive* primitive);
 
-private:
-	void updateCameraVecotrs();
+	void updateCameraVectors();
 };

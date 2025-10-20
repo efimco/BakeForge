@@ -19,7 +19,12 @@ Camera::Camera(glm::vec3 pos)
 	increasedSpeed = defaultSpeed * 3;
 	orbitPivot = glm::vec3(0.0f); // point to orbit around
 	distanceToOrbitPivot = glm::length(position - orbitPivot);
-	updateCameraVecotrs();
+	updateCameraVectors();
+}
+
+void Camera::processMovementControls()
+{
+ return;
 }
 
 glm::mat4 Camera::getViewMatrix()
@@ -36,7 +41,7 @@ void Camera::processZoom(float yOffset)
 	// Clamp to prevent getting too close or too far
 	float newDistance = glm::clamp(distanceToOrbitPivot / zoomFactor, 0.01f, 1000.0f);
 	distanceToOrbitPivot = newDistance;
-	updateCameraVecotrs();
+	updateCameraVectors();
 }
 
 void Camera::processPanning(float xOffset, float yOffset, glm::vec2 winSize)
@@ -46,10 +51,10 @@ void Camera::processPanning(float xOffset, float yOffset, glm::vec2 winSize)
 	glm::vec3 rightMove = -right * xOffset * panSpeed;
 	glm::vec3 upMove = up * -yOffset * panSpeed;
 	orbitPivot += rightMove + upMove;
-	updateCameraVecotrs();
+	updateCameraVectors();
 }
 
-void Camera::updateCameraVecotrs()
+void Camera::updateCameraVectors()
 {
 	glm::vec3 offset;
 	offset.x = distanceToOrbitPivot * cos(glm::radians(pitch)) * sin(glm::radians(yaw));
@@ -74,7 +79,7 @@ void Camera::updateCameraVecotrs()
 // 	float distance = radius * 2.5f; // More breathing room like Blender
 // 	distanceToOrbitPivot = distance;
 
-// 	updateCameraVecotrs();
+// 	updateCameraVectors();
 // }
 
 void Camera::processOrbit(float deltaX, float deltaY)
@@ -89,5 +94,6 @@ void Camera::processOrbit(float deltaX, float deltaY)
 	if (pitch < -89.0f)
 		pitch = -89.0f;
 
-	updateCameraVecotrs();
+	updateCameraVectors();
 }
+
