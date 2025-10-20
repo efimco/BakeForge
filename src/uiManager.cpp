@@ -6,6 +6,7 @@
 #include <iostream>
 #include "inputEventsHandler.hpp"
 #include "sceneManager.hpp"
+#include "debugPassMacros.hpp"
 
 const float TEXT_BASE_WIDTH = 1;
 
@@ -14,7 +15,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const HWND& hwnd) :
 	m_device(device),
 	m_hwnd(hwnd),
-	m_deviceContext(deviceContext)
+	m_context(deviceContext)
 {
 	ImGui_ImplWin32_EnableDpiAwareness();
 	float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
@@ -44,7 +45,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX11_Init(m_device.Get(), m_deviceContext.Get());
+	ImGui_ImplDX11_Init(m_device.Get(), m_context.Get());
 
 	// сonfigure ImGui multi-viewport support to use modern flip model swap chains
 	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -74,6 +75,7 @@ UIManager::~UIManager()
 
 void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, SceneNode* scene)
 {
+	DEBUG_PASS_START(L"UIManager Draw");
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
@@ -96,6 +98,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
+	DEBUG_PASS_END();
 }
 
 uint32_t* UIManager::getMousePos()

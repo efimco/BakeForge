@@ -3,7 +3,7 @@
 #include <iostream>
 #include "sceneManager.hpp"
 #include <glm/gtc/matrix_transform.hpp>
-
+#include "debugPassMacros.hpp"
 
 struct alignas(16) ConstantBufferData
 {
@@ -37,8 +37,8 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
 	depthStencilDesc.DepthEnable = TRUE;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
 
 	{
 		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
@@ -100,17 +100,10 @@ GBuffer::~GBuffer()
 	delete m_shaderManager;
 }
 
-void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime)
+void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double deltaTime, ComPtr<ID3D11DepthStencilView>& dsv)
 {
 
-#ifdef _DEBUG
-	ComPtr<ID3DUserDefinedAnnotation> annotation;
-	m_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), &annotation);
-	if (annotation)
-	{
-		annotation->BeginEvent(L"GBuffer Draw");
-	}
-#endif
+	DEBUG_PASS_START(L"GBuffer Draw");
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -120,8 +113,6 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 	{
 		m_context->ClearRenderTargetView(rtv, AppConfig::getClearColor());
 	}
-
-	m_context->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -148,19 +139,12 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, double de
 	}
 	ID3D11RenderTargetView* nullRTVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
 	m_context->OMSetRenderTargets(5, nullRTVs, nullptr);
-#ifdef _DEBUG
-	if (annotation)
-	{
-		annotation->EndEvent();
-	}
-#endif
+	DEBUG_PASS_END();
 
 }
 
 void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim, double deltaTime)
 {
-	glm::vec3 rotation = glm::vec3(0, deltaTime * 100, 0);
-	// prim->transform.rotate(rotation);
 	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -185,17 +169,14 @@ void GBuffer::createOrResize()
 		t_metallicRoughness.Reset();
 		t_normal.Reset();
 		t_position.Reset();
-		t_depth.Reset();
 
 		rtv_albedo.Reset();
 		rtv_metallicRoughness.Reset();
-		dsv.Reset();
 		rtv_normal.Reset();
 		rtv_position.Reset();
 
 		srv_albedo.Reset();
 		srv_metallicRoughness.Reset();
-		srv_depth.Reset();
 		srv_normal.Reset();
 		srv_position.Reset();
 	}
@@ -343,48 +324,6 @@ void GBuffer::createOrResize()
 		HRESULT hr = m_device->CreateShaderResourceView(t_position.Get(), &positionSRVDesc, &srv_position);
 		if (FAILED(hr))
 			std::cerr << "Error Creating Position SRV: " << hr << std::endl;
-	}
-
-	//depth
-	D3D11_TEXTURE2D_DESC depthDesc;
-	depthDesc.ArraySize = 1;
-	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-	depthDesc.CPUAccessFlags = 0;
-	depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	depthDesc.Height = AppConfig::getViewportHeight();
-	depthDesc.Width = AppConfig::getViewportWidth();
-	depthDesc.MipLevels = 1;
-	depthDesc.MiscFlags = 0;
-	depthDesc.SampleDesc.Count = 1;
-	depthDesc.SampleDesc.Quality = 0;
-	depthDesc.Usage = D3D11_USAGE_DEFAULT;
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Flags = 0;
-	dsvDesc.Texture2D.MipSlice = 0;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc;
-	depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	depthSRVDesc.Texture2D.MostDetailedMip = 0;
-	depthSRVDesc.Texture2D.MipLevels = depthDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&depthDesc, nullptr, &t_depth);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthSrencil Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateDepthStencilView(t_depth.Get(), &dsvDesc, &dsv);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthSrencil DSV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_depth.Get(), &depthSRVDesc, &srv_depth);
-		if (FAILED(hr))
-			std::cerr << "Error Creating PosDepthSrencilition SRV: " << hr << std::endl;
 	}
 
 	//objectID

@@ -1,12 +1,8 @@
 #include "FSQuad.hpp"
 #include <assert.h>
-
-#include <d3d11_1.h>
-#include <wrl.h>
 #include <iostream>
-
+#include "debugPassMacros.hpp"
 #include "appConfig.hpp"
-using namespace Microsoft::WRL;
 
 
 FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceContext>& _context)
@@ -88,14 +84,7 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 	static const UINT offset = 0;
 
 
-#ifdef _DEBUG
-	ComPtr<ID3DUserDefinedAnnotation> annotation;
-	m_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), &annotation);
-	if (annotation)
-	{
-		annotation->BeginEvent(L"FSQuad Draw");
-	}
-#endif
+	DEBUG_PASS_START(L"FSQuad Draw");
 	ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
 	m_context->PSSetShaderResources(0, 4, nullSRVs);
 	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
@@ -118,12 +107,7 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 	m_context->PSSetShaderResources(0, 1, &nullSRV);
 	m_context->OMSetRenderTargets(1, &nullRTV, nullptr);
 
-#ifdef _DEBUG
-	if (annotation)
-	{
-		annotation->EndEvent();
-	}
-#endif
+	DEBUG_PASS_END();
 }
 
 

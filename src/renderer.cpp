@@ -32,6 +32,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene = new SceneNode();
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
+	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	resize();
@@ -44,6 +45,7 @@ void Renderer::draw()
 	if (AppConfig::getNeedsResize())
 	{
 		resize();
+		m_zPrePass->createOrResize();
 		m_gBuffer->createOrResize();
 		m_fsquad->createOrResize();
 		AppConfig::setNeedsResize(false);
@@ -64,15 +66,18 @@ void Renderer::draw()
 	}
 
 	// --- GPU Work ---
-	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count());
+	m_zPrePass->draw(m_view, m_projection);
+	m_gBuffer->draw(m_view, m_projection, m_deltaTime.count(), m_zPrePass->getDSV());
 	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
+
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
-	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
+
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
+	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(1, 0);
 }
 
