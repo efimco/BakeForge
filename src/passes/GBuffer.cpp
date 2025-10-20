@@ -11,7 +11,8 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
 	int objectID;
-	float padding[3]; // Align to 16 bytes
+	bool isSelected;
+	float padding[2]; // Align to 16 bytes
 };
 
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
@@ -170,6 +171,7 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int obj
 		cbData->inverseTransposedModel = glm::transpose(prim->transform.getWorldMatrix());
 		cbData->model = glm::transpose(prim->transform.getWorldMatrix());
 		cbData->objectID = objectID + 1;
+		cbData->isSelected = SceneManager::isPrimitiveSelected(prim.get());
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
 }

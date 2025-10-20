@@ -1,6 +1,7 @@
 #include "objectPicker.hpp"
 #include <iostream>
-
+#include "sceneManager.hpp"
+#include "inputEventsHandler.hpp"
 ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
 	m_shaderManager = new ShaderManager(m_device);
@@ -62,6 +63,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		cb->mousePosY = mousePos[1];
 		cb->padding[0] = 0;
 		cb->padding[0] = 0;
+		std::cout << "Mouse X: " << cb->mousePosX << " Mouse Y: " << cb->mousePosY << std::endl;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 
@@ -85,5 +87,17 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		assert(SUCCEEDED(hr));
 		readBackID = *reinterpret_cast<uint32_t*>(mapped.pData);
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
+	}
+	if (InputEvents::getLMouseClicked())
+	{
+		std::cout << "Picked ID: " << readBackID << std::endl;
+		if (readBackID == 0)
+		{
+			SceneManager::clearSelectedPrimitives();
+		}
+		else
+		{
+			SceneManager::selectPrimitive(readBackID-1);
+		}
 	}
 }

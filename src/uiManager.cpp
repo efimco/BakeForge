@@ -5,6 +5,7 @@
 #include "appConfig.hpp"
 #include <iostream>
 #include "inputEventsHandler.hpp"
+#include "sceneManager.hpp"
 
 const float TEXT_BASE_WIDTH = 1;
 
@@ -85,6 +86,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	showViewport(srv);
 	showGBufferImage(gbuffer);
 	drawSceneGraph(scene);
+	processInputEvents();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -192,7 +194,9 @@ void UIManager::showGBufferImage(const GBuffer& gbuffer)
 void UIManager::processInputEvents()
 {
 	InputEvents::setMouseInViewport(m_isMouseInViewport);
-	InputEvents::setMouseClicked(m_io->MouseClicked);
+	InputEvents::setLMouseClicked(m_io->MouseClicked[0]);
+	InputEvents::setMMouseClicked(m_io->MouseClicked[2]);
+	InputEvents::setRMouseClicked(m_io->MouseClicked[1]);
 }
 
 void UIManager::drawSceneGraph(SceneNode* scene)
@@ -232,9 +236,22 @@ void UIManager::drawNode(SceneNode* node)
 	}
 	else
 	{
-		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf |
-			ImGuiTreeNodeFlags_Bullet |
-			ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		if (ImGui::IsItemClicked())
+		{
+			if (auto primitive = dynamic_cast<Primitive*>(node))
+			{
+				if (!SceneManager::isPrimitiveSelected(primitive))
+				{
+					SceneManager::selectPrimitive(primitive);
+				}
+				else
+				{
+					SceneManager::deselectPrimitive(primitive);
+				}
+			}
+
+		}
 		ImGui::TableNextColumn();
 	}
 }
