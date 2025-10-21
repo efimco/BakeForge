@@ -85,8 +85,6 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 
 	DEBUG_PASS_START(L"FSQuad Draw");
-	ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
-	m_context->PSSetShaderResources(0, 4, nullSRVs);
 	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("toFSQuad"), nullptr, 0);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -116,13 +114,15 @@ void FSQuad::createOrResize()
 	if (m_texture != nullptr)
 	{
 		m_texture.Reset();
+		m_rtv.Reset();
+		m_srv.Reset();
 	}
-	D3D11_TEXTURE2D_DESC textureDesc;
+	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.ArraySize = 1;
 	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	textureDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	textureDesc.Height = AppConfig::getViewportHeight();
+	textureDesc.CPUAccessFlags = 0; // FIX: Remove CPU_ACCESS_READ - not compatible with DEFAULT usage
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // FIX: Use standard 8-bit format for final output
+	textureDesc.Height = AppConfig::getViewportHeight(); // FIX: Use window size, not viewport
 	textureDesc.Width = AppConfig::getViewportWidth();
 	textureDesc.MipLevels = 1;
 	textureDesc.MiscFlags = 0;

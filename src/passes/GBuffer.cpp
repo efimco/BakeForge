@@ -180,7 +180,7 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC albedoDesc = {};
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	albedoDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	albedoDesc.CPUAccessFlags = 0;
 	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	albedoDesc.Height = AppConfig::getViewportHeight();
 	albedoDesc.Width = AppConfig::getViewportWidth();
@@ -216,7 +216,7 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC metallicRoughnessDesc;
 	metallicRoughnessDesc.ArraySize = 1;
 	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	metallicRoughnessDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	metallicRoughnessDesc.CPUAccessFlags = 0;
 	metallicRoughnessDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
 	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
@@ -253,7 +253,7 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC normalDesc;
 	normalDesc.ArraySize = 1;
 	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	normalDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	normalDesc.CPUAccessFlags = 0;
 	normalDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
 	normalDesc.Height = AppConfig::getViewportHeight();
 	normalDesc.Width = AppConfig::getViewportWidth();
@@ -289,7 +289,7 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC positionDesc;
 	positionDesc.ArraySize = 1;
 	positionDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	positionDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	positionDesc.CPUAccessFlags = 0;
 	positionDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	positionDesc.Height = AppConfig::getViewportHeight();
 	positionDesc.Width = AppConfig::getViewportWidth();
@@ -325,7 +325,7 @@ void GBuffer::createOrResize()
 	D3D11_TEXTURE2D_DESC objectIDDesc;
 	objectIDDesc.ArraySize = 1;
 	objectIDDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	objectIDDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	objectIDDesc.CPUAccessFlags = 0;
 	objectIDDesc.Format = DXGI_FORMAT_R32_UINT;
 	objectIDDesc.Height = AppConfig::getViewportHeight();
 	objectIDDesc.Width = AppConfig::getViewportWidth();
