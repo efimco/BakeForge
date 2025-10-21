@@ -87,7 +87,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		readBackID = *reinterpret_cast<uint32_t*>(mapped.pData);
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
 	}
-	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON))
+	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON) && InputEvents::getMouseInViewport())
 	{
 		std::cout << "Picked ID: " << readBackID << std::endl;
 		if (readBackID == 0)
@@ -96,7 +96,14 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		}
 		else
 		{
-			SceneManager::selectPrimitive(readBackID-1);
+			if (!SceneManager::isPrimitiveSelected(readBackID - 1))
+			{
+				SceneManager::selectPrimitive(readBackID - 1);
+			}
+			else
+			{
+				SceneManager::deselectPrimitive(readBackID - 1);
+			}
 		}
 	}
 }
