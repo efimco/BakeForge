@@ -8,7 +8,9 @@ cbuffer ConstantBuffer : register(b0)
 	float2 _pad; // align to 16 bytes
 };
 
-Texture2D textureSampler : register(t0);
+Texture2D albedoTexture : register(t0);
+Texture2D metallicRoughnessTexture : register(t1);
+Texture2D normalTexture : register(t2);
 
 SamplerState samplerState : register(s0);
 
@@ -50,7 +52,7 @@ VertexOutput VS(VertexInput input)
 PSOutput PS(VertexOutput input)
 {
 	PSOutput output;
-	output.albedo = textureSampler.Sample(samplerState, input.texCoord);
+	output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
 	if (output.albedo.a < 0.1f)
 	{
 		discard;
@@ -59,8 +61,10 @@ PSOutput PS(VertexOutput input)
 	{
 		output.albedo = output.albedo * float4(1.0f, 0.5f, 0.5f, 1.0f);
 	}
-	output.metallicRoughness = float2(0.0f, 0.0f);
-	output.normal = float4(input.normal, 0.0f);
+	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
+	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
+	output.metallicRoughness = float2(metallic, roughness);
+	output.normal = float4(normalize(input.normal * 2.0f - 1.0f), 1.0f);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
 	output.objectID = objectID;
 	return output;

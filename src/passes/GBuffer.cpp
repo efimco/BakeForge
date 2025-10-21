@@ -128,8 +128,11 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 		update(view, projection, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-		auto& material = prim->getMaterial();
-		m_context->PSSetShaderResources(0, 1, material->albedo->srv.GetAddressOf());
+		std::shared_ptr<Material>& material = prim->getMaterial();
+		ID3D11ShaderResourceView* const srvArray[] = { material->albedo->srv.Get(),
+												 material->metallicRoughness->srv.Get(),
+												 material->normal->srv.Get() };
+		m_context->PSSetShaderResources(0, 3, srvArray);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
 	ID3D11RenderTargetView* nullRTVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };

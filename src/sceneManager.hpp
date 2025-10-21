@@ -21,6 +21,7 @@ namespace SceneManager
 	void deselectPrimitive(Primitive* primitive);
 	void deselectPrimitive(uint32_t id);
 	bool isPrimitiveSelected(Primitive* primitive);
+	bool isPrimitiveSelected(uint32_t id);
 	void clearSelectedPrimitives();
 
 };

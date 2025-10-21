@@ -66,7 +66,8 @@ void SceneManager::selectPrimitive(uint32_t id)
 	const auto& it = selectedPrimitives.find(primitives[id].get());
 	if (it == selectedPrimitives.end())
 	{
-		selectedPrimitives[primitives[id].get()] = true;
+		Primitive* primitive = primitives[id].get();
+		selectedPrimitives[primitive] = true;
 	}
 }
 
@@ -90,7 +91,38 @@ void SceneManager::deselectPrimitive(uint32_t id)
 
 bool SceneManager::isPrimitiveSelected(Primitive* primitive)
 {
-	return selectedPrimitives.find(primitive) != selectedPrimitives.end();
+	if (selectedPrimitives.find(primitive) == selectedPrimitives.end())
+	{
+
+		return false;
+	}
+	if (selectedPrimitives[primitive] == false)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+	return false;
+}
+
+bool SceneManager::isPrimitiveSelected(uint32_t id)
+{
+	if (selectedPrimitives.find(primitives[id].get()) == selectedPrimitives.end())
+	{
+
+		return false;
+	}
+	if (selectedPrimitives[primitives[id].get()] == false)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+	return false;
 }
 
 void SceneManager::clearSelectedPrimitives()
