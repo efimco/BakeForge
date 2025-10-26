@@ -88,15 +88,15 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
-			primitive->setMaterial(m_materialIndex[gltfPrimitive.material]);
+			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
 			if (SceneManager::isNameUsed(model.nodes[meshIndex].name))
 			{
-				SceneManager::getNameCounter(model.nodes[meshIndex].name) = 0;
+				SceneManager::getNameCounter(model.nodes[meshIndex].name)++;
 			}
 			else
 			{
-				SceneManager::getNameCounter(model.nodes[meshIndex].name)++;
+				SceneManager::getNameCounter(model.nodes[meshIndex].name) = 0;
 			}
 
 			if (SceneManager::getNameCounter(model.nodes[meshIndex].name) == 0)

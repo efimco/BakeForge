@@ -23,12 +23,15 @@ private:
 	ImGuiIO* m_io;
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
+	SceneNode* m_selectedNode = nullptr;
 	void simpleWindow();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 	void showInvisibleDockWindow();
+	void showMaterialBrowser();
 	void showGBufferImage(const GBuffer& gbuffer);
 	void processInputEvents();
 	void drawSceneGraph(SceneNode* scene);
 	void drawNode(SceneNode* node);
+	void showProperties();
 
 };

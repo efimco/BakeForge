@@ -5,7 +5,7 @@ static int windowHeight = 2;
 static int viewportWidth = 2;
 static int viewportHeight = 2;
 static bool needsResize = true;
-static float clearColor[4] = { 0.4f, 0.6f, 0.9f, 1.0f };
+static float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 static bool isMinimized = false;
 static double deltaTime = 0.0;
 

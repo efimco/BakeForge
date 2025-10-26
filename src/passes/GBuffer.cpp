@@ -132,7 +132,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 		update(view, projection, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-		std::shared_ptr<Material>& material = prim->getMaterial();
+		std::shared_ptr<Material>& material = prim->material;
 		ID3D11ShaderResourceView* const srvArray[] = { material->albedo->srv.Get(),
 												 material->metallicRoughness->srv.Get(),
 												 material->normal->srv.Get() };

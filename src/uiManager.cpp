@@ -88,6 +88,8 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	showViewport(srv);
 	showGBufferImage(gbuffer);
 	drawSceneGraph(scene);
+	showProperties();
+	showMaterialBrowser();
 	processInputEvents();
 
 	ImGui::Render();
@@ -125,6 +127,28 @@ void UIManager::showInvisibleDockWindow()
 
 	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGui::End();
+}
+
+void UIManager::showMaterialBrowser()
+{
+	ImGui::Begin("Material Browser");
+	std::vector<std::string> materialNames = SceneManager::getMaterialNames();
+	ImVec2 contentRegion = ImGui::GetContentRegionAvail();
+	float maxItemSize = 100.0f;
+	int itemsPerRow = int(floor(contentRegion.x / (maxItemSize + ImGui::GetStyle().ItemSpacing.x)));
+	float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x*2) / itemsPerRow;
+	for (int i = 0; i < materialNames.size(); i++)
+	{
+		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
+		{
+			// Material selected
+		}
+		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
+		{
+			ImGui::SameLine();
+		}
+	}
 	ImGui::End();
 }
 
@@ -261,6 +285,7 @@ void UIManager::drawNode(SceneNode* node)
 		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 		if (ImGui::IsItemClicked())
 		{
+			m_selectedNode = node;
 			if (auto primitive = dynamic_cast<Primitive*>(node))
 			{
 				if (!SceneManager::isPrimitiveSelected(primitive))
@@ -276,6 +301,75 @@ void UIManager::drawNode(SceneNode* node)
 		}
 		ImGui::TableNextColumn();
 	}
+}
+
+void UIManager::showProperties()
+{
+	ImGui::Begin("Properties");
+	if (m_selectedNode)
+	{
+		if (dynamic_cast<Primitive*>(m_selectedNode))
+		{
+			Primitive* prim = dynamic_cast<Primitive*>(m_selectedNode);
+			ImGui::Text("Type: Primitive");
+			ImGui::Text("Name: %s", prim->name.c_str());
+			ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f);
+			ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f);
+			ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f);
+
+			const auto& materialNames = SceneManager::getMaterialNames();
+			static int currentMaterialIndex = -1;
+			// Find current material index
+			if (currentMaterialIndex < 0 && prim->material)
+			{
+				int index = 0;
+				for (const auto& name : materialNames)
+				{
+					if (SceneManager::getMaterial(name) == prim->material)
+					{
+						currentMaterialIndex = index;
+						break;
+					}
+					index++;
+				}
+			}
+
+			if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
+			{
+				for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
+				{
+					bool isSelected = (currentMaterialIndex == n);
+					if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
+					{
+						currentMaterialIndex = n;
+						std::shared_ptr<Material> selectedMaterial = SceneManager::getMaterial(materialNames[n]);
+						prim->material = selectedMaterial;
+					}
+					if (isSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+		}
+		else if (dynamic_cast<Light*>(m_selectedNode))
+		{
+			Light* light = dynamic_cast<Light*>(m_selectedNode);
+			ImGui::Text("Name: %s", light->name.c_str());
+			ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
+				"Point Light\0Directional Light\0Spot Light\0");
+			ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f);
+			ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f);
+			ImGui::ColorEdit3("Color", &light->color[0]);
+			ImGui::DragFloat("Intensity", &light->intensity, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f);
+
+		}
+		ImGui::Text("Selected Node: %s", m_selectedNode->name.c_str());
+	}
+	ImGui::End();
 }
 
 

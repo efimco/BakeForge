@@ -19,24 +19,24 @@ struct alignas(16) LightData
 	glm::vec3 direction;
 	float padding1; // Padding to align to 16 bytes
 	glm::vec2 spotParams; // x: inner cone angle, y: outer cone angle
+	glm::vec2 padding2; // Additional padding to align to 16 bytes
 	glm::vec3 attenuations;
-	float padding2; // Padding to align to 16 bytes
+	float radius; // radius for point lights
 };
 
 class Light : public SceneNode
 {
 public:
 	Light(LightType type, glm::vec3 position, std::string name = "Light");
-	LightType getType() const;
 	LightData getLightData() const;
 
-private:
-	float m_intensity = 1.0f;
-	glm::vec3 m_color = glm::vec3(1.0f, 1.0f, 1.0f);
-	glm::vec3 m_direction = glm::vec3(0.0f, -1.0f, 0.0f);
-	glm::vec3 m_attenuation = glm::vec3(1.0f, 0.0f, 0.0f);
-	glm::vec2 m_spotParams = glm::vec2(0.0f, 0.0f); // x: inner cone angle, y: outer cone angle
-	LightType m_type = POINT_LIGHT;
+	float intensity = 1.0f;
+	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
+	glm::vec3 direction = glm::vec3(0.0f, -1.0f, 0.0f);
+	glm::vec3 attenuation = glm::vec3(1.0f, 0.0f, 0.0f);
+	glm::vec2 spotParams = glm::vec2(0.0f, 0.0f); // x: inner cone angle, y: outer cone angle
+	float radius = 1.0f;
+	LightType type = POINT_LIGHT;
 
-	
+
 };

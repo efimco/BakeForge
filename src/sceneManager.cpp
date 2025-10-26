@@ -73,6 +73,17 @@ std::shared_ptr<Material> SceneManager::getMaterial(std::string name)
 	return nullptr;
 }
 
+std::vector<std::string> SceneManager::getMaterialNames()
+{
+	std::vector<std::string> names;
+	for (const auto& pair : materials)
+	{
+		names.push_back(pair.first);
+	}
+	return names;
+}
+
+
 void SceneManager::addMaterial(std::shared_ptr<Material>&& material)
 {
 	materials[material->name] = std::move(material);
