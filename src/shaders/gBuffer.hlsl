@@ -34,7 +34,7 @@ struct PSOutput
 {
 	float4 albedo : SV_TARGET0;
 	float2 metallicRoughness : SV_TARGET1;
-	float4 normal : SV_TARGET2;
+	float3 normal : SV_TARGET2;
 	float4 fragPos : SV_TARGET3;
 	uint objectID : SV_TARGET4;
 };
@@ -47,6 +47,22 @@ VertexOutput VS(VertexInput input)
 	output.texCoord = input.texCoord;
 	output.normal = normalize(mul((float3x3)inverseTransposedModel, input.normal));
 	return output;
+}
+
+float3 getNormalFromMap(VertexOutput input)
+{
+	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
+	float3 Q1 = ddx(input.fragPos.xyz);
+	float3 Q2 = ddy(input.fragPos.xyz);
+	float2 st1 = ddx(input.texCoord);
+	float2 st2 = ddy(input.texCoord);
+
+	float3 N = normalize(input.normal);
+	float3 T = normalize(Q1 * st2.y - Q2 * st1.y);
+	float3 B = normalize(cross(N, T));
+	float3x3 TBN = float3x3(T, B, N);
+
+	return normalize(mul(tangentNormal, TBN));
 }
 
 PSOutput PS(VertexOutput input)
@@ -64,7 +80,7 @@ PSOutput PS(VertexOutput input)
 	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
 	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
 	output.metallicRoughness = float2(metallic, roughness);
-	output.normal = float4(normalize(input.normal * 2.0f - 1.0f), 1.0f);
+	output.normal = getNormalFromMap(input);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
 	output.objectID = objectID;
 	return output;
