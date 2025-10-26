@@ -82,7 +82,7 @@ void Renderer::draw()
 		m_gBuffer->getPositionSRV(),
 		m_gBuffer->getObjectIDSRV(),
 		m_zPrePass->getDepthSRV());
-	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
+	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());

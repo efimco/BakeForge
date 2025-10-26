@@ -2,6 +2,7 @@
 #include "appConfig.hpp"
 #include <iostream>
 #include "debugPassMacros.hpp"
+#include "sceneManager.hpp"
 
 DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
 	: m_device(device), m_context(context)
@@ -9,7 +10,31 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	createOrResize();
 	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");
+	D3D11_BUFFER_DESC lightsBufferDesc = {};
+	lightsBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	lightsBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	lightsBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	lightsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	lightsBufferDesc.ByteWidth = sizeof(LightData) * uint32_t(SceneManager::getLights().size());
+	lightsBufferDesc.StructureByteStride = sizeof(LightData);
 
+	{
+		HRESULT hr = m_device->CreateBuffer(&lightsBufferDesc, nullptr, &m_lightsBuffer);
+		if (FAILED(hr))
+			std::cerr << "Error Creating Lights Buffer: " << hr << std::endl;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = static_cast<UINT>(SceneManager::getLights().size());
+
+	{
+		HRESULT hr = m_device->CreateShaderResourceView(m_lightsBuffer.Get(), &srvDesc, &m_lightsSRV);
+		if (FAILED(hr))
+			std::cerr << "Error Creating Lights SRV: " << hr << std::endl;
+	}
 }
 
 void DeferredPass::createOrResize()
@@ -20,7 +45,6 @@ void DeferredPass::createOrResize()
 		m_finalRTV.Reset();
 		m_finalSRV.Reset();
 	}
-
 	// Create final render target texture, RTV, and SRV
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.ArraySize = 1;
@@ -84,7 +108,7 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	{
 		createOrResize();
 	}
-
+	update();
 	m_context->CSSetShader(m_shaderManager->getComputeShader("deferred"), nullptr, 0);
 
 	// Set SRVs
@@ -94,9 +118,10 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 		normalSRV.Get(),
 		positionSRV.Get(),
 		objectIDSRV.Get(),
-		depthSRV.Get()
+		depthSRV.Get(),
+		m_lightsSRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 6, srvs);
+	m_context->CSSetShaderResources(0, 7, srvs);
 
 	// Set UAVs
 	ID3D11UnorderedAccessView* uavs[] = {
@@ -110,8 +135,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs
-	ID3D11ShaderResourceView* nullSRVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->CSSetShaderResources(0, 5, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	m_context->CSSetShaderResources(0, 7, nullSRVs);
 	ID3D11UnorderedAccessView* nullUAVs[1] = { nullptr };
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAVs, nullptr);
 
@@ -122,4 +147,21 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 ComPtr<ID3D11ShaderResourceView> DeferredPass::getFinalSRV() const
 {
 	return m_finalSRV;
+}
+
+void DeferredPass::update()
+{
+	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+	HRESULT hr = m_context->Map(m_lightsBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (SUCCEEDED(hr))
+	{
+		LightData* lightData = static_cast<LightData*>(mappedResource.pData);
+		const auto& lights = SceneManager::getLights();
+		for (size_t i = 0; i < lights.size(); ++i)
+		{
+			lightData[i] = lights[i]->getLightData();
+
+		}
+		m_context->Unmap(m_lightsBuffer.Get(), 0);
+	}
 }

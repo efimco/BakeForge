@@ -1,4 +1,5 @@
 #include "light.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/rotate_vector.hpp>
 
 Light::Light(LightType type, glm::vec3 position, std::string _name)

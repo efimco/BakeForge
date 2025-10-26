@@ -28,6 +28,7 @@ class Light : public SceneNode
 public:
 	Light(LightType type, glm::vec3 position, std::string name = "Light");
 	LightType getType() const;
+	LightData getLightData() const;
 
 private:
 	float m_intensity = 1.0f;
@@ -37,5 +38,5 @@ private:
 	glm::vec2 m_spotParams = glm::vec2(0.0f, 0.0f); // x: inner cone angle, y: outer cone angle
 	LightType m_type = POINT_LIGHT;
 
-	LightData getLightData() const;
+	
 };
