@@ -24,6 +24,49 @@ struct Light
 StructuredBuffer<Light> lights : register(t6); 
 RWTexture2D<unorm float4> outColor : register(u0); 
 
+
+float3 applyPointLight(Light light, float3 fragPos, float3 normal, float3 albedo, float metallic, float roughness)
+{
+	float3 lightDir = normalize(light.position - fragPos);
+	float3 viewDir = normalize(-fragPos);
+
+	// Diffuse
+	float diff = max(dot(normal, lightDir), 0.0);
+	float3 diffuse = diff * light.color * albedo;
+
+	// Specular
+	float3 halfwayDir = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0 / roughness);
+	float3 specular = spec * light.color * metallic;
+
+	// Attenuation with radius
+	float distance = length(light.position - fragPos);
+	float attenuation = saturate(1.0 - distance / light.radius);
+	if (distance < light.radius)
+	{
+		
+		return (diffuse + specular) * light.intensity * attenuation;
+	}
+	return float3(0.0, 0.0, 0.0);
+}
+
+float3 applyDirectionalLight(Light light, float3 fragPos, float3 normal, float3 albedo, float metallic, float roughness)
+{
+	float3 lightDir = normalize(-light.direction);
+	float3 viewDir = normalize(-fragPos);
+
+	// Diffuse
+	float diff = max(dot(normal, lightDir), 0.0);
+	float3 diffuse = diff * light.color * albedo;
+
+	// Specular
+	float3 halfwayDir = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0 / roughness);
+	float3 specular = spec * light.color * metallic;
+
+	return (diffuse + specular) * light.intensity;
+}
+
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
@@ -43,43 +86,11 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 		Light light = lights[i];
 		if (light.lightType == 0) // Point light
 		{
-			float3 lightDir = normalize(light.position - fragPos);
-			float3 viewDir = normalize(-fragPos);
-
-			// Diffuse
-			float diff = max(dot(normal, lightDir), 0.0);
-			float3 diffuse = diff * light.color * albedo;
-
-			// Specular
-			float3 halfwayDir = normalize(lightDir + viewDir);
-			float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0 / roughness);
-			float3 specular = spec * light.color * metallic;
-
-			// Attenuation with radius
-			float distance = length(light.position - fragPos);
-			float attenuation = saturate(1.0 - distance / light.radius);
-			if (distance < light.radius)
-			{
-				
-				finalColor = 0;
-			}
-			finalColor += (diffuse + specular) * light.intensity * attenuation;
+			finalColor += applyPointLight(light, fragPos, normal, albedo, metallic, roughness);
 		}
 		else if (light.lightType == 1) // Directional light
 		{
-			float3 lightDir = normalize(-light.direction);
-			float3 viewDir = normalize(-fragPos);
-
-			// Diffuse
-			float diff = max(dot(normal, lightDir), 0.0);
-			float3 diffuse = diff * light.color * albedo;
-
-			// Specular
-			float3 halfwayDir = normalize(lightDir + viewDir);
-			float spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0 / roughness);
-			float3 specular = spec * light.color * metallic;
-
-			finalColor += (diffuse + specular) * light.intensity;
+			finalColor += applyDirectionalLight(light, fragPos, normal, albedo, metallic, roughness);
 		}
 	}
 
