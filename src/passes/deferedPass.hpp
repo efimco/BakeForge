@@ -23,6 +23,7 @@ public:
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 private:
+	void update();
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 
@@ -37,4 +38,5 @@ private:
 
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	ComPtr<ID3D11Buffer> m_lightsBuffer;
+	ComPtr<ID3D11ShaderResourceView> m_lightsSRV;
 };
