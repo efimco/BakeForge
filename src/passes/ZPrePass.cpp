@@ -173,3 +173,8 @@ void ZPrePass::createOrResize()
 			std::cerr << "Error Creating DepthStencil SRV: " << hr << std::endl;
 	}
 }
+
+const ComPtr<ID3D11ShaderResourceView>& ZPrePass::getDepthSRV() const
+{
+	return srv_depth;
+}

@@ -1,10 +1,25 @@
 #include "sceneManager.hpp"
 #include "iostream"
+
 static std::vector<std::unique_ptr<Primitive>> primitives;
 static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // path + actual texture
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 
 static std::unordered_map<Primitive*, bool> selectedPrimitives;
+
+static std::vector<std::unique_ptr<Light>> lights;
+static std::unordered_map<std::string, uint32_t> names;
+
+
+bool SceneManager::isNameUsed(std::string name)
+{
+	return names.find(name) != names.end();
+}
+
+uint32_t& SceneManager::getNameCounter(std::string name)
+{
+	return names[name];
+}
 
 std::unique_ptr<Primitive>& SceneManager::addPrimitive(std::unique_ptr<Primitive>&& primitive)
 {
@@ -12,9 +27,20 @@ std::unique_ptr<Primitive>& SceneManager::addPrimitive(std::unique_ptr<Primitive
 	return primitives.back();
 }
 
+std::unique_ptr<Light>& SceneManager::addLight(std::unique_ptr<Light>&& light)
+{
+	lights.push_back(std::move(light));
+	return lights.back();
+}
+
 std::vector<std::unique_ptr<Primitive>>& SceneManager::getPrimitives()
 {
 	return primitives;
+}
+
+std::vector<std::unique_ptr<Light>>& SceneManager::getLights()
+{
+	return lights;
 }
 
 size_t SceneManager::getPrimitiveCount()

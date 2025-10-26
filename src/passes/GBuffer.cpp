@@ -99,6 +99,10 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 {
 
 	DEBUG_PASS_START(L"GBuffer Draw");
+	if (AppConfig::getNeedsResize())
+	{
+		createOrResize();
+	}
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -184,7 +188,7 @@ void GBuffer::createOrResize()
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	albedoDesc.CPUAccessFlags = 0;
-	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	albedoDesc.Height = AppConfig::getViewportHeight();
 	albedoDesc.Width = AppConfig::getViewportWidth();
 	albedoDesc.MipLevels = 1;
@@ -380,6 +384,21 @@ void GBuffer::createOrResize()
 const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV() const
 {
 	return srv_albedo;
+}
+
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getMetallicRoughnessSRV() const
+{
+	return srv_metallicRoughness;
+}
+
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getNormalSRV() const
+{
+	return srv_normal;
+}
+
+const ComPtr<ID3D11ShaderResourceView>& GBuffer::getPositionSRV() const
+{
+	return srv_position;
 }
 
 const ComPtr<ID3D11ShaderResourceView>& GBuffer::getObjectIDSRV() const

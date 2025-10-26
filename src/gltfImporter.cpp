@@ -6,7 +6,7 @@
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 
-static std::unordered_map<std::string, uint32_t> names;
+
 
 GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene) : m_device(device)
 {
@@ -90,22 +90,22 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->setIndexData(std::move(indices));
 			primitive->setMaterial(m_materialIndex[gltfPrimitive.material]);
 			primitive->transform = transform;
-			if (names.find(model.nodes[meshIndex].name) == names.end())
+			if (SceneManager::isNameUsed(model.nodes[meshIndex].name))
 			{
-				names[model.nodes[meshIndex].name] = 0;
+				SceneManager::getNameCounter(model.nodes[meshIndex].name) = 0;
 			}
 			else
 			{
-				names[model.nodes[meshIndex].name]++;
+				SceneManager::getNameCounter(model.nodes[meshIndex].name)++;
 			}
 
-			if (names[model.nodes[meshIndex].name] == 0)
+			if (SceneManager::getNameCounter(model.nodes[meshIndex].name) == 0)
 			{
 				primitive->name = model.nodes[meshIndex].name;
 			}
 			else
 			{
-				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(names[model.nodes[meshIndex].name]);
+				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(SceneManager::getNameCounter(model.nodes[meshIndex].name));
 			}
 
 			std::unique_ptr<Primitive>& rPrim = SceneManager::addPrimitive(std::move(primitive));

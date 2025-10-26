@@ -142,6 +142,8 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	ImVec2 uv1 = ImVec2(1, 1);
 	static ImVec2 prevSize = ImGui::GetContentRegionAvail();
 	ImVec2 size = ImGui::GetContentRegionAvail();
+	size.x = static_cast<int>(size.x) % 2 == 0 ? size.x : size.x - 1;
+	size.y = static_cast<int>(size.y) % 2 == 0 ? size.y : size.y - 1;
 
 	AppConfig::setViewportWidth(static_cast<int>(size.x));
 	AppConfig::setViewportHeight(static_cast<int>(size.y));

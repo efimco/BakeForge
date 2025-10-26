@@ -9,6 +9,7 @@
 #include "FSQuad.hpp"
 #include "objectPicker.hpp"
 #include "ZPrePass.hpp"
+#include "deferedPass.hpp"
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -46,4 +47,5 @@ private:
 	std::unique_ptr<GBuffer> m_gBuffer;
 	std::unique_ptr<ZPrePass> m_zPrePass;
 	std::unique_ptr<FSQuad> m_fsquad;
+	std::unique_ptr<DeferredPass> m_deferredPass;
 };
