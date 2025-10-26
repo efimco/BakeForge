@@ -47,6 +47,7 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 
 	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadVertexShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "PS");
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(
@@ -70,6 +71,22 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 		assert(SUCCEEDED(hr));
 	}
 
+	// Create sampler state for texture sampling in pixel shader
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	{
+		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
+		assert(SUCCEEDED(hr));
+	}
+
 }
 
 void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)
@@ -85,8 +102,9 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	m_context->VSSetShader(m_shaderManager->getVertexShader("zPrePass"), nullptr, 0);
-	m_context->PSSetShader(nullptr, nullptr, 0);
+	m_context->PSSetShader(m_shaderManager->getPixelShader("zPrePass"), nullptr, 0);
 	m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
+	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
@@ -95,10 +113,23 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)
 	{
 		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
 		update(view, projection, prim);
+		
+		// Bind albedo texture for alpha testing
+		if (prim->material && prim->material->albedo)
+		{
+			ID3D11ShaderResourceView* albedoSRV = prim->material->albedo->srv.Get();
+			m_context->PSSetShaderResources(0, 1, &albedoSRV);
+		}
+		
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
+	
+	// Unbind resources
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	m_context->PSSetShaderResources(0, 1, &nullSRV);
+	
 	m_context->VSSetShader(nullptr, nullptr, 0);
 	m_context->PSSetShader(nullptr, nullptr, 0);
 	DEBUG_PASS_END();
