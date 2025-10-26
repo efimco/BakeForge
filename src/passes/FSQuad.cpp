@@ -85,6 +85,7 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 
 	DEBUG_PASS_START(L"FSQuad Draw");
+
 	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("toFSQuad"), nullptr, 0);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

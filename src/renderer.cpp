@@ -31,10 +31,14 @@ Renderer::Renderer(const HWND& hwnd)
 	m_prevTime = std::chrono::system_clock::now();
 	m_scene = new SceneNode();
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
+	std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, glm::vec3(0.0f, 10.0f, -10.0f));
+	SceneManager::addLight(std::move(dirLight));
+	m_scene->addChild(SceneManager::getLights()[0].get());
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
+	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	resize();
 }
 
@@ -47,6 +51,7 @@ void Renderer::draw()
 		resize();
 		m_zPrePass->createOrResize();
 		m_gBuffer->createOrResize();
+		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
@@ -70,6 +75,13 @@ void Renderer::draw()
 
 	m_zPrePass->draw(m_view, m_projection);
 	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
+	m_deferredPass->draw(m_view, m_projection,
+		m_gBuffer->getAlbedoSRV(),
+		m_gBuffer->getMetallicRoughnessSRV(),
+		m_gBuffer->getNormalSRV(),
+		m_gBuffer->getPositionSRV(),
+		m_gBuffer->getObjectIDSRV(),
+		m_zPrePass->getDepthSRV());
 	m_fsquad->draw(m_gBuffer->getAlbedoSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
@@ -81,6 +93,7 @@ void Renderer::draw()
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(0, 0);
+
 }
 
 

@@ -5,14 +5,23 @@
 #include "texture.hpp"
 #include <memory>
 #include "material.hpp"
+#include "light.hpp"
 
 namespace SceneManager
 {
+	bool isNameUsed(std::string name);
+	uint32_t& getNameCounter(std::string name);
+
 	std::unique_ptr<Primitive>& addPrimitive(std::unique_ptr<Primitive>&& primitive);
 	std::vector<std::unique_ptr<Primitive>>& getPrimitives();
 	size_t getPrimitiveCount();
+
+	std::unique_ptr<Light>& addLight(std::unique_ptr<Light>&& light);
+	std::vector<std::unique_ptr<Light>>& getLights();
+
 	std::shared_ptr<Texture> getTexture(std::string name);
 	void addTexture(std::shared_ptr<Texture>&& texture);
+
 	std::shared_ptr<Material> getMaterial(std::string name);
 	void addMaterial(std::shared_ptr<Material>&& material);
 
