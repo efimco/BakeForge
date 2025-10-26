@@ -85,7 +85,7 @@ void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 
 	DEBUG_PASS_START(L"FSQuad Draw");
-
+	m_context->RSSetState(m_rasterizerState.Get());
 	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("toFSQuad"), nullptr, 0);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -121,9 +121,9 @@ void FSQuad::createOrResize()
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.ArraySize = 1;
 	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	textureDesc.CPUAccessFlags = 0; // FIX: Remove CPU_ACCESS_READ - not compatible with DEFAULT usage
-	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // FIX: Use standard 8-bit format for final output
-	textureDesc.Height = AppConfig::getViewportHeight(); // FIX: Use window size, not viewport
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.Height = AppConfig::getViewportHeight();
 	textureDesc.Width = AppConfig::getViewportWidth();
 	textureDesc.MipLevels = 1;
 	textureDesc.MiscFlags = 0;
@@ -160,6 +160,16 @@ void FSQuad::createOrResize()
 	viewport.TopLeftY = 0;
 	viewport.MaxDepth = 1.0f;
 	viewport.MinDepth = 0.0f;
+
+	D3D11_RASTERIZER_DESC rasterizerDesc = {};
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.FrontCounterClockwise = false;
+
+	HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
+	if (FAILED(hr))
+		std::cerr << "Failed to create Rasterizer State: HRESULT = " << hr << std::endl;
+
 
 	m_context->RSSetViewports(1, &viewport);
 }

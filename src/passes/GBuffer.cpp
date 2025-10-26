@@ -18,7 +18,7 @@ struct alignas(16) ConstantBufferData
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_NONE;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.DepthBias = 0;
 	rasterizerDesc.DepthBiasClamp = 0;
@@ -360,17 +360,6 @@ void GBuffer::createOrResize()
 		HRESULT hr = m_device->CreateShaderResourceView(t_objectID.Get(), &objectIDSRVDesc, &srv_objectID);
 		assert(SUCCEEDED(hr));
 	}
-
-	//viewport
-	D3D11_VIEWPORT viewport;
-	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
-	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
-	viewport.TopLeftX = 0;
-	viewport.TopLeftY = 0;
-	viewport.MaxDepth = 1.0f;
-	viewport.MinDepth = 0.0f;
-
-	m_context->RSSetViewports(1, &viewport);
 
 	// rtv assignment
 	m_rtvs[0] = rtv_albedo.Get();

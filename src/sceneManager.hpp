@@ -26,6 +26,9 @@ namespace SceneManager
 	void addMaterial(std::shared_ptr<Material>&& material);
 	std::vector<std::string> getMaterialNames();
 
+	SceneNode* getSelectedNode();
+	void setSelectedNode(SceneNode* node);
+
 	void selectPrimitive(Primitive* primitive);
 	void selectPrimitive(uint32_t id);
 	void deselectPrimitive(Primitive* primitive);

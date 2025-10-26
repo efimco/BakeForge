@@ -285,7 +285,7 @@ void UIManager::drawNode(SceneNode* node)
 		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 		if (ImGui::IsItemClicked())
 		{
-			m_selectedNode = node;
+			SceneManager::setSelectedNode(node);
 			if (auto primitive = dynamic_cast<Primitive*>(node))
 			{
 				if (!SceneManager::isPrimitiveSelected(primitive))
@@ -306,19 +306,28 @@ void UIManager::drawNode(SceneNode* node)
 void UIManager::showProperties()
 {
 	ImGui::Begin("Properties");
-	if (m_selectedNode)
+	if (SceneManager::getSelectedNode())
 	{
-		if (dynamic_cast<Primitive*>(m_selectedNode))
+		if (dynamic_cast<Primitive*>(SceneManager::getSelectedNode()))
 		{
-			Primitive* prim = dynamic_cast<Primitive*>(m_selectedNode);
+			Primitive* prim = dynamic_cast<Primitive*>(SceneManager::getSelectedNode());
 			ImGui::Text("Type: Primitive");
 			ImGui::Text("Name: %s", prim->name.c_str());
-			ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f);
-			ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f);
-			ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f);
+			if (ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f))
+			{
+				prim->transform.updateMatrix();
+			}
+			if (ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f))
+			{
+				prim->transform.updateMatrix();
+			}
+			if (ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f))
+			{
+				prim->transform.updateMatrix();
+			}
 
 			const auto& materialNames = SceneManager::getMaterialNames();
-			static int currentMaterialIndex = -1;
+			 int currentMaterialIndex = -1;
 			// Find current material index
 			if (currentMaterialIndex < 0 && prim->material)
 			{
@@ -354,9 +363,9 @@ void UIManager::showProperties()
 			}
 
 		}
-		else if (dynamic_cast<Light*>(m_selectedNode))
+		else if (dynamic_cast<Light*>(SceneManager::getSelectedNode()))
 		{
-			Light* light = dynamic_cast<Light*>(m_selectedNode);
+			Light* light = dynamic_cast<Light*>(SceneManager::getSelectedNode());
 			ImGui::Text("Name: %s", light->name.c_str());
 			ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
 				"Point Light\0Directional Light\0Spot Light\0");
@@ -367,7 +376,7 @@ void UIManager::showProperties()
 			ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f);
 
 		}
-		ImGui::Text("Selected Node: %s", m_selectedNode->name.c_str());
+		ImGui::Text("Selected Node: %s", SceneManager::getSelectedNode()->name.c_str());
 	}
 	ImGui::End();
 }
