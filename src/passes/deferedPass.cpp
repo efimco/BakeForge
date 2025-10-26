@@ -3,7 +3,7 @@
 #include <iostream>
 #include "debugPassMacros.hpp"
 #include "sceneManager.hpp"
-
+static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
 DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
 	: m_device(device), m_context(context)
 {
@@ -130,8 +130,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
 	// Dispatch compute shader
-	UINT dispatchX = static_cast<UINT>(std::ceil(AppConfig::getViewportWidth() / 16.0f));
-	UINT dispatchY = static_cast<UINT>(std::ceil(AppConfig::getViewportHeight() / 16.0f));
+	UINT dispatchX = static_cast<UINT>(std::ceil(AppConfig::getViewportWidth() / COMPUTE_THREAD_GROUP_SIZE));
+	UINT dispatchY = static_cast<UINT>(std::ceil(AppConfig::getViewportHeight() / COMPUTE_THREAD_GROUP_SIZE));
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs

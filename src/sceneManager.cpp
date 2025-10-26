@@ -6,6 +6,7 @@ static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // pa
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 
 static std::unordered_map<Primitive*, bool> selectedPrimitives;
+static SceneNode* selectedNode = nullptr;
 
 static std::vector<std::unique_ptr<Light>> lights;
 static std::unordered_map<std::string, uint32_t> names;
@@ -83,6 +84,16 @@ std::vector<std::string> SceneManager::getMaterialNames()
 	return names;
 }
 
+SceneNode* SceneManager::getSelectedNode()
+{
+	return selectedNode;
+}
+
+void SceneManager::setSelectedNode(SceneNode* node)
+{
+	selectedNode = node;
+}
+
 
 void SceneManager::addMaterial(std::shared_ptr<Material>&& material)
 {
@@ -105,6 +116,7 @@ void SceneManager::selectPrimitive(uint32_t id)
 	{
 		Primitive* primitive = primitives[id].get();
 		selectedPrimitives[primitive] = true;
+		selectedNode = primitive;
 	}
 }
 
@@ -113,6 +125,10 @@ void SceneManager::deselectPrimitive(Primitive* primitive)
 	const auto& it = selectedPrimitives.find(primitive);
 	if (it != selectedPrimitives.end())
 	{
+		if (selectedNode == primitive)
+		{
+			selectedNode = nullptr;
+		}
 		selectedPrimitives.erase(it);
 	}
 }

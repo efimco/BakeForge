@@ -31,6 +31,7 @@ private:
 	ComPtr<ID3D11SamplerState> m_samplerState;
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
+	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 
 	std::unique_ptr<ShaderManager> m_shaderManager;
 
