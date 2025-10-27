@@ -7,6 +7,7 @@
 #include "inputEventsHandler.hpp"
 #include "sceneManager.hpp"
 #include "debugPassMacros.hpp"
+#include "scene.hpp"
 
 const float TEXT_BASE_WIDTH = 1;
 
@@ -73,7 +74,7 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, SceneNode* scene)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene)
 {
 	DEBUG_PASS_START(L"UIManager Draw");
 	ImGui_ImplDX11_NewFrame();
@@ -137,7 +138,7 @@ void UIManager::showMaterialBrowser()
 	ImVec2 contentRegion = ImGui::GetContentRegionAvail();
 	float maxItemSize = 100.0f;
 	int itemsPerRow = int(floor(contentRegion.x / (maxItemSize + ImGui::GetStyle().ItemSpacing.x)));
-	float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x*2) / itemsPerRow;
+	float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
 	for (int i = 0; i < materialNames.size(); i++)
 	{
 		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
@@ -245,20 +246,33 @@ void UIManager::processInputEvents()
 
 }
 
-void UIManager::drawSceneGraph(SceneNode* scene)
+void UIManager::drawSceneGraph(Scene* scene)
 {
 	ImGui::Begin("Scene Graph");
-	static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV |
-		ImGuiTableFlags_BordersOuterH |
-		ImGuiTableFlags_Resizable |
-		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_NoBordersInBody;
-	if (ImGui::BeginTable("SceneGraph", 1, table_flags))
+	static ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+		ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY;
+
+	ImVec2 availableSize = ImGui::GetContentRegionAvail();
+	if (ImGui::BeginTable("SceneGraph", 1, tableFlags, availableSize))
 	{
-		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+		ImGui::TableSetupColumn(scene->name.c_str(), ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 		drawNode(scene);
 		ImGui::EndTable();
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
+			{
+				SceneNode* draggedNode = *(SceneNode**)payload->Data;
+				if (draggedNode && draggedNode->parent)
+				{
+					draggedNode->parent->removeChild(draggedNode);
+					scene->addChild(draggedNode);
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
 	}
 	ImGui::End();
 }
@@ -267,10 +281,29 @@ void UIManager::drawNode(SceneNode* node)
 {
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
+	bool isScene = dynamic_cast<Scene*>(node);
+	if (isScene)
+	{
+		for (auto& child : node->children)
+		{
+			drawNode(child);
+		}
+		return;
+	}
+
 	const bool isFolder = (node->children.size() > 0);
 	if (isFolder)
 	{
-		bool open = ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_None);
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+		bool isSelected = SceneManager::isNodeSelected(node);
+		if (isSelected)
+		{
+			nodeFlags |= ImGuiTreeNodeFlags_Selected;
+		}
+		bool open = ImGui::TreeNodeEx(node->name.c_str(), nodeFlags);
+		handleNodeSelection(node);
+
+		handleNodeDragDrop(node);
 		if (open)
 		{
 			for (auto& child : node->children)
@@ -279,27 +312,59 @@ void UIManager::drawNode(SceneNode* node)
 			}
 			ImGui::TreePop();
 		}
+
+		ImGui::TableNextColumn();
 	}
 	else
 	{
-		ImGui::TreeNodeEx(node->name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-		if (ImGui::IsItemClicked())
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+		bool isSelected = SceneManager::isNodeSelected(node);
+		if (isSelected)
 		{
-			SceneManager::setSelectedNode(node);
-			if (auto primitive = dynamic_cast<Primitive*>(node))
-			{
-				if (!SceneManager::isPrimitiveSelected(primitive))
-				{
-					SceneManager::selectPrimitive(primitive);
-				}
-				else
-				{
-					SceneManager::deselectPrimitive(primitive);
-				}
-			}
-
+			nodeFlags |= ImGuiTreeNodeFlags_Selected;
 		}
+		ImGui::TreeNodeEx(node->name.c_str(), nodeFlags);
+
+		handleNodeDragDrop(node);
+		handleNodeSelection(node);
 		ImGui::TableNextColumn();
+	}
+}
+
+void UIManager::handleNodeSelection(SceneNode* node)
+{
+	if (ImGui::IsItemClicked())
+	{
+		bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
+		SceneManager::setSelectedNode(node, addToSelection);
+		auto primitive = dynamic_cast<Primitive*>(node);
+		if (primitive && !SceneManager::isPrimitiveSelected(primitive))
+		{
+			SceneManager::selectPrimitive(primitive, addToSelection);
+		}
+	}
+}
+
+void UIManager::handleNodeDragDrop(SceneNode* node)
+{
+	if (ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("SCENE_NODE", &node, sizeof(SceneNode*));
+		ImGui::Text("%s", node->name.c_str());
+		ImGui::EndDragDropSource();
+	}
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
+		{
+			SceneNode* draggedNode = *(SceneNode**)payload->Data;
+			if (draggedNode && draggedNode != node && draggedNode->parent)
+			{
+				draggedNode->parent->removeChild(draggedNode);
+				node->addChild(draggedNode);
+			}
+		}
+		ImGui::EndDragDropTarget();
 	}
 }
 
@@ -310,75 +375,101 @@ void UIManager::showProperties()
 	{
 		if (dynamic_cast<Primitive*>(SceneManager::getSelectedNode()))
 		{
-			Primitive* prim = dynamic_cast<Primitive*>(SceneManager::getSelectedNode());
-			ImGui::Text("Type: Primitive");
-			ImGui::Text("Name: %s", prim->name.c_str());
-			if (ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f))
-			{
-				prim->transform.updateMatrix();
-			}
-			if (ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f))
-			{
-				prim->transform.updateMatrix();
-			}
-			if (ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f))
-			{
-				prim->transform.updateMatrix();
-			}
-
-			const auto& materialNames = SceneManager::getMaterialNames();
-			 int currentMaterialIndex = -1;
-			// Find current material index
-			if (currentMaterialIndex < 0 && prim->material)
-			{
-				int index = 0;
-				for (const auto& name : materialNames)
-				{
-					if (SceneManager::getMaterial(name) == prim->material)
-					{
-						currentMaterialIndex = index;
-						break;
-					}
-					index++;
-				}
-			}
-
-			if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
-			{
-				for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
-				{
-					bool isSelected = (currentMaterialIndex == n);
-					if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
-					{
-						currentMaterialIndex = n;
-						std::shared_ptr<Material> selectedMaterial = SceneManager::getMaterial(materialNames[n]);
-						prim->material = selectedMaterial;
-					}
-					if (isSelected)
-					{
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-
+			showPrimitiveProperties(dynamic_cast<Primitive*>(SceneManager::getSelectedNode()));
 		}
 		else if (dynamic_cast<Light*>(SceneManager::getSelectedNode()))
 		{
-			Light* light = dynamic_cast<Light*>(SceneManager::getSelectedNode());
-			ImGui::Text("Name: %s", light->name.c_str());
-			ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
-				"Point Light\0Directional Light\0Spot Light\0");
-			ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f);
-			ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f);
-			ImGui::ColorEdit3("Color", &light->color[0]);
-			ImGui::DragFloat("Intensity", &light->intensity, 0.1f, 0.0f, 100.0f);
-			ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f);
-
+			showLightProperties(dynamic_cast<Light*>(SceneManager::getSelectedNode()));
 		}
 		ImGui::Text("Selected Node: %s", SceneManager::getSelectedNode()->name.c_str());
 	}
 	ImGui::End();
+}
+
+void UIManager::showPrimitiveProperties(Primitive* prim)
+{
+	ImGui::Text("Type: Primitive");
+	ImGui::Text("Name: %s", prim->name.c_str());
+	if (ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f))
+	{
+		SceneManager::setTransformsDirty(true);
+	}
+	if (ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f))
+	{
+		SceneManager::setTransformsDirty(true);
+	}
+	if (ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f))
+	{
+		SceneManager::setTransformsDirty(true);
+	}
+
+	const auto& materialNames = SceneManager::getMaterialNames();
+	int currentMaterialIndex = -1;
+	// Find current material index
+	if (currentMaterialIndex < 0 && prim->material)
+	{
+		int index = 0;
+		for (const auto& name : materialNames)
+		{
+			if (SceneManager::getMaterial(name) == prim->material)
+			{
+				currentMaterialIndex = index;
+				break;
+			}
+			index++;
+		}
+	}
+
+	if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
+	{
+		for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
+		{
+			bool isSelected = (currentMaterialIndex == n);
+			if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
+			{
+				currentMaterialIndex = n;
+				std::shared_ptr<Material> selectedMaterial = SceneManager::getMaterial(materialNames[n]);
+				prim->material = selectedMaterial;
+			}
+			if (isSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+}
+
+void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
+{
+	return;
+}
+
+void UIManager::showLightProperties(Light* light)
+{
+	ImGui::Text("Name: %s", light->name.c_str());
+	ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
+		"Point Light\0Directional Light\0Spot Light\0");
+	if (ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f))
+	{
+		SceneManager::setLightsDirty(true);
+	}
+	if (ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f))
+	{
+		SceneManager::setLightsDirty(true);
+	}
+	if (ImGui::ColorEdit3("Color", &light->color[0]))
+	{
+		SceneManager::setLightsDirty(true);
+	}
+	if (ImGui::DragFloat("Intensity", &light->intensity, 0.1f, 0.0f, 100.0f))
+	{
+		SceneManager::setLightsDirty(true);
+	}
+	if (ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f))
+	{
+		SceneManager::setLightsDirty(true);
+	}
 }
 
 
@@ -387,18 +478,17 @@ void UIManager::simpleWindow()
 	static float f = 0.0f;
 	static int counter = 0;
 
-	ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+	ImGui::Begin("Hello, world!");
+	ImGui::TextWrapped("This is some useful text.");
+	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 
-	ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-
-	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-
-	if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+	if (ImGui::Button("Button"))
 		counter++;
 	ImGui::SameLine();
 	ImGui::Text("counter = %d", counter);
 
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
+	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",
+		1000.0f / m_io->Framerate, m_io->Framerate);
 	ImGui::End();
 
 }

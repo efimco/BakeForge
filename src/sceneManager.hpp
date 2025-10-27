@@ -27,14 +27,22 @@ namespace SceneManager
 	std::vector<std::string> getMaterialNames();
 
 	SceneNode* getSelectedNode();
-	void setSelectedNode(SceneNode* node);
+	void setSelectedNode(SceneNode* node, bool addToSelection = false);
+	void clearSelectedNodes();
+	bool isNodeSelected(SceneNode* node);
 
-	void selectPrimitive(Primitive* primitive);
-	void selectPrimitive(uint32_t id);
+	void selectPrimitive(Primitive* primitive, bool addToSelection = false);
+	void selectPrimitive(uint32_t id, bool addToSelection = false);
 	void deselectPrimitive(Primitive* primitive);
 	void deselectPrimitive(uint32_t id);
 	bool isPrimitiveSelected(Primitive* primitive);
 	bool isPrimitiveSelected(uint32_t id);
 	void clearSelectedPrimitives();
+
+	bool areLightsDirty();
+	void setLightsDirty(bool dirty);
+
+	void setTransformsDirty(bool dirty);
+	bool areTransformsDirty();
 
 };

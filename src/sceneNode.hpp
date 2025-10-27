@@ -24,4 +24,5 @@ public:
 
 	void addChild(SceneNode* child);
 	void removeChild(SceneNode* child);
+	glm::mat4 getWorldMatrix();
 };

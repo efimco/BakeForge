@@ -147,15 +147,16 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 
 void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim)
 {
-	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
+	glm::mat4 model = prim->getWorldMatrix();
+	glm::mat4 mvp = projection * view * model;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		cbData->inverseTransposedModel = glm::transpose(prim->transform.getWorldMatrix());
-		cbData->model = glm::transpose(prim->transform.getWorldMatrix());
+		cbData->inverseTransposedModel = glm::transpose(model);
+		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
 		cbData->isSelected = SceneManager::isPrimitiveSelected(prim.get());
 		m_context->Unmap(m_constantbuffer.Get(), 0);

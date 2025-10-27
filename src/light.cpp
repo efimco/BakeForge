@@ -10,11 +10,12 @@ Light::Light(LightType type, glm::vec3 position, std::string _name)
 	name = _name;
 }
 
-LightData Light::getLightData() const
+LightData Light::getLightData() 
 {
 	LightData data;
 	data.type = type;
-	data.position = transform.position;
+	glm::mat4 worldMatrix = getWorldMatrix();
+	data.position = glm::vec3(worldMatrix[3]); 
 	data.intensity = intensity;
 	data.color = color;
 	data.direction = glm::rotate(direction, glm::radians(transform.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));

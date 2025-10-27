@@ -28,7 +28,7 @@ class Light : public SceneNode
 {
 public:
 	Light(LightType type, glm::vec3 position, std::string name = "Light");
-	LightData getLightData() const;
+	LightData getLightData();
 
 	float intensity = 1.0f;
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);

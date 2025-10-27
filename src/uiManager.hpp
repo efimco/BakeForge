@@ -3,6 +3,9 @@
 #include <wrl.h>
 #include "imgui.h"
 #include "GBuffer.hpp"
+#include "scene.hpp"
+#include "light.hpp"
+
 using namespace Microsoft::WRL;
 
 class UIManager
@@ -13,7 +16,7 @@ public:
 		const HWND& hwnd);
 	~UIManager();
 
-	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, SceneNode* scene);
+	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene);
 	uint32_t* getMousePos();
 
 private:
@@ -29,8 +32,15 @@ private:
 	void showMaterialBrowser();
 	void showGBufferImage(const GBuffer& gbuffer);
 	void processInputEvents();
-	void drawSceneGraph(SceneNode* scene);
+
+	void drawSceneGraph(Scene* scene);
+	void handleNodeSelection(SceneNode* node);
+	void handleNodeDragDrop(SceneNode* node);
 	void drawNode(SceneNode* node);
+
 	void showProperties();
+	void showPrimitiveProperties(Primitive* primitive);
+	void showMaterialProperties(std::shared_ptr<Material> material);
+	void showLightProperties(Light* light);
 
 };

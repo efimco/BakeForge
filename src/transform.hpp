@@ -12,11 +12,8 @@ struct Transform
 
 	void updateMatrix();
 
-	glm::mat4 getWorldMatrix(const Transform* parentTransform = nullptr) const;
 
 	void translate(const glm::vec3& translation);
 	void rotate(const glm::vec3& rotation);
 	void setScale(const glm::vec3& scale);
-
-	void decompose();
 };

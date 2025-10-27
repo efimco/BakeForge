@@ -29,7 +29,7 @@ Renderer::Renderer(const HWND& hwnd)
 
 
 	m_prevTime = std::chrono::system_clock::now();
-	m_scene = new SceneNode();
+	m_scene = new Scene("RootScene");
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
 	std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, glm::vec3(0.0f, 10.0f, -10.0f));
 	SceneManager::addLight(std::move(dirLight));

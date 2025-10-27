@@ -89,6 +89,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 	}
 	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON) && InputEvents::getMouseInViewport())
 	{
+		bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
 		std::cout << "Picked ID: " << readBackID << std::endl;
 		if (readBackID == 0)
 		{
@@ -98,7 +99,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		{
 			if (!SceneManager::isPrimitiveSelected(readBackID - 1))
 			{
-				SceneManager::selectPrimitive(readBackID - 1);
+				SceneManager::selectPrimitive(readBackID - 1, isShiftPressed);
 			}
 			else
 			{

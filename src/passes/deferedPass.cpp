@@ -108,7 +108,12 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	{
 		createOrResize();
 	}
-	update();
+	if (SceneManager::areLightsDirty())
+	{
+		update();
+		SceneManager::setLightsDirty(false);
+	}
+
 	m_context->CSSetShader(m_shaderManager->getComputeShader("deferred"), nullptr, 0);
 
 	// Set SRVs

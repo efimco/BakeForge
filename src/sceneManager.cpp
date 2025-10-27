@@ -6,10 +6,15 @@ static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // pa
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 
 static std::unordered_map<Primitive*, bool> selectedPrimitives;
+static std::unordered_map<SceneNode*, bool> selectedNodes;
 static SceneNode* selectedNode = nullptr;
 
 static std::vector<std::unique_ptr<Light>> lights;
 static std::unordered_map<std::string, uint32_t> names;
+
+static bool lightsAreDirty = true;
+
+static bool transformsAreDirty = true;
 
 
 bool SceneManager::isNameUsed(std::string name)
@@ -89,9 +94,28 @@ SceneNode* SceneManager::getSelectedNode()
 	return selectedNode;
 }
 
-void SceneManager::setSelectedNode(SceneNode* node)
+void SceneManager::setSelectedNode(SceneNode* node, bool addToSelection)
 {
+	if (addToSelection)
+	{
+		selectedNodes[node] = true;
+	}
+	else
+	{
+		clearSelectedNodes();
+		selectedNodes[node] = true;
+	}
 	selectedNode = node;
+}
+
+void SceneManager::clearSelectedNodes()
+{
+	selectedNodes.clear();
+}
+
+bool SceneManager::isNodeSelected(SceneNode* node)
+{
+	return selectedNodes.find(node) != selectedNodes.end();
 }
 
 
@@ -100,23 +124,35 @@ void SceneManager::addMaterial(std::shared_ptr<Material>&& material)
 	materials[material->name] = std::move(material);
 }
 
-void SceneManager::selectPrimitive(Primitive* primitive)
+void SceneManager::selectPrimitive(Primitive* primitive, bool addToSelection)
 {
 	const auto& it = selectedPrimitives.find(primitive);
 	if (it == selectedPrimitives.end())
 	{
+		if (!addToSelection)
+		{
+			clearSelectedPrimitives();
+		}
 		selectedPrimitives[primitive] = true;
+		selectedNode = primitive;
+		selectedNodes[primitive] = true;
 	}
+
 }
 
-void SceneManager::selectPrimitive(uint32_t id)
+void SceneManager::selectPrimitive(uint32_t id, bool addToSelection)
 {
 	const auto& it = selectedPrimitives.find(primitives[id].get());
 	if (it == selectedPrimitives.end())
 	{
 		Primitive* primitive = primitives[id].get();
+		if (!addToSelection)
+		{
+			clearSelectedPrimitives();
+		}
 		selectedPrimitives[primitive] = true;
 		selectedNode = primitive;
+		selectedNodes[primitive] = true;
 	}
 }
 
@@ -130,6 +166,11 @@ void SceneManager::deselectPrimitive(Primitive* primitive)
 			selectedNode = nullptr;
 		}
 		selectedPrimitives.erase(it);
+		selectedNodes.erase(primitive);
+		if (selectedNode == primitive)
+		{
+			selectedNode = nullptr;
+		}
 	}
 }
 
@@ -139,6 +180,11 @@ void SceneManager::deselectPrimitive(uint32_t id)
 	if (it != selectedPrimitives.end())
 	{
 		selectedPrimitives.erase(it);
+		selectedNodes.erase(primitives[id].get());
+		if (selectedNode == primitives[id].get())
+		{
+			selectedNode = nullptr;
+		}
 	}
 }
 
@@ -181,4 +227,28 @@ bool SceneManager::isPrimitiveSelected(uint32_t id)
 void SceneManager::clearSelectedPrimitives()
 {
 	selectedPrimitives.clear();
+	selectedNodes.clear();
+	selectedNode = nullptr;
+
 }
+
+bool SceneManager::areLightsDirty()
+{
+	return lightsAreDirty;
+}
+
+void SceneManager::setLightsDirty(bool dirty)
+{
+	lightsAreDirty = dirty;
+}
+
+void SceneManager::setTransformsDirty(bool dirty)
+{
+	transformsAreDirty = dirty;
+}
+
+bool SceneManager::areTransformsDirty()
+{
+	return transformsAreDirty;
+}
+
