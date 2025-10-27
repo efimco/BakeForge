@@ -20,15 +20,6 @@ void Transform::updateMatrix()
 	matrix = translationMatrix * rotationMatrix * scaleMatrix;
 }
 
-glm::mat4 Transform::getWorldMatrix(const Transform* parentTransform) const
-{
-	if (parentTransform)
-	{
-		return parentTransform->matrix * matrix;
-	}
-	return matrix;
-}
-
 void Transform::translate(const glm::vec3& translation)
 {
 	position += translation;
@@ -45,13 +36,4 @@ void Transform::setScale(const glm::vec3& newScale)
 {
 	scale = newScale;
 	updateMatrix();
-}
-
-void Transform::decompose()
-{
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::quat orientation;
-	glm::decompose(matrix, scale, orientation, position, skew, perspective);
-	rotation = glm::degrees(glm::eulerAngles(orientation));
 }

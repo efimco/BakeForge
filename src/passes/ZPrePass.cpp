@@ -142,7 +142,7 @@ ComPtr<ID3D11DepthStencilView>& ZPrePass::getDSV()
 
 void ZPrePass::update(const glm::mat4& view, const glm::mat4& projection, std::unique_ptr<Primitive>& prim)
 {
-	glm::mat4 mvp = projection * view * prim->transform.getWorldMatrix();
+	glm::mat4 mvp = projection * view * prim->getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
