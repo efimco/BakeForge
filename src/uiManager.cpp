@@ -292,6 +292,8 @@ void UIManager::drawNode(SceneNode* node)
 	}
 
 	const bool isFolder = (node->children.size() > 0);
+	const char* icon = getNodeIcon(node);
+	std::string label = std::string(icon) + " " + node->name;
 	if (isFolder)
 	{
 		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -300,10 +302,11 @@ void UIManager::drawNode(SceneNode* node)
 		{
 			nodeFlags |= ImGuiTreeNodeFlags_Selected;
 		}
-		bool open = ImGui::TreeNodeEx(node->name.c_str(), nodeFlags);
-		handleNodeSelection(node);
 
+		bool open = ImGui::TreeNodeEx(label.c_str(), nodeFlags);
+		handleNodeSelection(node);
 		handleNodeDragDrop(node);
+
 		if (open)
 		{
 			for (auto& child : node->children)
@@ -317,18 +320,36 @@ void UIManager::drawNode(SceneNode* node)
 	}
 	else
 	{
-		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 		bool isSelected = SceneManager::isNodeSelected(node);
 		if (isSelected)
 		{
 			nodeFlags |= ImGuiTreeNodeFlags_Selected;
 		}
-		ImGui::TreeNodeEx(node->name.c_str(), nodeFlags);
+		ImGui::TreeNodeEx(label.c_str(), nodeFlags);
 
 		handleNodeDragDrop(node);
 		handleNodeSelection(node);
 		ImGui::TableNextColumn();
 	}
+}
+
+const char* UIManager::getNodeIcon(SceneNode* node)
+{
+	if (dynamic_cast<Light*>(node))
+	{
+		return "[L]"; // Light
+	}
+	else if (dynamic_cast<Primitive*>(node))
+	{
+		return "[P]"; // Primitive
+	}
+	else if (!node->children.empty())
+	{
+		return "[F]"; // Folder
+	}
+
+	return "[D]"; // Default document icon
 }
 
 void UIManager::handleNodeSelection(SceneNode* node)

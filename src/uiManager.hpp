@@ -6,6 +6,12 @@
 #include "scene.hpp"
 #include "light.hpp"
 
+#define ICON_FA_CUBE       "\xef\x86\xb2"     // Mesh/Primitive
+#define ICON_FA_LIGHTBULB  "\xef\x83\xab"     // Light
+#define ICON_FA_FOLDER     "\xef\x81\xbb"     // Folder/Group
+#define ICON_FA_CAMERA     "\xef\x80\xbd"     // Camera
+#define ICON_FA_IMAGE      "\xef\x80\xbe"     // Material/Texture
+
 using namespace Microsoft::WRL;
 
 class UIManager
@@ -24,6 +30,7 @@ private:
 	const ComPtr<ID3D11DeviceContext>& m_context;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
+	ImFont* m_iconFont = nullptr;
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	void simpleWindow();
@@ -37,6 +44,7 @@ private:
 	void handleNodeSelection(SceneNode* node);
 	void handleNodeDragDrop(SceneNode* node);
 	void drawNode(SceneNode* node);
+	const char* getNodeIcon(SceneNode* node);
 
 	void showProperties();
 	void showPrimitiveProperties(Primitive* primitive);
