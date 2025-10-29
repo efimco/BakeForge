@@ -392,15 +392,15 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 	ImGui::Text("Name: %s", prim->name.c_str());
 	if (ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f))
 	{
-		SceneManager::setTransformsDirty(true);
+		SceneManager::setLightsDirty(true);
 	}
 	if (ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f))
 	{
-		SceneManager::setTransformsDirty(true);
+		SceneManager::setLightsDirty(true);
 	}
 	if (ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f))
 	{
-		SceneManager::setTransformsDirty(true);
+		SceneManager::setLightsDirty(true);
 	}
 
 	const auto& materialNames = SceneManager::getMaterialNames();
@@ -448,8 +448,12 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 void UIManager::showLightProperties(Light* light)
 {
 	ImGui::Text("Name: %s", light->name.c_str());
-	ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
-		"Point Light\0Directional Light\0Spot Light\0");
+
+	if (ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
+		"Point Light\0Directional Light\0Spot Light\0"))
+	{
+		SceneManager::setLightsDirty(true);
+	}
 	if (ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f))
 	{
 		SceneManager::setLightsDirty(true);
