@@ -18,5 +18,6 @@ struct Texture
 	Texture(Texture&& other, const ComPtr<ID3D11Device>& device);
 	Texture(const Texture& other) = delete;
 	Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& device);
+	Texture(std::string filepath, const ComPtr<ID3D11Device>& device);
 	const ComPtr<ID3D11Device>& device;
 };
