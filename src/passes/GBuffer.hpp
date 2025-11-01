@@ -4,7 +4,7 @@
 #include "camera.hpp"
 #include <glm/glm.hpp>
 #include "shaderManager.hpp"
-
+#include "primitive.hpp"
 
 using namespace Microsoft::WRL;
 

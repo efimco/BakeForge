@@ -39,6 +39,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\rogland_clear_night_2k.hdr");
 	resize();
 }
 
@@ -53,6 +54,7 @@ void Renderer::draw()
 		m_gBuffer->createOrResize();
 		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
+		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
 
@@ -72,9 +74,9 @@ void Renderer::draw()
 	}
 
 	// --- GPU Work ---
-
 	m_zPrePass->draw(m_view, m_projection);
 	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
+	m_cubeMapPass->draw(m_view, m_projection, m_camera->position);
 	m_deferredPass->draw(m_view, m_projection,
 		m_gBuffer->getAlbedoSRV(),
 		m_gBuffer->getMetallicRoughnessSRV(),
@@ -90,7 +92,7 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
+	m_uiManager->draw(m_cubeMapPass->getBackgroundSRV(), *m_gBuffer, m_scene);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(0, 0);
 
