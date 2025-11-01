@@ -53,11 +53,5 @@ float4 PS(VertexOutput input) : SV_TARGET
 	// Sample HDR equirectangular map
 	float3 hdrColor = hdrEquirect.Sample(samplerState, uv).rgb;
 
-	// Simple Reinhard tonemapping
-	hdrColor = hdrColor / (hdrColor + float3(1.0, 1.0, 1.0));
-
-	// Gamma correction
-	hdrColor = pow(hdrColor, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
-
 	return float4(hdrColor, 1.0f);
 }
