@@ -2,6 +2,7 @@
 #include <iostream>
 #include "sceneManager.hpp"
 #include "inputEventsHandler.hpp"
+
 ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);

@@ -1,6 +1,5 @@
 #pragma once
 #include "glm/glm.hpp"
-#include "primitive.hpp"
 #include "sceneNode.hpp"
 #include <vector>
 

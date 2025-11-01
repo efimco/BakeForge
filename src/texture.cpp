@@ -67,11 +67,20 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 	device->GetImmediateContext(&context);
 	context->GenerateMips(srv.Get());
 }
+uint32_t GetBytesPerPixel(DXGI_FORMAT format);
 
-Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device) : device(_device)
+Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device, bool isHdr) : device(_device)
 {
 	int width, height, channels;
-	stbi_uc* data = stbi_load(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	void* data = nullptr;
+	if (isHdr)
+	{
+		data = stbi_loadf(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	}
+	else
+	{
+		data = stbi_load(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	}
 	if (!data)
 	{
 		std::cerr << "Failed to load texture image: " << filepath << std::endl;
@@ -82,7 +91,7 @@ Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device) : de
 	texDesc.Height = height;
 	texDesc.Width = width;
 	texDesc.CPUAccessFlags = 0;
-	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT format = isHdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.Format = format;
 	texDesc.MipLevels = 1;
 	texDesc.ArraySize = 1;
@@ -90,11 +99,11 @@ Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device) : de
 	texDesc.SampleDesc.Quality = 0;
 	texDesc.Usage = D3D11_USAGE_DEFAULT;
 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	texDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	texDesc.MiscFlags = isHdr ? 0 : D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
 	D3D11_SUBRESOURCE_DATA subresData;
 	subresData.pSysMem = data;
-	subresData.SysMemPitch = width * 4; // 4 bytes per pixel (RGBA)
+	subresData.SysMemPitch = width * GetBytesPerPixel(format);
 	subresData.SysMemSlicePitch = 0;
 
 	{
@@ -119,6 +128,33 @@ Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device) : de
 	}
 	ComPtr<ID3D11DeviceContext> context;
 	device->GetImmediateContext(&context);
-	context->GenerateMips(srv.Get());
+	if (!isHdr)
+		context->GenerateMips(srv.Get());
 	stbi_image_free(data);
+}
+
+uint32_t Texture::getWidth() const
+{
+	return texDesc.Width;
+}
+
+uint32_t Texture::getHeight() const
+{
+	return texDesc.Height;
+}
+
+uint32_t GetBytesPerPixel(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+		return 4;
+	case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		return 16;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		return 8;
+		// Add more formats as needed
+	default:
+		return 0; // Unknown format
+	}
 }
