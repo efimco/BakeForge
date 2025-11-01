@@ -22,6 +22,7 @@ struct Light
 };
 
 StructuredBuffer<Light> lights : register(t6); 
+Texture2D<float4> tBackground : register(t7);
 RWTexture2D<unorm float4> outColor : register(u0); 
 
 
@@ -73,12 +74,13 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	outColor[DTid.xy] = tAlbedo.Load(int3(DTid.xy, 0));
 	float3 fragPos = tFragPos.Load(int3(DTid.xy, 0)).xyz;
 	float3 normal = tNormal.Load(int3(DTid.xy, 0)).xyz;
-	float3 albedo = tAlbedo.Load(int3(DTid.xy, 0)).xyz;
+	float4 albedo = tAlbedo.Load(int3(DTid.xy, 0));
 	float metallic = tMetallicRoughness.Load(int3(DTid.xy, 0)).x;
 	float roughness = tMetallicRoughness.Load(int3(DTid.xy, 0)).y;
 	uint objectID = tObjectID.Load(int3(DTid.xy, 0)); 
 	float depth = tDepth.Load(int3(DTid.xy, 0)).x;
 
+	float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
 	float3 finalColor = float3(0.0, 0.0, 0.0);
 
 	for (uint i = 0; i < lights.Length; ++i)
@@ -96,5 +98,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 
 	// Visualize objectID for debugging (convert uint to normalized float)
 	float idValue = float(objectID) / 255.0;
+	finalColor = lerp(background, finalColor, albedo.a);
+	finalColor = pow(finalColor, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
 	outColor[DTid.xy] = float4(finalColor, 1.0);
 }	

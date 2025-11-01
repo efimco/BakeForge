@@ -19,7 +19,8 @@ public:
 		const ComPtr<ID3D11ShaderResourceView>& normalSRV,
 		const ComPtr<ID3D11ShaderResourceView>& positionSRV,
 		const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
-		const ComPtr<ID3D11ShaderResourceView>& depthSRV);
+		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
+		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 private:

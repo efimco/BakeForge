@@ -83,7 +83,9 @@ void Renderer::draw()
 		m_gBuffer->getNormalSRV(),
 		m_gBuffer->getPositionSRV(),
 		m_gBuffer->getObjectIDSRV(),
-		m_zPrePass->getDepthSRV());
+		m_zPrePass->getDepthSRV(),
+		m_cubeMapPass->getBackgroundSRV()
+	);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
@@ -92,7 +94,7 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_uiManager->draw(m_cubeMapPass->getBackgroundSRV(), *m_gBuffer, m_scene);
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
 	m_device->getSwapChain()->Present(0, 0);
 
