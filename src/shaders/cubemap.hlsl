@@ -41,17 +41,17 @@ float4 PS(VertexOutput input) : SV_TARGET
 {
 	float3 direction = normalize(input.localPos);
 
-	// Convert direction to spherical coordinates for equirectangular sampling
-	float phi = atan2(direction.z, direction.x);
-	float theta = acos(direction.y);
+// Convert direction to spherical coordinates for equirectangular sampling
+float phi = atan2(direction.z, direction.x);
+float theta = acos(direction.y);
 
-	// Map to UV coordinates [0,1]
-	float2 uv;
-	uv.x = phi / (2.0 * 3.14159265359) + 0.5;
-	uv.y = theta / 3.14159265359;
+// Map to UV coordinates [0,1]
+float2 uv;
+uv.x = phi / (2.0 * 3.14159265359) + 0.5;
+uv.y = theta / 3.14159265359;
 
-	// Sample HDR equirectangular map
-	float3 hdrColor = hdrEquirect.Sample(samplerState, uv).rgb;
+// Sample HDR equirectangular map
+float3 hdrColor = hdrEquirect.Sample(samplerState, uv).rgb;
 
-	return float4(hdrColor, 1.0f);
+return float4(hdrColor, 1.0f);
 }
