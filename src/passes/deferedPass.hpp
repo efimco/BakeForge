@@ -20,7 +20,9 @@ public:
 		const ComPtr<ID3D11ShaderResourceView>& positionSRV,
 		const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
 		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
-		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV);
+		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
+		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV
+	);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 private:
@@ -36,6 +38,7 @@ private:
 	ComPtr<ID3D11BlendState> m_blendState;
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
+	ComPtr<ID3D11SamplerState> m_samplerState;
 
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	ComPtr<ID3D11Buffer> m_lightsBuffer;

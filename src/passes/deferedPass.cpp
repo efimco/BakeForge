@@ -35,6 +35,21 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 		if (FAILED(hr))
 			std::cerr << "Error Creating Lights SRV: " << hr << std::endl;
 	}
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	{
+		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
+		if (FAILED(hr))
+			std::cerr << "Error Creating Sampler State: " << hr << std::endl;
+	}
 }
 
 void DeferredPass::createOrResize()
@@ -100,7 +115,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	const ComPtr<ID3D11ShaderResourceView>& positionSRV,
 	const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
 	const ComPtr<ID3D11ShaderResourceView>& depthSRV,
-	const ComPtr<ID3D11ShaderResourceView>& backgroundSRV
+	const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
+	const ComPtr<ID3D11ShaderResourceView>& irradianceSRV
 )
 {
 	DEBUG_PASS_START(L"Deferred Pass Draw");
@@ -126,9 +142,11 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 		objectIDSRV.Get(),
 		depthSRV.Get(),
 		m_lightsSRV.Get(),
-		backgroundSRV.Get()
+		backgroundSRV.Get(),
+		irradianceSRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 8, srvs);
+	m_context->CSSetShaderResources(0, 9, srvs);
+	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	// Set UAVs
 	ID3D11UnorderedAccessView* uavs[] = {
@@ -142,8 +160,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs
-	ID3D11ShaderResourceView* nullSRVs[8] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->CSSetShaderResources(0, 8, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[9] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	m_context->CSSetShaderResources(0, 9, nullSRVs);
 	ID3D11UnorderedAccessView* nullUAVs[1] = { nullptr };
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAVs, nullptr);
 
