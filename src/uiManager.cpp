@@ -77,13 +77,18 @@ UIManager::~UIManager()
 void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene)
 {
 	DEBUG_PASS_START(L"UIManager Draw");
+
+	// Always check window validity before starting a new frame
+	if (!IsWindow(m_hwnd))
+	{
+		DEBUG_PASS_END();
+		return;
+	}
+
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	if (!IsWindow(m_hwnd))
-	{
-		return;
-	}
+
 	showInvisibleDockWindow();
 	simpleWindow();
 	showViewport(srv);
