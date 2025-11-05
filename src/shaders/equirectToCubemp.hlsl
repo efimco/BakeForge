@@ -1,3 +1,5 @@
+#include "constants.hlsl"
+
 Texture2D hdrEquirect : register(t0);
 SamplerState samplerState : register(s0);
 RWTexture2DArray<float4> gCubeUAV : register(u0);
@@ -28,8 +30,8 @@ float2 DirToEquirectUV(float3 dir)
 	float phi = atan2(dir.z, dir.x);        // [-pi, pi]
 	float theta = asin(clamp(dir.y, -1, 1));  // [-pi/2, pi/2]
 	float2 uv;
-	uv.x = 0.5f + phi * (1.0f / (2.0f * 3.14159265f));
-	uv.y = 0.5f - theta * (1.0f / 3.14159265f);
+	uv.x = 0.5f + phi * (1.0f / (2.0f * PI));
+	uv.y = 0.5f - theta * (1.0f / PI);
 	return uv;
 }
 

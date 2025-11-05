@@ -79,6 +79,7 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 	m_shaderManager->LoadVertexShader("cubemapVS", L"../../src/shaders/cubemap.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("cubemapPS", L"../../src/shaders/cubemap.hlsl", "PS");
 	m_shaderManager->LoadComputeShader("equirectToCubempCS", L"../../src/shaders/equirectToCubemp.hlsl", "CS");
+	m_shaderManager->LoadComputeShader("irradianceMapCS", L"../../src/shaders/irradianceConvolution.hlsl", "CS");
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -162,6 +163,11 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection, glm::vec3& camera
 ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getBackgroundSRV()
 {
 	return m_backgroundSRV;
+}
+
+ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getIrradianceSRV()
+{
+	return m_irradianceSRV;
 }
 
 std::string& CubeMapPass::getHDRIPath()
@@ -275,7 +281,7 @@ void CubeMapPass::createCubeMapResources()
 			throw std::runtime_error("Failed to create sampler state.");
 		}
 	}
-
+	DEBUG_PASS_START(L"CubeMapGeneration");
 	m_context->CSSetSamplers(0, 1, samplerState.GetAddressOf());
 
 	m_context->CSSetUnorderedAccessViews(0, 1, m_CubeMapUAV.GetAddressOf(), nullptr);
@@ -285,6 +291,7 @@ void CubeMapPass::createCubeMapResources()
 	uint32_t gx = (sideSize + 7) / 8;
 	uint32_t gy = (sideSize + 7) / 8;
 	m_context->Dispatch(gx, gy, 6);
+	DEBUG_PASS_END();
 }
 
 void CubeMapPass::createBackgroundResources()
@@ -334,7 +341,73 @@ void CubeMapPass::createBackgroundResources()
 
 void CubeMapPass::createIrradianceMap()
 {
+
+	static const uint32_t irradianceMapSize = 128;
+	D3D11_TEXTURE2D_DESC irradianceDesc = {};
+	irradianceDesc.ArraySize = 6; // 6 faces for cubemap
+	irradianceDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	irradianceDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	irradianceDesc.Width = irradianceMapSize;
+	irradianceDesc.Height = irradianceMapSize;
+	irradianceDesc.MipLevels = 1;
+	irradianceDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	irradianceDesc.SampleDesc.Count = 1;
+	irradianceDesc.Usage = D3D11_USAGE_DEFAULT;
+	{
+		HRESULT hr = m_device->CreateTexture2D(&irradianceDesc, nullptr, &m_irradianceTexture);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create irradiance texture.");
+		}
+	}
+	// Create the unordered access view for the irradiance map
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd = {};
+	uavd.Format = irradianceDesc.Format;
+	uavd.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+	uavd.Texture2DArray.MipSlice = 0;
+	uavd.Texture2DArray.FirstArraySlice = 0;
+	uavd.Texture2DArray.ArraySize = 6;
+	{
+		HRESULT hr = m_device->CreateUnorderedAccessView(m_irradianceTexture.Get(), &uavd, &m_irradianceUAV);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create irradiance unordered access view.");
+		}
+	}
+
+	// Create the shader resource view for the irradiance map
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = irradianceDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MipLevels = irradianceDesc.MipLevels;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	{
+		HRESULT hr = m_device->CreateShaderResourceView(m_irradianceTexture.Get(), &srvDesc, &m_irradianceSRV);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create irradiance shader resource view.");
+		}
+	}
+
+	DEBUG_PASS_START(L"IrradianceMapGeneration");
+	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+	m_context->CSSetUnorderedAccessViews(0, 1, m_irradianceUAV.GetAddressOf(), nullptr);
+	m_context->CSSetShaderResources(0, 1, m_CubeMapSRV.GetAddressOf());
+	m_context->CSSetConstantBuffers(0, 1, m_equirectToCubemapConstantBuffer.GetAddressOf());
+	m_context->CSSetShader(m_shaderManager->getComputeShader("irradianceMapCS"), nullptr, 0);
+	uint32_t gx = (irradianceMapSize + 7) / 8;
+	uint32_t gy = (irradianceMapSize + 7) / 8;
+	m_context->Dispatch(gx, gy, 1);
 	
+	// Unbind resources
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	ID3D11UnorderedAccessView* nullUAV = nullptr;
+	ID3D11SamplerState* nullSampler = nullptr;
+	m_context->CSSetShaderResources(0, 1, &nullSRV);
+	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+	m_context->CSSetSamplers(0, 1, &nullSampler);
+	DEBUG_PASS_END();
+
 }
 
 void CubeMapPass::createPrefilteredMap()
