@@ -23,8 +23,22 @@ struct Light
 
 StructuredBuffer<Light> lights : register(t6); 
 Texture2D<float4> tBackground : register(t7);
+TextureCube tIrradianceMap : register(t8);
+SamplerState linearSampler : register(s0);
 RWTexture2D<unorm float4> outColor : register(u0); 
 
+
+// Calculate IBL diffuse contribution
+float3 calculateIBLDiffuse(float3 normal, float3 albedo, float metallic)
+{
+	// Sample irradiance cubemap
+	float3 irradiance = tIrradianceMap.SampleLevel(linearSampler, normal, 0).rgb;
+	
+	// Apply non-metallic mask (metals don't have diffuse reflection)
+	float3 diffuseContribution = albedo * irradiance * (1.0 - metallic);
+	
+	return diffuseContribution;
+}
 
 float3 applyPointLight(Light light, float3 fragPos, float3 normal, float3 albedo, float metallic, float roughness)
 {
@@ -71,34 +85,39 @@ float3 applyDirectionalLight(Light light, float3 fragPos, float3 normal, float3 
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
-	outColor[DTid.xy] = tAlbedo.Load(int3(DTid.xy, 0));
+
 	float3 fragPos = tFragPos.Load(int3(DTid.xy, 0)).xyz;
 	float3 normal = tNormal.Load(int3(DTid.xy, 0)).xyz;
 	float4 albedo = tAlbedo.Load(int3(DTid.xy, 0));
-	float metallic = tMetallicRoughness.Load(int3(DTid.xy, 0)).x;
-	float roughness = tMetallicRoughness.Load(int3(DTid.xy, 0)).y;
-	uint objectID = tObjectID.Load(int3(DTid.xy, 0)); 
+	float2 metallicRoughness = tMetallicRoughness.Load(int3(DTid.xy, 0)).xy;
+	uint objectID = tObjectID.Load(int3(DTid.xy, 0));
 	float depth = tDepth.Load(int3(DTid.xy, 0)).x;
-
 	float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
+	
+	float metallic = metallicRoughness.x;
+	float roughness = max(metallicRoughness.y, 0.04); // Prevent division by zero
+	
 	float3 finalColor = float3(0.0, 0.0, 0.0);
+	
 
+	finalColor += calculateIBLDiffuse(normal, albedo.rgb, metallic);
+	
 	for (uint i = 0; i < lights.Length; ++i)
 	{
 		Light light = lights[i];
 		if (light.lightType == 0) // Point light
 		{
-			finalColor += applyPointLight(light, fragPos, normal, albedo, metallic, roughness);
+			finalColor += applyPointLight(light, fragPos, normal, albedo.rgb, metallic, roughness);
 		}
 		else if (light.lightType == 1) // Directional light
 		{
-			finalColor += applyDirectionalLight(light, fragPos, normal, albedo, metallic, roughness);
+			finalColor += applyDirectionalLight(light, fragPos, normal, albedo.rgb, metallic, roughness);
 		}
 	}
 
-	// Visualize objectID for debugging (convert uint to normalized float)
-	float idValue = float(objectID) / 255.0;
 	finalColor = lerp(background, finalColor, albedo.a);
+	
 	finalColor = pow(finalColor, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
+	
 	outColor[DTid.xy] = float4(finalColor, 1.0);
 }	
