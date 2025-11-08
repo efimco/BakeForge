@@ -20,6 +20,7 @@ public:
 	void draw(glm::mat4& view, glm::mat4& projection, glm::vec3& cameraPosition);
 	ComPtr<ID3D11ShaderResourceView>& getBackgroundSRV();
 	ComPtr<ID3D11ShaderResourceView>& getIrradianceSRV();
+	ComPtr<ID3D11ShaderResourceView>& getPrefilteredSRV();
 	std::string& getHDRIPath();
 	
 private:

@@ -116,7 +116,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
 	const ComPtr<ID3D11ShaderResourceView>& depthSRV,
 	const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
-	const ComPtr<ID3D11ShaderResourceView>& irradianceSRV
+	const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,
+	const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV
 )
 {
 	DEBUG_PASS_START(L"Deferred Pass Draw");
@@ -143,9 +144,10 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 		depthSRV.Get(),
 		m_lightsSRV.Get(),
 		backgroundSRV.Get(),
-		irradianceSRV.Get()
+		irradianceSRV.Get(),
+		prefilteredSRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 9, srvs);
+	m_context->CSSetShaderResources(0, 10, srvs);
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	// Set UAVs
@@ -160,8 +162,8 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs
-	ID3D11ShaderResourceView* nullSRVs[9] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->CSSetShaderResources(0, 9, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[10] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	m_context->CSSetShaderResources(0, 10, nullSRVs);
 	ID3D11UnorderedAccessView* nullUAVs[1] = { nullptr };
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAVs, nullptr);
 

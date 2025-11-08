@@ -24,7 +24,7 @@ float3 FaceUVToDir(uint face, float2 uv)
 }
 
 
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void CS(uint3 tid : SV_DispatchThreadID)
 {
 	if (tid.x >= gCubeFaceSize || tid.y >= gCubeFaceSize) return;
