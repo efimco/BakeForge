@@ -21,7 +21,8 @@ public:
 		const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
 		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
 		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
-		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV
+		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,
+		const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV
 	);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;

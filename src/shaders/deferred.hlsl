@@ -1,5 +1,6 @@
 
-
+#include "BRDF.hlsl"
+#include "constants.hlsl"
 Texture2D tAlbedo : register(t0);
 Texture2D tMetallicRoughness : register(t1);
 Texture2D tNormal : register(t2);
@@ -24,6 +25,7 @@ struct Light
 StructuredBuffer<Light> lights : register(t6); 
 Texture2D<float4> tBackground : register(t7);
 TextureCube tIrradianceMap : register(t8);
+TextureCube tPrefilteredMap : register(t9);
 SamplerState linearSampler : register(s0);
 RWTexture2D<unorm float4> outColor : register(u0); 
 
@@ -38,6 +40,38 @@ float3 calculateIBLDiffuse(float3 normal, float3 albedo, float metallic)
 	float3 diffuseContribution = albedo * irradiance * (1.0 - metallic);
 	
 	return diffuseContribution;
+}
+
+float3x3 getIrradianceMapRotation()
+{
+	float irradianceMapRotationY = 0.25; // 90 degrees
+	float angle = irradianceMapRotationY * yaw;
+	float cosA = cos(angle);
+	float sinA = sin(angle);
+	return float3x3(cosA, 0.0, - sinA, 0.0, 1.0, 0.0, sinA, 0.0, cosA);
+}
+
+// Calculate IBL specular contribution
+float3 calculateIBLSpecular(float3 normal, float3 viewDir, float3 albedo, float metallic, float roughness)
+{
+	float3x3 rotationMatrix = getIrradianceMapRotation();
+	float3 reflectDir = reflect(-viewDir, normal);
+	
+	// Calculate mip level based on roughness (0 = mirror, higher = blurrier)
+	float mipLevel = roughness * 11.0; // Map roughness to mip levels 0-4
+	
+	// Sample prefiltered environment map
+	float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, mul(reflectDir, rotationMatrix), mipLevel).rgb;
+	
+	// Fresnel calculation (Schlick approximation)
+	float cosTheta = max(dot(normal, viewDir), 0.0);
+	float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
+	float3 F = fresnelSchlick(cosTheta, F0, roughness);
+
+	// Apply fresnel and metallic mask
+	float3 specularContribution = prefilteredColor * F;
+
+	return specularContribution;
 }
 
 float3 applyPointLight(Light light, float3 fragPos, float3 normal, float3 albedo, float metallic, float roughness)
@@ -96,11 +130,14 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	
 	float metallic = metallicRoughness.x;
 	float roughness = max(metallicRoughness.y, 0.04); // Prevent division by zero
-	
 	float3 finalColor = float3(0.0, 0.0, 0.0);
 	
-
+	// Calculate view direction for IBL specular
+	float3 viewDir = normalize(-fragPos);
+	
+	// Add IBL contributions
 	finalColor += calculateIBLDiffuse(normal, albedo.rgb, metallic);
+	finalColor += calculateIBLSpecular(normal, viewDir, albedo.rgb, metallic, roughness);
 	
 	for (uint i = 0; i < lights.Length; ++i)
 	{
@@ -117,7 +154,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 
 	finalColor = lerp(background, finalColor, albedo.a);
 	
-	finalColor = pow(finalColor, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
+	// finalColor = pow(finalColor, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
 	
 	outColor[DTid.xy] = float4(finalColor, 1.0);
 }	

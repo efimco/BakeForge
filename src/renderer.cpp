@@ -85,7 +85,8 @@ void Renderer::draw()
 		m_gBuffer->getObjectIDSRV(),
 		m_zPrePass->getDepthSRV(),
 		m_cubeMapPass->getBackgroundSRV(),
-		m_cubeMapPass->getIrradianceSRV()
+		m_cubeMapPass->getIrradianceSRV(),
+		m_cubeMapPass->getPrefilteredSRV()
 	);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 

@@ -52,6 +52,8 @@ VertexOutput VS(VertexInput input)
 float3 getNormalFromMap(VertexOutput input)
 {
 	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
+	// If no normal map (flat normal), use geometry normal
+
 	float3 Q1 = ddx(input.fragPos.xyz);
 	float3 Q2 = ddy(input.fragPos.xyz);
 	float2 st1 = ddx(input.texCoord);
@@ -61,6 +63,10 @@ float3 getNormalFromMap(VertexOutput input)
 	float3 T = normalize(Q1 * st2.y - Q2 * st1.y);
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
+	if (length(tangentNormal) < 0.01f)
+		return N;
+
+
 
 	return normalize(mul(tangentNormal, TBN));
 }
