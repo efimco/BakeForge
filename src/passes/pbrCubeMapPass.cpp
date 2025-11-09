@@ -55,8 +55,8 @@ struct alignas(16) CubeMapConstantBufferData
 {
 	glm::mat4 view;
 	glm::mat4 projection;
-	glm::vec3 cameraPosition;
-	float padding; // Align to 16 bytes
+	float mapRotationY;
+	float padding[3];
 };
 
 struct alignas(16) EquirectToCubempConstantBufferData
@@ -146,10 +146,10 @@ void CubeMapPass::createOrResize()
 {
 	createBackgroundResources();
 }
-void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection, glm::vec3& cameraPosition)
+void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
 	DEBUG_PASS_START(L"CubeMapPass::draw");
-	update(view, projection, cameraPosition);
+	update(view, projection);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -159,6 +159,7 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection, glm::vec3& camera
 	UINT stride = sizeof(float) * 3;
 	UINT offset = 0;
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+	m_context->PSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
 
 	m_context->VSSetShader(m_shaderManager->getVertexShader("cubemapVS"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("cubemapPS"), nullptr, 0);
@@ -198,7 +199,7 @@ std::string& CubeMapPass::getHDRIPath()
 	return m_hdrImagePath;
 }
 
-void CubeMapPass::update(glm::mat4& view, glm::mat4& projection, glm::vec3& cameraPosition)
+void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_backgroundConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -209,8 +210,7 @@ void CubeMapPass::update(glm::mat4& view, glm::mat4& projection, glm::vec3& came
 	CubeMapConstantBufferData* data = reinterpret_cast<CubeMapConstantBufferData*>(mappedResource.pData);
 	data->view = view;
 	data->projection = projection;
-	data->cameraPosition = cameraPosition;
-	data->padding = 0.0f;
+	data->mapRotationY = AppConfig::getIBLRotation();
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }
 

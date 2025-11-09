@@ -72,22 +72,30 @@ PSOutput PS(VertexOutput input)
 {
 	PSOutput output;
 	output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
+	output.fragPos = float4(input.fragPos.xyz, 1.0f);
+	output.normal = getNormalFromMap(input);
+	float3 N = output.normal;
+	float3 V = -input.fragPos.xyz;
+	float NdotV = max(dot(N, V), 0.0f);
+	NdotV += .7;
+	NdotV *= 1.0f;
+	float4 selectionColor = float4(1.9, 0.5, 0.0, 1.0);
 	if (output.albedo.a < 0.1f)
 	{
 		discard;
 	}
 	if (isSelected)
 	{
-		output.albedo = output.albedo * float4(1.0f, 0.5f, 0.5f, 1.0f);
+		output.albedo = lerp(output.albedo, selectionColor, NdotV);
 	}
 	float gammaFactor = 2.6f;
-	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a); 
+	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);
 	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
 
 	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
 	output.metallicRoughness = float2(metallic, roughness);
-	output.normal = getNormalFromMap(input);
-	output.fragPos = float4(input.fragPos.xyz, 1.0f);
+
+
 	output.objectID = objectID;
 	return output;
 }
