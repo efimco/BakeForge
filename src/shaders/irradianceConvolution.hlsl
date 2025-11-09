@@ -1,3 +1,6 @@
+#ifndef IRRADIANCE_CONVOLUTION_HLSL
+#define IRRADIANCE_CONVOLUTION_HLSL
+
 #include "constants.hlsl"
 TextureCube cubeMap : register(t0);
 SamplerState samplerState : register(s0);
@@ -9,56 +12,96 @@ cbuffer CB : register(b0)
 	uint3 _pad;
 }
 
-float3 FaceUVToDir(uint face, float2 uv)
-{
-	float x = uv.x;
-	float y = uv.y;
 
-	// Each face assumes +Z forward in its local space; adjust per face:
-	if (face == 0) return normalize(float3(1, -y, -x)); // +X
-	if (face == 1) return normalize(float3(-1, -y, x)); // -X
-	if (face == 2) return normalize(float3(x, 1, y)); // +Y
-	if (face == 3) return normalize(float3(x, -1, -y)); // -Y
-	if (face == 4) return normalize(float3(x, -y, 1)); // +Z
-	/*face==5*/    return normalize(float3(-x, -y, -1)); // -Z
+static const uint NumSamples = 64 * 1024;
+static const float InvNumSamples = 1.0 / float(NumSamples);
+static const float Epsilon = 0.00001;
+
+float radicalInverse_VdC(uint bits)
+{
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+// Sample i-th point from Hammersley point set of NumSamples points total.
+float2 sampleHammersley(uint i)
+{
+	return float2(i * InvNumSamples, radicalInverse_VdC(i));
+}
+
+// Uniformly sample point on a hemisphere.
+// Cosine-weighted sampling would be a better fit for Lambertian BRDF but since this
+// compute shader runs only once as a pre-processing step performance is not *that* important.
+// See: "Physically Based Rendering" 2nd ed., section 13.6.1.
+float3 sampleHemisphere(float u1, float u2)
+{
+	const float u1p = sqrt(max(0.0, 1.0 - u1*u1));
+	return float3(cos(TwoPI*u2) * u1p, sin(TwoPI*u2) * u1p, u1);
+}
+
+float3 getSamplingVector(uint3 ThreadID)
+{
+	float outputWidth, outputHeight, outputDepth;
+	irradianceMap.GetDimensions(outputWidth, outputHeight, outputDepth);
+
+	float2 st = ThreadID.xy / float2(outputWidth, outputHeight);
+	float2 uv = 2.0 * float2(st.x, 1.0 - st.y) - 1.0;
+
+	// Select vector based on cubemap face index.
+	float3 ret;
+	switch (ThreadID.z)
+	{
+	case 0: ret = float3(1.0, uv.y, -uv.x); break;
+	case 1: ret = float3(-1.0, uv.y, uv.x); break;
+	case 2: ret = float3(uv.x, 1.0, -uv.y); break;
+	case 3: ret = float3(uv.x, -1.0, uv.y); break;
+	case 4: ret = float3(uv.x, uv.y, 1.0); break;
+	case 5: ret = float3(-uv.x, uv.y, -1.0); break;
+	}
+	return normalize(ret);
+}
+
+void computeBasisVectors(const float3 N, out float3 S, out float3 T)
+{
+	// Branchless select non-degenerate T.
+	T = cross(N, float3(0.0, 1.0, 0.0));
+	T = lerp(cross(N, float3(1.0, 0.0, 0.0)), T, step(Epsilon, dot(T, T)));
+
+	T = normalize(T);
+	S = normalize(cross(N, T));
+}
+
+// Convert point from tangent/shading space to world space.
+float3 tangentToWorld(const float3 v, const float3 N, const float3 S, const float3 T)
+{
+	return S * v.x + T * v.y + N * v.z;
 }
 
 
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 6)]
 void CS(uint3 tid : SV_DispatchThreadID)
 {
-	if (tid.x >= gCubeFaceSize || tid.y >= gCubeFaceSize) return;
-	float2 uv = (float2(tid.xy) + 0.5f) / float(gCubeFaceSize);
-	uv = uv * 2.0f - 1.0f;
+	float3 N = getSamplingVector(tid);
 
-	for (int i = 0; i < 6; i++)
-	{
-		float3 N = FaceUVToDir(i, uv);
+	float3 S, T;
+	computeBasisVectors(N, S, T);
 
-		float3 irradiance = float3(0.0f, 0.0f, 0.0f);
+	float3 irradiance = 0.0;
+	for(uint i=0; i<NumSamples; ++i) {
+		float2 u  = sampleHammersley(i);
+		float3 Li = tangentToWorld(sampleHemisphere(u.x, u.y), N, S, T);
+		float cosTheta = max(0.0, dot(Li, N));
 
-		float3 up = float3(0.0f, 1.0f, 0.0f);
-		float3 right = normalize(cross(up, N));
-		up = normalize(cross(N, right));
-
-		float sampleDelta = 0.025f;
-		float nrSamples = 0.0f;
-		for (float phi = 0.0f; phi < 2.0f * PI; phi += sampleDelta)
-		{
-			for (float theta = 0.0f; theta < 0.5f * PI; theta += sampleDelta)
-			{
-				// Spherical to Cartesian
-				float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-				// Tangent space to world space
-				float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
-
-				irradiance += cubeMap.SampleLevel(samplerState, sampleVec, 0).rgb * cos(theta) * sin(theta);
-				nrSamples++;
-			}
-		}
-
-		irradiance /= nrSamples;
-
-		irradianceMap[uint3(tid.xy, i)] = float4(irradiance, 1.0f);
+		// PIs here cancel out because of division by pdf.
+		irradiance += 2.0 * cubeMap.SampleLevel(samplerState, Li, 0).rgb * cosTheta;
 	}
+	irradiance /= float(NumSamples);
+
+	irradianceMap[tid] = float4(irradiance, 1.0);
 }
+
+#endif // IRRADIANCE_CONVOLUTION_HLSL

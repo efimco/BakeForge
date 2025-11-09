@@ -509,6 +509,8 @@ void UIManager::simpleWindow()
 	static int counter = 0;
 
 	ImGui::Begin("Hello, world!");
+	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity());
+	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
 	ImGui::TextWrapped("This is some useful text.");
 	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 

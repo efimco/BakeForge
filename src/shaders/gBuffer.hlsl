@@ -53,7 +53,8 @@ float3 getNormalFromMap(VertexOutput input)
 {
 	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
 	// If no normal map (flat normal), use geometry normal
-
+	if (length(tangentNormal) < 0.01f)
+		return input.normal;
 	float3 Q1 = ddx(input.fragPos.xyz);
 	float3 Q2 = ddy(input.fragPos.xyz);
 	float2 st1 = ddx(input.texCoord);
@@ -63,10 +64,6 @@ float3 getNormalFromMap(VertexOutput input)
 	float3 T = normalize(Q1 * st2.y - Q2 * st1.y);
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
-	if (length(tangentNormal) < 0.01f)
-		return N;
-
-
 
 	return normalize(mul(tangentNormal, TBN));
 }
@@ -83,7 +80,10 @@ PSOutput PS(VertexOutput input)
 	{
 		output.albedo = output.albedo * float4(1.0f, 0.5f, 0.5f, 1.0f);
 	}
+	float gammaFactor = 2.6f;
+	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a); 
 	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
+
 	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
 	output.metallicRoughness = float2(metallic, roughness);
 	output.normal = getNormalFromMap(input);

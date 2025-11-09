@@ -21,6 +21,7 @@ public:
 	ComPtr<ID3D11ShaderResourceView>& getBackgroundSRV();
 	ComPtr<ID3D11ShaderResourceView>& getIrradianceSRV();
 	ComPtr<ID3D11ShaderResourceView>& getPrefilteredSRV();
+	ComPtr<ID3D11ShaderResourceView>& getBRDFLutSRV();
 	std::string& getHDRIPath();
 	
 private:

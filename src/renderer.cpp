@@ -78,6 +78,7 @@ void Renderer::draw()
 	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view, m_projection, m_camera->position);
 	m_deferredPass->draw(m_view, m_projection,
+		m_camera->position,
 		m_gBuffer->getAlbedoSRV(),
 		m_gBuffer->getMetallicRoughnessSRV(),
 		m_gBuffer->getNormalSRV(),
@@ -86,7 +87,8 @@ void Renderer::draw()
 		m_zPrePass->getDepthSRV(),
 		m_cubeMapPass->getBackgroundSRV(),
 		m_cubeMapPass->getIrradianceSRV(),
-		m_cubeMapPass->getPrefilteredSRV()
+		m_cubeMapPass->getPrefilteredSRV(),
+		m_cubeMapPass->getBRDFLutSRV()
 	);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 

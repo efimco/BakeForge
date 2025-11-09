@@ -14,6 +14,7 @@ public:
 
 	void createOrResize();
 	void draw(const glm::mat4& view, const glm::mat4& projection,
+		const glm::vec3& cameraPosition,
 		const ComPtr<ID3D11ShaderResourceView>& albedoSRV,
 		const ComPtr<ID3D11ShaderResourceView>& metallicRoughnessSRV,
 		const ComPtr<ID3D11ShaderResourceView>& normalSRV,
@@ -22,7 +23,8 @@ public:
 		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
 		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
 		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,
-		const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV
+		const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV,
+		const ComPtr<ID3D11ShaderResourceView>& brdfLutSRV
 	);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
@@ -44,4 +46,6 @@ private:
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	ComPtr<ID3D11Buffer> m_lightsBuffer;
 	ComPtr<ID3D11ShaderResourceView> m_lightsSRV;
+
+	ComPtr<ID3D11Buffer> m_constantBuffer;
 };
