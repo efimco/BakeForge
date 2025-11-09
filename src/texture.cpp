@@ -26,7 +26,7 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 	else if (image.component == 2)
 		format = DXGI_FORMAT_R8G8_UNORM;
 	else
-		format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.Format = format;
 	texDesc.MipLevels = 1;
 	texDesc.ArraySize = 1;
@@ -91,7 +91,7 @@ Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device, bool
 	texDesc.Height = height;
 	texDesc.Width = width;
 	texDesc.CPUAccessFlags = 0;
-	DXGI_FORMAT format = isHdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	DXGI_FORMAT format = isHdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.Format = format;
 	texDesc.MipLevels = 1;
 	texDesc.ArraySize = 1;

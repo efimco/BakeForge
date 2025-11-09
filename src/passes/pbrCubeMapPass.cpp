@@ -72,6 +72,11 @@ struct alignas(16) PrefilteredMapConstantBufferData
 	uint32_t _pad[2];
 };
 
+struct alignas(16) BRDFLUTConstantBufferData
+{
+	uint32_t lutSize;
+	uint32_t _pad[3];
+};
 
 CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 	ComPtr<ID3D11DeviceContext>& context,
@@ -88,6 +93,7 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 	m_shaderManager->LoadComputeShader("equirectToCubempCS", L"../../src/shaders/equirectToCubemp.hlsl", "CS");
 	m_shaderManager->LoadComputeShader("irradianceMapCS", L"../../src/shaders/irradianceConvolution.hlsl", "CS");
 	m_shaderManager->LoadComputeShader("prefilteredMapCS", L"../../src/shaders/prefilteredMap.hlsl", "CS");
+	m_shaderManager->LoadComputeShader("brdfLUTCS", L"../../src/shaders/LUT4BRDF.hlsl", "CS");
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -139,7 +145,6 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 void CubeMapPass::createOrResize()
 {
 	createBackgroundResources();
-	createBRDFLut();
 }
 void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection, glm::vec3& cameraPosition)
 {
@@ -181,6 +186,11 @@ ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getIrradianceSRV()
 ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getPrefilteredSRV()
 {
 	return m_prefilteredSRV;
+}
+
+ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getBRDFLutSRV()
+{
+	return m_brdfLutSRV;
 }
 
 std::string& CubeMapPass::getHDRIPath()
@@ -355,7 +365,7 @@ void CubeMapPass::createBackgroundResources()
 void CubeMapPass::createIrradianceMap()
 {
 
-	static const uint32_t irradianceMapSize = 128;
+	static const uint32_t irradianceMapSize = 32;
 	D3D11_TEXTURE2D_DESC irradianceDesc = {};
 	irradianceDesc.ArraySize = 6; // 6 faces for cubemap
 	irradianceDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
@@ -402,15 +412,43 @@ void CubeMapPass::createIrradianceMap()
 		}
 	}
 
+	// Create constant buffer for irradiance generation with correct structure
+	ComPtr<ID3D11Buffer> irradianceConstantBuffer;
+	{
+		D3D11_BUFFER_DESC constantBufferDesc = {};
+		constantBufferDesc.ByteWidth = sizeof(EquirectToCubempConstantBufferData); // Same structure works
+		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		constantBufferDesc.StructureByteStride = 0;
+		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		constantBufferDesc.MiscFlags = 0;
+
+		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &irradianceConstantBuffer);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create irradiance constant buffer.");
+		}
+	}
+
+	// Update constant buffer
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	HRESULT hr = m_context->Map(irradianceConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (SUCCEEDED(hr))
+	{
+		EquirectToCubempConstantBufferData* data = reinterpret_cast<EquirectToCubempConstantBufferData*>(mappedResource.pData);
+		data->faceSize = irradianceMapSize;
+		m_context->Unmap(irradianceConstantBuffer.Get(), 0);
+	}
+
 	DEBUG_PASS_START(L"IrradianceMapGeneration");
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->CSSetUnorderedAccessViews(0, 1, m_irradianceUAV.GetAddressOf(), nullptr);
 	m_context->CSSetShaderResources(0, 1, m_CubeMapSRV.GetAddressOf());
-	m_context->CSSetConstantBuffers(0, 1, m_equirectToCubemapConstantBuffer.GetAddressOf());
+	m_context->CSSetConstantBuffers(0, 1, irradianceConstantBuffer.GetAddressOf());
 	m_context->CSSetShader(m_shaderManager->getComputeShader("irradianceMapCS"), nullptr, 0);
-	uint32_t gx = (irradianceMapSize + 7) / 8;
-	uint32_t gy = (irradianceMapSize + 7) / 8;
-	m_context->Dispatch(gx, gy, 1);
+	uint32_t gx = 8;
+	uint32_t gy = gx;
+	m_context->Dispatch(gx, gy, 6); // Dispatch 6 for all cubemap faces!
 
 	// Unbind resources
 	ID3D11ShaderResourceView* nullSRV = nullptr;
@@ -425,16 +463,16 @@ void CubeMapPass::createIrradianceMap()
 
 void CubeMapPass::createPrefilteredMap()
 {
-	const uint32_t prefilteredMapSize = 1024;
-	const uint32_t numMips = 11; // 0-9 mip levels
-	
+	const uint32_t prefilteredMapSize = 128;
+	const uint32_t numMips = 5; // 0-4 mip levels to match shader
+
 	D3D11_TEXTURE2D_DESC prefilteredMapDesc = {};
 	prefilteredMapDesc.ArraySize = 6; // 6 faces for cubemap
 	prefilteredMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 	prefilteredMapDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	prefilteredMapDesc.Width = prefilteredMapSize;
 	prefilteredMapDesc.Height = prefilteredMapSize;
-	prefilteredMapDesc.MipLevels = numMips; 
+	prefilteredMapDesc.MipLevels = numMips;
 	prefilteredMapDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	prefilteredMapDesc.SampleDesc.Count = 1;
 	prefilteredMapDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -479,13 +517,13 @@ void CubeMapPass::createPrefilteredMap()
 	}
 
 	DEBUG_PASS_START(L"PrefilteredMapGeneration");
-	
+
 	// Generate each mip level separately
 	for (uint32_t mip = 0; mip < numMips; ++mip)
 	{
 		// Calculate mip size
 		uint32_t currentMipSize = std::max(1u, prefilteredMapSize >> mip);
-		
+
 		// Update constant buffer
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		HRESULT hr = m_context->Map(prefilteredConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -505,7 +543,7 @@ void CubeMapPass::createPrefilteredMap()
 		uavDesc.Texture2DArray.MipSlice = mip;
 		uavDesc.Texture2DArray.FirstArraySlice = 0;
 		uavDesc.Texture2DArray.ArraySize = 6;
-		
+
 		hr = m_device->CreateUnorderedAccessView(m_prefilteredTexture.Get(), &uavDesc, &mipUAV);
 		if (FAILED(hr))
 		{
@@ -518,7 +556,7 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetShaderResources(0, 1, m_CubeMapSRV.GetAddressOf());
 		m_context->CSSetConstantBuffers(0, 1, prefilteredConstantBuffer.GetAddressOf());
 		m_context->CSSetShader(m_shaderManager->getComputeShader("prefilteredMapCS"), nullptr, 0);
-		
+
 		// Dispatch for this mip level
 		uint32_t gx = (currentMipSize + 15) / 16;
 		uint32_t gy = (currentMipSize + 15) / 16;
@@ -532,10 +570,88 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 		m_context->CSSetSamplers(0, 1, &nullSampler);
 	}
-	
+
 	DEBUG_PASS_END();
 }
 
 void CubeMapPass::createBRDFLut()
 {
+	const uint32_t brdfLUTsize = 256;
+
+	D3D11_TEXTURE2D_DESC brdfLUTDesc = {};
+	brdfLUTDesc.ArraySize = 1;
+	brdfLUTDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	brdfLUTDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	brdfLUTDesc.Width = brdfLUTsize;
+	brdfLUTDesc.Height = brdfLUTsize;
+	brdfLUTDesc.MipLevels = 1;
+	brdfLUTDesc.MiscFlags = 0;
+	brdfLUTDesc.SampleDesc.Count = 1;
+	brdfLUTDesc.Usage = D3D11_USAGE_DEFAULT;
+	{
+		HRESULT hr = m_device->CreateTexture2D(&brdfLUTDesc, nullptr, &m_brdfLutTexture);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create BRDF LUT texture.");
+		}
+	}
+
+	// Create the shader resource view for the BRDF LUT
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = brdfLUTDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = brdfLUTDesc.MipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	{
+		HRESULT hr = m_device->CreateShaderResourceView(m_brdfLutTexture.Get(), &srvDesc, &m_brdfLutSRV);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create BRDF LUT shader resource view.");
+		}
+	}
+
+	// Create unordered access view for BRDF LUT
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = brdfLUTDesc.Format;
+	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+	{
+		HRESULT hr = m_device->CreateUnorderedAccessView(m_brdfLutTexture.Get(), &uavDesc, &m_brdfLutUAV);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create BRDF LUT unordered access view.");
+		}
+	}
+
+	// Create constant buffer for BRDF LUT generation
+	ComPtr<ID3D11Buffer> brdfLUTConstantBuffer;
+	{
+		D3D11_BUFFER_DESC constantBufferDesc = {};
+		constantBufferDesc.ByteWidth = sizeof(BRDFLUTConstantBufferData);
+		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		constantBufferDesc.StructureByteStride = 0;
+		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		constantBufferDesc.MiscFlags = 0;
+
+		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &brdfLUTConstantBuffer);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to create BRDF LUT constant buffer.");
+		}
+	}
+
+
+	DEBUG_PASS_START(L"BRDFLUTGeneration");
+
+	// Generate BRDF LUT
+	m_context->CSSetUnorderedAccessViews(0, 1, m_brdfLutUAV.GetAddressOf(), nullptr);
+	m_context->CSSetShader(m_shaderManager->getComputeShader("brdfLUTCS"), nullptr, 0);
+	uint32_t gx = brdfLUTsize / 32;
+	uint32_t gy = gx;
+	m_context->Dispatch(gx, gy, 1);
+	// Unbind resources
+	ID3D11UnorderedAccessView* nullUAV = nullptr;
+	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+
+	DEBUG_PASS_END();
 }

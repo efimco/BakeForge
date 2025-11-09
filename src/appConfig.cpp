@@ -8,6 +8,8 @@ static bool needsResize = true;
 static float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 static bool isMinimized = false;
 static double deltaTime = 0.0;
+static float IBLintensity = 1.0f;
+static float IBLrotation = 0.0f;
 
 
 bool& AppConfig::getNeedsResize()
@@ -48,6 +50,16 @@ void AppConfig::setWindowHeight(int height)
 void AppConfig::setWindowMinimized(bool _isMnimized)
 {
 	isMinimized = _isMnimized;
+}
+
+float& AppConfig::getIBLIntensity()
+{
+	return IBLintensity;
+}
+
+float& AppConfig::getIBLRotation()
+{
+	return IBLrotation;
 }
 
 void AppConfig::setDeltaTime(double value)

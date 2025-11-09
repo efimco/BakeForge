@@ -12,6 +12,9 @@ namespace AppConfig
 	void setWindowWidth(int width);
 	void setWindowHeight(int height);
 	void setWindowMinimized(bool isMinimized);
+	float& getIBLIntensity();
+	float& getIBLRotation();
+
 
 	void setDeltaTime(double value);
 	double getDeltaTime();
