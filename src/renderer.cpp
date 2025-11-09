@@ -76,7 +76,7 @@ void Renderer::draw()
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection);
 	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
-	m_cubeMapPass->draw(m_view, m_projection, m_camera->position);
+	m_cubeMapPass->draw(m_view, m_projection);
 	m_deferredPass->draw(m_view, m_projection,
 		m_camera->position,
 		m_gBuffer->getAlbedoSRV(),
