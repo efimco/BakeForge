@@ -55,6 +55,8 @@ float3 getNormalFromMap(VertexOutput input)
 	// If no normal map (flat normal), use geometry normal
 	if (length(tangentNormal) < 0.01f)
 		return input.normal;
+	// Invert Y for DirectX normal maps
+	tangentNormal.y = -tangentNormal.y;
 	float3 Q1 = ddx(input.fragPos.xyz);
 	float3 Q2 = ddy(input.fragPos.xyz);
 	float2 st1 = ddx(input.texCoord);
@@ -62,6 +64,7 @@ float3 getNormalFromMap(VertexOutput input)
 
 	float3 N = normalize(input.normal);
 	float3 T = normalize(Q1 * st2.y - Q2 * st1.y);
+	T.y = -T.y;
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
 
@@ -73,12 +76,10 @@ PSOutput PS(VertexOutput input)
 	PSOutput output;
 	output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
-	output.normal = getNormalFromMap(input);
-	float3 N = output.normal;
-	float3 V = -input.fragPos.xyz;
-	float NdotV = max(dot(N, V), 0.0f);
-	NdotV += .7;
-	NdotV *= 1.0f;
+	float3 worldNormal = getNormalFromMap(input);
+	float3 N = worldNormal;
+	float3 V = normalize(-input.fragPos.xyz);
+	float NdotV = saturate(dot(N, V));
 	float4 selectionColor = float4(1.9, 0.5, 0.0, 1.0);
 	if (output.albedo.a < 0.1f)
 	{
@@ -91,9 +92,11 @@ PSOutput PS(VertexOutput input)
 	float gammaFactor = 2.6f;
 	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);
 	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
-
 	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
 	output.metallicRoughness = float2(metallic, roughness);
+
+	// Encode normal from [-1,1] to [0,1] for storage in UNORM render target
+	output.normal = worldNormal * 0.5f + 0.5f;
 
 
 	output.objectID = objectID;

@@ -67,16 +67,11 @@ struct alignas(16) EquirectToCubempConstantBufferData
 
 struct alignas(16) PrefilteredMapConstantBufferData
 {
-	uint32_t faceSize;
+	uint32_t mipSize;
 	uint32_t mipLevel;
 	uint32_t _pad[2];
 };
 
-struct alignas(16) BRDFLUTConstantBufferData
-{
-	uint32_t lutSize;
-	uint32_t _pad[3];
-};
 
 CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 	ComPtr<ID3D11DeviceContext>& context,
@@ -314,6 +309,7 @@ void CubeMapPass::createCubeMapResources()
 	uint32_t gx = (sideSize + 7) / 8;
 	uint32_t gy = (sideSize + 7) / 8;
 	m_context->Dispatch(gx, gy, 6);
+
 	DEBUG_PASS_END();
 }
 
@@ -464,7 +460,7 @@ void CubeMapPass::createIrradianceMap()
 void CubeMapPass::createPrefilteredMap()
 {
 	const uint32_t prefilteredMapSize = 128;
-	const uint32_t numMips = 5; // 0-4 mip levels to match shader
+	const uint32_t numMips = 8; // 0-7 mip levels to match shader
 
 	D3D11_TEXTURE2D_DESC prefilteredMapDesc = {};
 	prefilteredMapDesc.ArraySize = 6; // 6 faces for cubemap
@@ -530,7 +526,7 @@ void CubeMapPass::createPrefilteredMap()
 		if (SUCCEEDED(hr))
 		{
 			PrefilteredMapConstantBufferData* data = reinterpret_cast<PrefilteredMapConstantBufferData*>(mappedResource.pData);
-			data->faceSize = prefilteredMapSize;
+			data->mipSize = currentMipSize;
 			data->mipLevel = mip;
 			m_context->Unmap(prefilteredConstantBuffer.Get(), 0);
 		}
@@ -558,8 +554,8 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetShader(m_shaderManager->getComputeShader("prefilteredMapCS"), nullptr, 0);
 
 		// Dispatch for this mip level
-		uint32_t gx = (currentMipSize + 15) / 16;
-		uint32_t gy = (currentMipSize + 15) / 16;
+		uint32_t gx = (currentMipSize + 7) / 8;
+		uint32_t gy = (currentMipSize + 7) / 8;
 		m_context->Dispatch(gx, gy, 1);
 
 		// Unbind resources after each mip
@@ -581,7 +577,7 @@ void CubeMapPass::createBRDFLut()
 	D3D11_TEXTURE2D_DESC brdfLUTDesc = {};
 	brdfLUTDesc.ArraySize = 1;
 	brdfLUTDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-	brdfLUTDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	brdfLUTDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
 	brdfLUTDesc.Width = brdfLUTsize;
 	brdfLUTDesc.Height = brdfLUTsize;
 	brdfLUTDesc.MipLevels = 1;
@@ -622,31 +618,12 @@ void CubeMapPass::createBRDFLut()
 		}
 	}
 
-	// Create constant buffer for BRDF LUT generation
-	ComPtr<ID3D11Buffer> brdfLUTConstantBuffer;
-	{
-		D3D11_BUFFER_DESC constantBufferDesc = {};
-		constantBufferDesc.ByteWidth = sizeof(BRDFLUTConstantBufferData);
-		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		constantBufferDesc.StructureByteStride = 0;
-		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		constantBufferDesc.MiscFlags = 0;
-
-		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &brdfLUTConstantBuffer);
-		if (FAILED(hr))
-		{
-			throw std::runtime_error("Failed to create BRDF LUT constant buffer.");
-		}
-	}
-
-
 	DEBUG_PASS_START(L"BRDFLUTGeneration");
 
 	// Generate BRDF LUT
 	m_context->CSSetUnorderedAccessViews(0, 1, m_brdfLutUAV.GetAddressOf(), nullptr);
 	m_context->CSSetShader(m_shaderManager->getComputeShader("brdfLUTCS"), nullptr, 0);
-	uint32_t gx = brdfLUTsize / 32;
+	uint32_t gx = 32;
 	uint32_t gy = gx;
 	m_context->Dispatch(gx, gy, 1);
 	// Unbind resources

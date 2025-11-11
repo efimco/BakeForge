@@ -42,7 +42,7 @@ RWTexture2D<unorm float4> outColor : register(u0);
 
 
 
-static const float MAX_REFLECTION_LOD = 4.0;
+static const float MAX_REFLECTION_LOD = 7.0;
 static const float MIN_REFLECTANCE = 0.04;
 static const float YAW = PI / 180.0;
 
@@ -69,6 +69,48 @@ float3 aces(float3 color)
     return color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
 }
 
+float3 agxDefaultContrastApprox(float3 x)
+{
+    float3 x2 = x * x;
+    float3 x4 = x2 * x2;
+
+    return +15.5 * x4 * x2
+        - 40.14 * x4 * x
+        + 31.96 * x4
+        - 6.868 * x2 * x
+        + 0.4298 * x2
+        + 0.1191 * x
+        - 0.00232;
+}
+
+float3 agx(float3 color)
+{
+    const float3x3 agxMat = float3x3(
+        0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+        0.0784335999999992, 0.878468636469772, 0.0784336,
+        0.0792237451477643, 0.0791661274605434, 0.879142973793104
+    );
+
+    const float3x3 agxMatInv = float3x3(
+        1.19687900512017, -0.0528968517574562, -0.0529716355144438,
+        -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
+        -0.0990297440797205, -0.0989611768448433, 1.15107367264116
+    );
+
+    const float minEv = -12.47393;
+    const float maxEv = 4.026069;
+
+    color = mul(agxMat, color);
+    color = max(color, 1e-10);
+    color = log2(color);
+    color = (color - minEv) / (maxEv - minEv);
+    color = clamp(color, 0.0, 1.0);
+    color = agxDefaultContrastApprox(color);
+    color = mul(agxMatInv, color);
+
+    return color;
+}
+
 uint querySpecularTextureLevels()
 {
     uint width, height, levels;
@@ -80,29 +122,32 @@ uint querySpecularTextureLevels()
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
     float3 fragPos = tFragPos.Load(int3(DTid.xy, 0)).xyz;
-    float3 encodedNormal = tNormal.Load(int3(DTid.xy, 0)).xyz;
+    float3 normal = tNormal.Load(int3(DTid.xy, 0)).xyz; // encoded in [0,1]
     float4 albedo = tAlbedo.Load(int3(DTid.xy, 0));
     float2 metallicRoughness = tMetallicRoughness.Load(int3(DTid.xy, 0)).xy;
     uint objectID = tObjectID.Load(int3(DTid.xy, 0));
     float depth = tDepth.Load(int3(DTid.xy, 0)).x;
     float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
 
-    float3 N = normalize(encodedNormal * 2.0 - 1.0);     // Decode normal from [0,1] to [-1,1]
+    // Decode normal from [0,1] back to [-1,1]
+    float3 N = normalize(normal * 2.0f - 1.0f);
 
-
-    float metallic = metallicRoughness.x;
-    float roughness = clamp(metallicRoughness.y, 0.04, 1.0); // Blender clamps roughness
+    float metallic = saturate(metallicRoughness.x);
+    float roughness = saturate(metallicRoughness.y); // Blender clamps roughness
 
     // Early exit for background
     if (objectID == 0)
     {
+        background.r = linear_rgb_to_srgb(background.r);
+        background.g = linear_rgb_to_srgb(background.g);
+        background.b = linear_rgb_to_srgb(background.b);
         outColor[DTid.xy] = float4(background, 1.0);
         return;
     }
 
     // View direction (camera space, so camera is at origin)
     float3 V = normalize(cameraPosition - fragPos);
-    float NdotV = max(dot(N, V), 0.001);
+    float NdotV = saturate(dot(N, V));
 
     float3 R = reflect(-V, N);
 
@@ -111,43 +156,27 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
     float3 rotatedN = mul(irradianceRotation, N);
     float3 rotatedR = mul(irradianceRotation, R);
 
-    // Calculate F0 (base reflectivity)
-    float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo.rgb, metallic);
+    // Metallic workflow: interpolate between dielectric 0.04 and albedo by metallic
+    float3 F0 = lerp(float3(MIN_REFLECTANCE, MIN_REFLECTANCE, MIN_REFLECTANCE), albedo.rgb, metallic);
 
     // IBL Diffuse
     float3 irradiance = tIrradianceMap.SampleLevel(linearSampler, rotatedN, 0).rgb;
     float3 F = fresnelSchlick(NdotV, F0, roughness);
     float3 kS = F;
     float3 kD = (1.0 - kS) * (1.0 - metallic);
-    float3 diffuseIBL = kD * albedo.rgb * irradiance;
+    // Lambert diffuse with irradiance convolution already accounting for 1/PI; omit /PI if irradiance is pre-integrated.
+    float3 diffuseIBL = irradiance * albedo.rgb * kD;
 
     // IBL Specular
-    float mipLevel = clamp(roughness * querySpecularTextureLevels()+1, 0.00, querySpecularTextureLevels());
+    uint numMips = querySpecularTextureLevels();  // total mip levels
+    float mipLevel = roughness * max(float(numMips) - 1.0f, 0.0f);
     float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, rotatedR, mipLevel).rgb;
     float2 brdf = tBRDFLUT.SampleLevel(linearSampler, float2(NdotV, roughness), 0).rg;
-    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y);
-
+    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y); // slight desaturation tweak
+    
     // Combine IBL
     float3 finalColor = (diffuseIBL + specularIBL) * IBLintensity;
-    // finalColor = prefilteredColor * IBLintensity;
-
-    // // Add direct lighting
-    // for (uint i = 0; i < lights.Length; ++i)
-    // {
-    //     Light light = lights[i];
-    //     if (light.lightType == 0) // Point light
-    //     {
-    //         finalColor += applyPointLight(light, fragPos, N, V, albedo.rgb, metallic, roughness);
-    //     }
-    //     else if (light.lightType == 1) // Directional light
-    //     {
-    //         finalColor += applyDirectionalLight(light, N, V, albedo.rgb, metallic, roughness);
-    //     }
-    // }
-
-    // Blender's ACES tonemapping (closer to Blender's Filmic)
-    finalColor = aces(finalColor);
-
+    // finalColor = agx(finalColor);
     // Gamma correction (Blender uses 2.2, but you have custom sRGB)
     finalColor.r = linear_rgb_to_srgb(finalColor.r);
     finalColor.g = linear_rgb_to_srgb(finalColor.g);

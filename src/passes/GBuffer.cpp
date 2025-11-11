@@ -155,7 +155,8 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int obj
 	{
 		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		cbData->inverseTransposedModel = glm::transpose(model);
+		// Use inverse-transpose of the model matrix (upper-left 3x3) for correct normal transformation
+		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
 		cbData->isSelected = SceneManager::isPrimitiveSelected(prim.get());
