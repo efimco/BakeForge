@@ -14,7 +14,6 @@ struct VertexOutput
 cbuffer CubeMapCB : register(b0)
 {
 	float4x4 view;
-	float4x4 projection;
 	float mapRotationY;
 	float3 padding; // align to 16 bytes
 };
@@ -35,7 +34,8 @@ VertexOutput VS(CubeMapVertex input)
 	viewNoTranslation[3][2] = 0.0;
 	viewNoTranslation[3][3] = 1.0;
 
-	float4 pos = mul(float4(input.position, 1.0f), viewNoTranslation);
+	float scale = 10.0; // Adjust this value to make the cube bigger
+	float4 pos = mul(float4(input.position * scale, 1.0f), viewNoTranslation);
 	output.position = pos.xyww; // Set w = z to ensure depth is 1.0
 
 	return output;
@@ -52,9 +52,8 @@ float3x3 getMapRotation()
 float4 PS(VertexOutput input) : SV_TARGET
 {
 	float3x3 rotationMatrix = getMapRotation();
-	float3 direction = normalize(input.localPos);
-	direction = mul(rotationMatrix, direction);
-
+	float3 direction = mul(rotationMatrix, input.localPos);
+	direction = normalize(direction);
 	// Convert direction to spherical coordinates for equirectangular sampling
 	float phi = atan2(direction.z, direction.x);
 	float theta = acos(direction.y);

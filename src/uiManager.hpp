@@ -50,5 +50,6 @@ private:
 	void showPrimitiveProperties(Primitive* primitive);
 	void showMaterialProperties(std::shared_ptr<Material> material);
 	void showLightProperties(Light* light);
+	void showCameraProperties(Camera* camera);
 
 };

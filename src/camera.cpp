@@ -6,26 +6,26 @@
 
 static const float YAW = 0.0f;
 static const float PITCH = 0.0f;
-static const float SENSITIVITY = 0.1f;
-static const float ZOOM = 45.f;
-static const float SPEED = 1.0f;
+static const float FOV = 45.f;
 static const glm::vec3 WORLD_UP = glm::vec3(0, 1, 0);
 
 Camera::Camera(glm::vec3 pos)
-	: front(glm::vec3(0.0f, 0.0f, -1.0f)), speed(SPEED), zoom(ZOOM), sensitivity(SENSITIVITY), position(pos),
-	cameraReseted(true), defaultSpeed(SPEED)
+	: front(glm::vec3(0.0f, 0.0f, -1.0f)), fov(FOV),
+	cameraReseted(true)
 {
+	// Initialize transform using SceneNode's properties
+	transform.position = pos;
+	transform.rotation = glm::vec3(PITCH, YAW, 0.0f); // pitch (X), yaw (Y)
+	transform.updateMatrix();
 
-	this->yaw = YAW;
-	this->pitch = PITCH;
-	increasedSpeed = defaultSpeed * 3;
 	orbitPivot = glm::vec3(0.0f); // point to orbit around
-	distanceToOrbitPivot = glm::length(position - orbitPivot);
+	distanceToOrbitPivot = glm::length(transform.position - orbitPivot);
 	updateCameraVectors();
 }
 
 void Camera::processMovementControls()
 {
+	
 	if (!InputEvents::getMouseInViewport())
 		return;
 	processZoom();
@@ -42,7 +42,7 @@ void Camera::processMovementControls()
 
 glm::mat4 Camera::getViewMatrix()
 {
-	return glm::lookAtLH(position, orbitPivot, WORLD_UP);
+	return glm::lookAtLH(transform.position, orbitPivot, WORLD_UP);
 }
 
 void Camera::processZoom()
@@ -71,13 +71,20 @@ void Camera::processPanning()
 
 void Camera::updateCameraVectors()
 {
-	glm::vec3 offset;
-	offset.x = distanceToOrbitPivot * cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-	offset.y = distanceToOrbitPivot * sin(glm::radians(pitch));
-	offset.z = distanceToOrbitPivot * cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	// Use SceneNode's transform.rotation (degrees) as the source of yaw/pitch
+	float yawDeg = transform.rotation.y;
+	float pitchDeg = transform.rotation.x;
 
-	position = orbitPivot + offset;
-	front = glm::normalize(orbitPivot - position);
+	glm::vec3 offset;
+	offset.x = distanceToOrbitPivot * cos(glm::radians(pitchDeg)) * sin(glm::radians(yawDeg));
+	offset.y = distanceToOrbitPivot * sin(glm::radians(pitchDeg));
+	offset.z = distanceToOrbitPivot * cos(glm::radians(pitchDeg)) * cos(glm::radians(yawDeg));
+
+	transform.position = orbitPivot + offset;
+	transform.updateMatrix();
+
+	// Derive camera basis from world axes and target
+	front = glm::normalize(orbitPivot - transform.position);
 	right = glm::normalize(glm::cross(WORLD_UP, front));
 	up = glm::normalize(glm::cross(front, right));
 }
@@ -89,17 +96,22 @@ void Camera::processOrbit()
 	InputEvents::getMouseDelta(deltaX, deltaY);
 	// Blender-style orbit: consistent angular speed
 	float orbitSensitivity = 0.5f; // Fixed sensitivity like Blender
-	yaw += deltaX * orbitSensitivity;
-	pitch += deltaY * orbitSensitivity;
 
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
+	// Apply deltas to SceneNode's transform.rotation (degrees)
+	transform.rotation.y += deltaX * orbitSensitivity; // yaw
+	transform.rotation.x += deltaY * orbitSensitivity; // pitch
+
+	// Clamp pitch to avoid gimbal lock
+	if (transform.rotation.x > 89.0f)
+		transform.rotation.x = 89.0f;
+	if (transform.rotation.x < -89.0f)
+		transform.rotation.x = -89.0f;
 }
 
-// void Camera::focusOn(Primitive* primitive)
+// void Camera::focusOn(SceneNode* node)
 // {
+// 	if (dynamic_cast<Primitive*>(node) == nullptr)
+// 		return;
 // 	glm::vec3 minPos = primitive->boundingBox.first + glm::vec3(primitive->transform.position);
 // 	glm::vec3 maxPos = primitive->boundingBox.second + glm::vec3(primitive->transform.position);
 // 	glm::vec3 center = (minPos + maxPos) * 0.5f;

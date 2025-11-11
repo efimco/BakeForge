@@ -24,8 +24,6 @@ Renderer::Renderer(const HWND& hwnd)
 	// Initialize camera matrices
 
 	m_view = m_camera->getViewMatrix();
-	float aspectRatio = (float)AppConfig::getViewportWidth() / (float)AppConfig::getViewportHeight();
-	m_projection = glm::perspectiveLH(glm::radians(m_camera->zoom), aspectRatio, 0.1f, 100.0f);
 
 
 	m_prevTime = std::chrono::system_clock::now();
@@ -34,6 +32,7 @@ Renderer::Renderer(const HWND& hwnd)
 	std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, glm::vec3(0.0f, 10.0f, -10.0f));
 	SceneManager::addLight(std::move(dirLight));
 	m_scene->addChild(SceneManager::getLights()[0].get());
+	m_scene->addChild(m_camera.get());
 	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
@@ -66,6 +65,8 @@ void Renderer::draw()
 
 	m_camera->processMovementControls();
 	m_view = m_camera->getViewMatrix();
+	float aspectRatio = (float)AppConfig::getViewportWidth() / (float)AppConfig::getViewportHeight();
+	m_projection = glm::perspectiveLH(glm::radians(m_camera->fov), aspectRatio, 0.1f, 100.0f);
 
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
@@ -76,9 +77,9 @@ void Renderer::draw()
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection);
 	m_gBuffer->draw(m_view, m_projection, m_zPrePass->getDSV());
-	m_cubeMapPass->draw(m_view, m_projection);
+	m_cubeMapPass->draw(m_view);
 	m_deferredPass->draw(m_view, m_projection,
-		m_camera->position,
+		m_camera->transform.position,
 		m_gBuffer->getAlbedoSRV(),
 		m_gBuffer->getMetallicRoughnessSRV(),
 		m_gBuffer->getNormalSRV(),
@@ -111,9 +112,6 @@ void Renderer::resize()
 	m_backBufferRTV.Reset();
 	m_depthStencilBuffer.Reset();
 	m_depthStencilView.Reset();
-
-	float aspectRatio = (float)AppConfig::getViewportWidth() / ((float)AppConfig::getViewportHeight() != 0.0f ? (float)AppConfig::getViewportHeight() : 1.0f);
-	m_projection = glm::perspectiveLH(glm::radians(m_camera->zoom), aspectRatio, 0.1f, 100.0f);
 
 	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight(), DXGI_FORMAT_UNKNOWN, 0);
 

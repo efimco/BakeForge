@@ -353,6 +353,10 @@ const char* UIManager::getNodeIcon(SceneNode* node)
 	{
 		return "[F]"; // Folder
 	}
+	else if (dynamic_cast<Camera*>(node))
+	{
+		return "[C]"; // Camera
+	}
 
 	return "[D]"; // Default document icon
 }
@@ -406,6 +410,10 @@ void UIManager::showProperties()
 		else if (dynamic_cast<Light*>(SceneManager::getSelectedNode()))
 		{
 			showLightProperties(dynamic_cast<Light*>(SceneManager::getSelectedNode()));
+		}
+		else if (dynamic_cast<Camera*>(SceneManager::getSelectedNode()))
+		{
+			showCameraProperties(dynamic_cast<Camera*>(SceneManager::getSelectedNode()));
 		}
 		ImGui::Text("Selected Node: %s", SceneManager::getSelectedNode()->name.c_str());
 	}
@@ -499,6 +507,23 @@ void UIManager::showLightProperties(Light* light)
 	if (ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f))
 	{
 		SceneManager::setLightsDirty(true);
+	}
+}
+
+void UIManager::showCameraProperties(Camera* camera)
+{
+	ImGui::Text("Name: %s", camera->name.c_str());
+	if (ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f))
+	{
+		camera->updateCameraVectors();
+	}
+	if (ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f))
+	{
+		camera->updateCameraVectors();
+	}
+	if (ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f))
+	{
+		camera->updateCameraVectors();
 	}
 }
 
