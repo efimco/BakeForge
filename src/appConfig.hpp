@@ -14,6 +14,7 @@ namespace AppConfig
 	void setWindowMinimized(bool isMinimized);
 	float& getIBLIntensity();
 	float& getIBLRotation();
+	bool& getRegeneratePrefilteredMap();
 
 
 	void setDeltaTime(double value);
