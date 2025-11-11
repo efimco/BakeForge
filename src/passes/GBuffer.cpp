@@ -13,6 +13,8 @@ struct alignas(16) ConstantBufferData
 	int objectID;
 	bool isSelected;
 	float padding[2]; // Align to 16 bytes
+	glm::vec3 cameraPosition;
+	float padding2; // Align to 16 bytes
 };
 
 GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
@@ -95,7 +97,7 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	}
 }
 
-void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID3D11DepthStencilView>& dsv)
+void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPosition, ComPtr<ID3D11DepthStencilView>& dsv)
 {
 
 	DEBUG_PASS_START(L"GBuffer Draw");
@@ -129,7 +131,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 	{
 		auto objectID = i;
 		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
-		update(view, projection, objectID, prim);
+		update(view, projection, cameraPosition, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		std::shared_ptr<Material>& material = prim->material;
@@ -145,7 +147,7 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, ComPtr<ID
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int objectID, std::unique_ptr<Primitive>& prim)
+void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPosition, int objectID, std::unique_ptr<Primitive>& prim)
 {
 	glm::mat4 model = prim->getWorldMatrix();
 	glm::mat4 mvp = projection * view * model;
@@ -160,6 +162,7 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, int obj
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
 		cbData->isSelected = SceneManager::isPrimitiveSelected(prim.get());
+		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
 }

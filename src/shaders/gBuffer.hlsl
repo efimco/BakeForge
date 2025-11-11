@@ -1,3 +1,5 @@
+#include "BRDF.hlsl"
+
 cbuffer ConstantBuffer : register(b0)
 {
 	float4x4 modelViewProjection;
@@ -5,7 +7,9 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 model;
 	int objectID;
 	bool isSelected;
-	float2 _pad; // align to 16 bytes
+	float2 _pad;
+	float3 cameraPosition;
+	float _pad2; // align to 16 bytes
 };
 
 Texture2D albedoTexture : register(t0);
@@ -78,16 +82,16 @@ PSOutput PS(VertexOutput input)
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
 	float3 worldNormal = getNormalFromMap(input);
 	float3 N = worldNormal;
-	float3 V = normalize(-input.fragPos.xyz);
-	float NdotV = saturate(dot(N, V));
-	float4 selectionColor = float4(1.9, 0.5, 0.0, 1.0);
+	float3 V = normalize(cameraPosition - input.fragPos.xyz);
+	float NdotV = dot(N, V);
+	float3 selectionColor = float3(1.9, 0.5, 0.0);
 	if (output.albedo.a < 0.1f)
 	{
 		discard;
 	}
 	if (isSelected)
 	{
-		output.albedo = lerp(output.albedo, selectionColor, NdotV);
+		output.albedo.rgb = lerp(output.albedo.rgb, selectionColor, 1.0 - saturate(NdotV + .1));
 	}
 	float gammaFactor = 2.6f;
 	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);

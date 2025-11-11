@@ -109,6 +109,7 @@ float3 agx(float3 color)
     color = mul(agxMatInv, color);
 
     return color;
+
 }
 
 uint querySpecularTextureLevels()
@@ -116,6 +117,45 @@ uint querySpecularTextureLevels()
     uint width, height, levels;
     tPrefilteredMap.GetDimensions(0, width, height, levels);
     return levels;
+}
+float3 applyPointLight(Light light, float3 fragPos, float3 N, float3 V, float3 F0, float roughness, float3 albedo, float metallic)
+{
+    float3 L = normalize(light.position - fragPos);
+    float3 H = normalize(V + L);
+
+    float distance = length(light.position - fragPos);
+
+    // Attenuation
+    float attenuation = saturate(pow(1.0 - pow(distance / light.radius, 4.0), 2.0)) / (pow(distance, 2.0) + 1.0);
+
+    if (light.radius < distance)
+    {
+        attenuation = 0.0;
+    }
+
+    float3 radiance = light.color * light.intensity * attenuation;
+
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotH = max(dot(N, H), 0.0);
+    float HdotV = max(dot(H, V), 0.0);
+
+    float D = distributionGGX(NdotH, roughness);
+    float G = geometrySmith(NdotV, NdotL, roughness);
+    float3 F = fresnelSchlick(HdotV, F0, roughness);
+
+    // Energy conservation
+    float3 kS = F;
+    float3 kD = (1.0 - kS) * (1.0 - metallic);
+
+    // Specular
+    float3 numerator = D * G * F;
+    float denominator = 4.0 * NdotV * NdotL + 0.001; // Add epsilon to prevent divide by zero
+    float3 specular = numerator / denominator;
+
+    float3 result = (kD * albedo / PI + specular) * radiance * NdotL;
+
+    return result;
 }
 
 [numthreads(16, 16, 1)]
@@ -129,11 +169,10 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
     float depth = tDepth.Load(int3(DTid.xy, 0)).x;
     float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
 
-    // Decode normal from [0,1] back to [-1,1]
     float3 N = normalize(normal * 2.0f - 1.0f);
 
     float metallic = saturate(metallicRoughness.x);
-    float roughness = saturate(metallicRoughness.y); // Blender clamps roughness
+    float roughness = saturate(metallicRoughness.y);
 
     // Early exit for background
     if (objectID == 0)
@@ -145,7 +184,6 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
         return;
     }
 
-    // View direction (camera space, so camera is at origin)
     float3 V = normalize(cameraPosition - fragPos);
     float NdotV = clamp(dot(N, V), 0.01, 0.99);
 
@@ -172,15 +210,37 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
     float mipLevel = roughness * max(float(numMips) - 1.0f, 0.0f);
     float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, rotatedR, mipLevel).rgb;
     float2 brdf = tBRDFLUT.SampleLevel(linearSampler, float2(NdotV, roughness), 0).rg;
-    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y); 
-    
+    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y);
+
     // Combine IBL
     float3 finalColor = (diffuseIBL + specularIBL) * IBLintensity;
-    // finalColor = agx(finalColor);
+
+    for (int i = 0; i < lights.Length; ++i)
+    {
+        Light light = lights[i];
+        if (light.lightType == 0) // Point
+        {
+            finalColor += applyPointLight(light, fragPos, N, V, F0, roughness, albedo.rgb, metallic);
+        }
+        else if (light.lightType == 1) // Directional
+        {
+            continue;
+        }
+        else if (light.lightType == 2) // Spot
+        {
+            continue;
+        }
+
+    }
+    // finalColor = lights[0].intensity;
+
     // Gamma correction (Blender uses 2.2, but you have custom sRGB)
     finalColor.r = linear_rgb_to_srgb(finalColor.r);
     finalColor.g = linear_rgb_to_srgb(finalColor.g);
     finalColor.b = linear_rgb_to_srgb(finalColor.b);
+
+    // ACES tone mapping
+    finalColor = aces(finalColor);
 
     outColor[DTid.xy] = float4(finalColor, 1.0);
 }
