@@ -62,8 +62,8 @@ void CS(uint2 tid : SV_DispatchThreadID)
 		return;
 
 	float2 uv = (float2(tid.xy) + 0.5) / float2(w, h);
-	uv.x += 0.02;
 	float NdotV = uv.x;
+
 	float roughness = uv.y;
 
 	brdfLUT[tid] = IntegrateBRDF(NdotV, roughness);

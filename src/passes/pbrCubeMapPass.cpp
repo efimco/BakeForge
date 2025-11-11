@@ -144,6 +144,14 @@ void CubeMapPass::createOrResize()
 void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
 	DEBUG_PASS_START(L"CubeMapPass::draw");
+	
+	if (AppConfig::getRegeneratePrefilteredMap())
+	{
+		createPrefilteredMap();
+		createBRDFLut();
+		AppConfig::getRegeneratePrefilteredMap() = false;
+	}
+
 	update(view, projection);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
@@ -459,6 +467,13 @@ void CubeMapPass::createIrradianceMap()
 
 void CubeMapPass::createPrefilteredMap()
 {
+	if (m_prefilteredTexture)
+	{
+		// Release existing resources
+		m_prefilteredTexture.Reset();
+		m_prefilteredSRV.Reset();
+	}
+
 	const uint32_t prefilteredMapSize = 128;
 	const uint32_t numMips = 8; // 0-7 mip levels to match shader
 
@@ -572,6 +587,13 @@ void CubeMapPass::createPrefilteredMap()
 
 void CubeMapPass::createBRDFLut()
 {
+	if (m_brdfLutTexture)
+	{
+		// Release existing resources
+		m_brdfLutTexture.Reset();
+		m_brdfLutSRV.Reset();
+		m_brdfLutUAV.Reset();
+	}
 	const uint32_t brdfLUTsize = 256;
 
 	D3D11_TEXTURE2D_DESC brdfLUTDesc = {};

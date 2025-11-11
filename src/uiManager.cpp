@@ -513,6 +513,7 @@ void UIManager::simpleWindow()
 	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
 	ImGui::TextWrapped("This is some useful text.");
 	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
 
 	if (ImGui::Button("Button"))
 		counter++;

@@ -10,7 +10,7 @@ static bool isMinimized = false;
 static double deltaTime = 0.0;
 static float IBLintensity = 1.0f;
 static float IBLrotation = 0.0f;
-
+static bool regeneratePrefilteredMap = false;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -60,6 +60,11 @@ float& AppConfig::getIBLIntensity()
 float& AppConfig::getIBLRotation()
 {
 	return IBLrotation;
+}
+
+bool& AppConfig::getRegeneratePrefilteredMap()
+{
+	return regeneratePrefilteredMap;
 }
 
 void AppConfig::setDeltaTime(double value)

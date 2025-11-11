@@ -147,7 +147,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 
     // View direction (camera space, so camera is at origin)
     float3 V = normalize(cameraPosition - fragPos);
-    float NdotV = saturate(dot(N, V));
+    float NdotV = clamp(dot(N, V), 0.01, 0.99);
 
     float3 R = reflect(-V, N);
 
@@ -172,7 +172,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
     float mipLevel = roughness * max(float(numMips) - 1.0f, 0.0f);
     float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, rotatedR, mipLevel).rgb;
     float2 brdf = tBRDFLUT.SampleLevel(linearSampler, float2(NdotV, roughness), 0).rg;
-    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y); // slight desaturation tweak
+    float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y); 
     
     // Combine IBL
     float3 finalColor = (diffuseIBL + specularIBL) * IBLintensity;
