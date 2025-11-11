@@ -7,7 +7,7 @@ RWTexture2DArray<float4> prefilteredMap : register(u0);
 
 cbuffer CB : register(b0)
 {
-	uint gCubeFaceSize;
+	uint gMipLevelSize;
 	uint gMipLevel;
 	uint2 _pad;
 }
@@ -31,47 +31,52 @@ float3 FaceUVToDir(uint face, float2 uv)
 	}
 }
 
+float3 PrefilterEnvMap(float roughness, float3 R)
+{
+	float3 N = R;
+	float3 V = R;
+	if (roughness <= 0.0001f)
+		return cubeMap.SampleLevel(samplerState, R, 0).rgb;
 
-[numthreads(16, 16, 1)]
+	float3 prefilteredColor = float3(0.0f, 0.0f, 0.0f);
+	float TotalWeight = 0.0001f;
+
+	const uint SAMPLE_COUNT = 1024;
+	for (uint i = 0; i < SAMPLE_COUNT; i++)
+	{
+		float2 Xi = Hammersley(i, SAMPLE_COUNT);
+		float3 H = ImportanceSampleGGX(Xi, roughness, R);
+		float3 L = 2.0f * dot(V, H) * H - V;
+		float NoL = saturate(dot(N, L));
+
+		if (NoL > 0.0)
+		{
+			prefilteredColor += cubeMap.SampleLevel(samplerState, L, 0).rgb * NoL;
+			TotalWeight += NoL;
+		}
+	}
+	;
+	return prefilteredColor / TotalWeight;
+}
+
+
+[numthreads(32, 32, 1)]
 void CS(uint3 tid : SV_DispatchThreadID)
 {
-	// Calculate current mip size
-	uint currentMipSize = max(1, gCubeFaceSize >> gMipLevel);
+	if (tid.x >= gMipLevelSize || tid.y >= gMipLevelSize)
+		return;
 
 	// Map pixel to UV coordinates 
-	float2 uv = (float2(tid.xy) + 0.5f) / float(currentMipSize);
+	float2 uv = (float2(tid.xy) + 0.5f) / float2(gMipLevelSize, gMipLevelSize);
 
 	// Calculate roughness based on mip level (0 = mirror, higher = rougher)
-	float roughness = float(gMipLevel) / 4.0f; // Assuming 5 mip levels (0-4)
-	roughness = clamp(roughness, 0.0f, 1.0f);
+	float roughness = float(gMipLevel) / 7.0f; // Assuming 8 mip levels (0-7)
 
 	// Process all 6 faces for this mip level
 	for (uint face = 0; face < 6; ++face)
 	{
-		float3 N = FaceUVToDir(face, uv);
-		float3 R = N;
-		float3 V = R;
-
-		const uint SAMPLE_COUNT = 1024;
-		float3 prefilteredColor = float3(0.0f, 0.0f, 0.0f);
-		float TotalWeight = 0.0f;
-		for (uint i = 0; i < SAMPLE_COUNT; i++)
-		{
-			// Generate sample using Hammersley sequence
-			float2 Xi = Hammersley(i, SAMPLE_COUNT);
-			float3 H = ImportanceSampleGGX(Xi, roughness, N);
-			float3 L = 2.0f * dot(V, H) * H - V;
-
-			float NoL = saturate(dot(N, L));
-
-			if (NoL > 0.0f)
-			{
-				float3 sampleColor = cubeMap.SampleLevel(samplerState, L, 0).rgb * NoL;
-				prefilteredColor += sampleColor;
-				TotalWeight += NoL;
-			}
-		}
-		prefilteredColor /= TotalWeight;
+		float3 R = FaceUVToDir(face, uv);
+		float3 prefilteredColor = PrefilterEnvMap(roughness, R);
 		prefilteredMap[uint3(tid.xy, face)] = float4(prefilteredColor, 1.0f);
 	}
 }

@@ -8,21 +8,22 @@ RWTexture2D<float2> brdfLUT : register(u0);
 
 float2 IntegrateBRDF(float NdotV, float roughness)
 {
-	NdotV = max(NdotV, 0.001);
+	NdotV = saturate(NdotV);
+	roughness = saturate(roughness);
 
-	// Normal pointing up in tangent space
-	float3 N = float3(0.0, 0.0, 1.0);
+	if (roughness < 0.0001)
+		return float2(0.0, 0.0);
 
-	// View vector from NdotV
 	float3 V;
-	V.x = sqrt(1.0 - NdotV * NdotV); // sin
+	V.x = sqrt(1.0 - (NdotV * NdotV)); // sin
 	V.y = 0.0;
 	V.z = NdotV; // cos
 
 	float A = 0.0;
 	float B = 0.0;
-	const uint NumSamples = 512u * 512u;
+	float3 N = float3(0.0, 0.0, 1.0);
 
+	const uint NumSamples = 1024u;
 	for (uint i = 0u; i < NumSamples; ++i)
 	{
 		// Generate Hammersley sample
@@ -30,9 +31,9 @@ float2 IntegrateBRDF(float NdotV, float roughness)
 		float3 H = ImportanceSampleGGX(Xi, roughness, N);
 		float3 L = 2.0 * dot(V, H) * H - V;
 
-		float NoL = L.z;
-		float NoH = H.z;
-		float VoH = max(dot(V, H), 0.0);
+		float NoL = saturate(L.z);
+		float NoH = saturate(H.z);
+		float VoH = saturate(dot(V, H));
 
 		if (NoL > 0.0)
 		{
@@ -49,17 +50,25 @@ float2 IntegrateBRDF(float NdotV, float roughness)
 	return float2(A, B) / float(NumSamples);
 }
 
-[numthreads(32, 32, 1)]
+[numthreads(8, 8, 1)]
 void CS(uint2 tid : SV_DispatchThreadID)
 {
+
 	// Convert pixel coordinates to normalized [0,1] range
-	float outputWidth, outputHeight;
-	brdfLUT.GetDimensions(outputWidth, outputHeight);
-	float NdotV = tid.x / outputWidth;
-	float roughness = tid.y / outputHeight;
+	uint w, h;
+	brdfLUT.GetDimensions(w, h);
+
+	if (tid.x >= w || tid.y >= h)
+		return;
+
+	float2 uv = (float2(tid.xy) + 0.5) / float2(w, h);
+	uv.x += 0.02;
+	float NdotV = uv.x;
+	float roughness = uv.y;
 
 	brdfLUT[tid] = IntegrateBRDF(NdotV, roughness);
 }
 
 #endif // LUT4BRDF_HLSL
+
 

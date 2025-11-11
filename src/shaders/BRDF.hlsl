@@ -99,13 +99,25 @@ float2 Hammersley(uint i, uint N)
 // Importance sampling for GGX distribution
 float3 ImportanceSampleGGX(float2 Xi, float roughness, float3 N)
 {
-	float a = roughness * roughness;
+	float a = max(roughness*roughness, 1e-4);
 
 	float phi = 2.0 * PI * Xi.x;
 	float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 
-	return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+	float3 H;
+	H.x = cos(phi) * sinTheta;
+	H.y = sin(phi) * sinTheta;
+	H.z = cosTheta;
+
+	// Transform H to tangent space
+	float3 up = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+	float3 tangent = normalize(cross(up, N));
+	float3 bitangent = cross(N, tangent);
+
+	float3 sampledVec = tangent * H.x + bitangent * H.y + N * H.z;
+	return normalize(sampledVec);
 }
+
 
 #endif // BRDF_HLSL
