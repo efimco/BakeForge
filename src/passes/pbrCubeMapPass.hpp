@@ -17,7 +17,7 @@ public:
 	~CubeMapPass() = default;
 
 	void createOrResize();
-	void draw(glm::mat4& view, glm::mat4& projection);
+	void draw(glm::mat4& view);
 	ComPtr<ID3D11ShaderResourceView>& getBackgroundSRV();
 	ComPtr<ID3D11ShaderResourceView>& getIrradianceSRV();
 	ComPtr<ID3D11ShaderResourceView>& getPrefilteredSRV();
@@ -25,7 +25,7 @@ public:
 	std::string& getHDRIPath();
 	
 private:
-	void update(glm::mat4& view, glm::mat4& projection);
+	void update(glm::mat4& view);
 	void createCubeMapResources();
 	void createBackgroundResources();
 	void createIrradianceMap();

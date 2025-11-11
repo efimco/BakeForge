@@ -54,7 +54,6 @@ float* cubeData = new float[]
 struct alignas(16) CubeMapConstantBufferData
 {
 	glm::mat4 view;
-	glm::mat4 projection;
 	float mapRotationY;
 	float padding[3];
 };
@@ -141,7 +140,7 @@ void CubeMapPass::createOrResize()
 {
 	createBackgroundResources();
 }
-void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
+void CubeMapPass::draw(glm::mat4& view)
 {
 	DEBUG_PASS_START(L"CubeMapPass::draw");
 	
@@ -152,7 +151,7 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 		AppConfig::getRegeneratePrefilteredMap() = false;
 	}
 
-	update(view, projection);
+	update(view);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -202,7 +201,7 @@ std::string& CubeMapPass::getHDRIPath()
 	return m_hdrImagePath;
 }
 
-void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
+void CubeMapPass::update(glm::mat4& view)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_backgroundConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -212,7 +211,6 @@ void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
 	}
 	CubeMapConstantBufferData* data = reinterpret_cast<CubeMapConstantBufferData*>(mappedResource.pData);
 	data->view = view;
-	data->projection = projection;
 	data->mapRotationY = AppConfig::getIBLRotation();
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }
