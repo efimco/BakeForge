@@ -6,7 +6,6 @@
 
 #include "renderer.hpp"
 #include "gltfImporter.hpp"
-#include "sceneManager.hpp"
 #include "appConfig.hpp"
 
 
@@ -27,13 +26,12 @@ Renderer::Renderer(const HWND& hwnd)
 
 
 	m_prevTime = std::chrono::system_clock::now();
-	m_scene = new Scene("RootScene");
+	m_scene = new Scene();
 	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
 	std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, glm::vec3(0.0f, 10.0f, -10.0f));
-	SceneManager::addLight(std::move(dirLight));
-	m_scene->addChild(SceneManager::getLights()[0].get());
+	m_scene->addLight(std::move(dirLight));
 	m_scene->addChild(m_camera.get());
-	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
+	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
@@ -75,11 +73,15 @@ void Renderer::draw()
 	}
 
 	// --- GPU Work ---
-	m_zPrePass->draw(m_view, m_projection);
-	m_gBuffer->draw(m_view, m_projection, m_camera->transform.position, m_zPrePass->getDSV());
+	m_zPrePass->draw(m_view, m_projection, m_scene);
+	m_gBuffer->draw(m_view, m_projection,
+		m_camera->transform.position,
+		m_scene,
+		m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view);
 	m_deferredPass->draw(m_view, m_projection,
 		m_camera->transform.position,
+		m_scene,
 		m_gBuffer->getAlbedoSRV(),
 		m_gBuffer->getMetallicRoughnessSRV(),
 		m_gBuffer->getNormalSRV(),
@@ -100,7 +102,7 @@ void Renderer::draw()
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
-	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos());
+	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene);
 	m_device->getSwapChain()->Present(0, 0);
 
 }

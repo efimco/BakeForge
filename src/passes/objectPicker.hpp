@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "shaderManager.hpp"
 #include <memory>
+#include "scene.hpp"
 using namespace Microsoft::WRL;
 
 
@@ -20,7 +21,7 @@ class ObjectPicker
 public:
 	ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
 	uint32_t readBackID;
-	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos);
+	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene);
 private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;

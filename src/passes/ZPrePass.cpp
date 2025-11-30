@@ -1,7 +1,6 @@
 #include "ZPrePass.hpp"
 #include "appConfig.hpp"
 #include <iostream>
-#include "sceneManager.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "debugPassMacros.hpp"
 
@@ -89,7 +88,7 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 
 }
 
-void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)
+void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene)
 {
 	DEBUG_PASS_START(L"ZPrePass Draw");
 	m_context->RSSetState(m_rasterizerState.Get());
@@ -109,9 +108,9 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection)
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
 
-	for (int i = 0; i < SceneManager::getPrimitiveCount(); i++)
+	for (int i = 0; i < scene->getPrimitiveCount(); i++)
 	{
-		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
+		std::unique_ptr<Primitive>& prim = scene->getPrimitives()[i];
 		update(view, projection, prim);
 		
 		// Bind albedo texture for alpha testing

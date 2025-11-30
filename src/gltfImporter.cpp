@@ -1,17 +1,15 @@
 #include <iostream>
 #include "gltfImporter.hpp"
 #include "primitive.hpp"
-#include "sceneManager.hpp"
 #include "material.hpp"
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 
 
 
-GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene) : m_device(device)
+GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene) : m_device(device), m_scene(scene)
 {
 	const tinygltf::Model model = readGlb(path);
-	m_scene = scene;
 	processGlb(model);
 
 }
@@ -90,28 +88,28 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->setIndexData(std::move(indices));
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
-			if (SceneManager::isNameUsed(model.nodes[meshIndex].name))
+			if (m_scene->isNameUsed(model.nodes[meshIndex].name))
 			{
-				SceneManager::getNameCounter(model.nodes[meshIndex].name)++;
+				m_scene->getNameCounter(model.nodes[meshIndex].name)++;
 			}
 			else
 			{
-				SceneManager::getNameCounter(model.nodes[meshIndex].name) = 0;
+				m_scene->getNameCounter(model.nodes[meshIndex].name) = 0;
 			}
 
-			if (SceneManager::getNameCounter(model.nodes[meshIndex].name) == 0)
+			if (m_scene->getNameCounter(model.nodes[meshIndex].name) == 0)
 			{
 				primitive->name = model.nodes[meshIndex].name;
 			}
 			else
 			{
-				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(SceneManager::getNameCounter(model.nodes[meshIndex].name));
+				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(m_scene->getNameCounter(model.nodes[meshIndex].name));
 			}
 
-			std::unique_ptr<Primitive>& rPrim = SceneManager::addPrimitive(std::move(primitive));
+			std::unique_ptr<Primitive>& rPrim = m_scene->addPrimitive(std::move(primitive));
 			m_scene->addChild(rPrim.get());
 
-			std::cout << "Added primitive. Total primitives now: " << SceneManager::getPrimitiveCount() << std::endl;
+			std::cout << "Added primitive. Total primitives now: " << m_scene->getPrimitiveCount() << std::endl;
 		}
 	}
 }
@@ -129,12 +127,12 @@ void GLTFModel::processImages(const tinygltf::Model& model)
 	for (int i = 0; i < model.images.size(); i++)
 	{
 		std::string name = model.images[i].name;
-		if (SceneManager::getTexture(name) == nullptr)
+		if (m_scene->getTexture(name) == nullptr)
 		{
 			std::shared_ptr<Texture> texture = std::make_shared<Texture>(model.images[i], m_device);
-			SceneManager::addTexture(std::move(texture));
+			m_scene->addTexture(std::move(texture));
 		}
-		m_imageIndex[i] = SceneManager::getTexture(name);
+		m_imageIndex[i] = m_scene->getTexture(name);
 	}
 }
 
@@ -172,11 +170,11 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 		mat->metallicValue = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
 
 		auto name = material.name;
-		if (SceneManager::getMaterial(name) == nullptr)
+		if (m_scene->getMaterial(name) == nullptr)
 		{
-			SceneManager::addMaterial(std::move(mat));
+			m_scene->addMaterial(std::move(mat));
 		}
-		m_materialIndex[i] = SceneManager::getMaterial(name);
+		m_materialIndex[i] = m_scene->getMaterial(name);
 	}
 	if (model.materials.empty())
 	{

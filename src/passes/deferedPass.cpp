@@ -2,7 +2,6 @@
 #include "appConfig.hpp"
 #include <iostream>
 #include "debugPassMacros.hpp"
-#include "sceneManager.hpp"
 static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
 
 struct alignas(16) DeferredConstantBuffer
@@ -25,7 +24,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	lightsBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	lightsBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	lightsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	lightsBufferDesc.ByteWidth = sizeof(LightData) * uint32_t(SceneManager::getLights().size());
+	lightsBufferDesc.ByteWidth = sizeof(LightData);
 	lightsBufferDesc.StructureByteStride = sizeof(LightData);
 
 	{
@@ -38,7 +37,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = static_cast<UINT>(SceneManager::getLights().size());
+	srvDesc.Buffer.NumElements = 1;
 
 	{
 		HRESULT hr = m_device->CreateShaderResourceView(m_lightsBuffer.Get(), &srvDesc, &m_lightsSRV);
@@ -129,8 +128,10 @@ void DeferredPass::createOrResize()
 			std::cerr << "Error Creating Final UAV: " << hr << std::endl;
 	}
 }
-void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
+void DeferredPass::draw(const glm::mat4& view,
+	const glm::mat4& projection,
 	const glm::vec3& cameraPosition,
+	Scene* scene,
 	const ComPtr<ID3D11ShaderResourceView>& albedoSRV,
 	const ComPtr<ID3D11ShaderResourceView>& metallicRoughnessSRV,
 	const ComPtr<ID3D11ShaderResourceView>& normalSRV,
@@ -149,10 +150,10 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	{
 		createOrResize();
 	}
-	if (SceneManager::areLightsDirty())
+	if (scene->areLightsDirty())
 	{
-		updateLights();
-		SceneManager::setLightsDirty(false);
+		updateLights(scene);
+		scene->setLightsDirty(false);
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
@@ -216,14 +217,14 @@ ComPtr<ID3D11ShaderResourceView> DeferredPass::getFinalSRV() const
 	return m_finalSRV;
 }
 
-void DeferredPass::updateLights()
+void DeferredPass::updateLights(Scene* scene)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
 	HRESULT hr = m_context->Map(m_lightsBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		LightData* lightData = static_cast<LightData*>(mappedResource.pData);
-		const auto& lights = SceneManager::getLights();
+		const auto& lights = scene->getLights();
 		for (size_t i = 0; i < lights.size(); ++i)
 		{
 			lightData[i] = lights[i]->getLightData();
