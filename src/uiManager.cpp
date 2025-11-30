@@ -366,12 +366,7 @@ void UIManager::handleNodeSelection(SceneNode* node)
 	if (ImGui::IsItemClicked())
 	{
 		bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
-		SceneManager::setSelectedNode(node, addToSelection);
-		auto primitive = dynamic_cast<Primitive*>(node);
-		if (primitive && !SceneManager::isPrimitiveSelected(primitive))
-		{
-			SceneManager::selectPrimitive(primitive, addToSelection);
-		}
+		SceneManager::setActiveNode(node, addToSelection);
 	}
 }
 
@@ -401,21 +396,21 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 void UIManager::showProperties()
 {
 	ImGui::Begin("Properties");
-	if (SceneManager::getSelectedNode())
+	if (SceneManager::getActiveNode())
 	{
-		if (dynamic_cast<Primitive*>(SceneManager::getSelectedNode()))
+		if (dynamic_cast<Primitive*>(SceneManager::getActiveNode()))
 		{
-			showPrimitiveProperties(dynamic_cast<Primitive*>(SceneManager::getSelectedNode()));
+			showPrimitiveProperties(dynamic_cast<Primitive*>(SceneManager::getActiveNode()));
 		}
-		else if (dynamic_cast<Light*>(SceneManager::getSelectedNode()))
+		else if (dynamic_cast<Light*>(SceneManager::getActiveNode()))
 		{
-			showLightProperties(dynamic_cast<Light*>(SceneManager::getSelectedNode()));
+			showLightProperties(dynamic_cast<Light*>(SceneManager::getActiveNode()));
 		}
-		else if (dynamic_cast<Camera*>(SceneManager::getSelectedNode()))
+		else if (dynamic_cast<Camera*>(SceneManager::getActiveNode()))
 		{
-			showCameraProperties(dynamic_cast<Camera*>(SceneManager::getSelectedNode()));
+			showCameraProperties(dynamic_cast<Camera*>(SceneManager::getActiveNode()));
 		}
-		ImGui::Text("Selected Node: %s", SceneManager::getSelectedNode()->name.c_str());
+		ImGui::Text("Selected Node: %s", SceneManager::getActiveNode()->name.c_str());
 	}
 	ImGui::End();
 }
