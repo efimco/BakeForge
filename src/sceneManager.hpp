@@ -14,6 +14,7 @@ namespace SceneManager
 
 	std::unique_ptr<Primitive>& addPrimitive(std::unique_ptr<Primitive>&& primitive);
 	std::vector<std::unique_ptr<Primitive>>& getPrimitives();
+	std::unique_ptr<Primitive>& getPrimitiveByID(size_t id);
 	size_t getPrimitiveCount();
 
 	std::unique_ptr<Light>& addLight(std::unique_ptr<Light>&& light);
@@ -26,23 +27,13 @@ namespace SceneManager
 	void addMaterial(std::shared_ptr<Material>&& material);
 	std::vector<std::string> getMaterialNames();
 
-	SceneNode* getSelectedNode();
-	void setSelectedNode(SceneNode* node, bool addToSelection = false);
+	SceneNode* getActiveNode();
+	void setActiveNode(SceneNode* node, bool addToSelection = false);
+	void deselectNode(SceneNode* node);
 	void clearSelectedNodes();
 	bool isNodeSelected(SceneNode* node);
 
-	void selectPrimitive(Primitive* primitive, bool addToSelection = false);
-	void selectPrimitive(uint32_t id, bool addToSelection = false);
-	void deselectPrimitive(Primitive* primitive);
-	void deselectPrimitive(uint32_t id);
-	bool isPrimitiveSelected(Primitive* primitive);
-	bool isPrimitiveSelected(uint32_t id);
-	void clearSelectedPrimitives();
 
 	bool areLightsDirty();
 	void setLightsDirty(bool dirty);
-
-	void setTransformsDirty(bool dirty);
-	bool areTransformsDirty();
-
 };

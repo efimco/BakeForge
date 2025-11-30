@@ -161,7 +161,7 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, const g
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
-		cbData->isSelected = SceneManager::isPrimitiveSelected(prim.get());
+		cbData->isSelected = SceneManager::isNodeSelected(prim.get());
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}

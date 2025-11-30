@@ -151,7 +151,7 @@ void DeferredPass::draw(const glm::mat4& view, const glm::mat4& projection,
 	}
 	if (SceneManager::areLightsDirty())
 	{
-		update();
+		updateLights();
 		SceneManager::setLightsDirty(false);
 	}
 
@@ -216,7 +216,7 @@ ComPtr<ID3D11ShaderResourceView> DeferredPass::getFinalSRV() const
 	return m_finalSRV;
 }
 
-void DeferredPass::update()
+void DeferredPass::updateLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
 	HRESULT hr = m_context->Map(m_lightsBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);

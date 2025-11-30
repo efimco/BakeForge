@@ -29,7 +29,7 @@ public:
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 private:
-	void update();
+	void updateLights();
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 

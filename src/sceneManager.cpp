@@ -5,17 +5,13 @@ static std::vector<std::unique_ptr<Primitive>> primitives;
 static std::unordered_map<std::string, std::shared_ptr<Texture>> textures; // path + actual texture
 static std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 
-static std::unordered_map<Primitive*, bool> selectedPrimitives;
 static std::unordered_map<SceneNode*, bool> selectedNodes;
-static SceneNode* selectedNode = nullptr;
+static SceneNode* activeNode = nullptr;
 
 static std::vector<std::unique_ptr<Light>> lights;
 static std::unordered_map<std::string, uint32_t> names;
 
 static bool lightsAreDirty = true;
-
-static bool transformsAreDirty = true;
-
 
 bool SceneManager::isNameUsed(std::string name)
 {
@@ -42,6 +38,11 @@ std::unique_ptr<Light>& SceneManager::addLight(std::unique_ptr<Light>&& light)
 std::vector<std::unique_ptr<Primitive>>& SceneManager::getPrimitives()
 {
 	return primitives;
+}
+
+std::unique_ptr<Primitive>& SceneManager::getPrimitiveByID(size_t id)
+{
+	return primitives[id];
 }
 
 std::vector<std::unique_ptr<Light>>& SceneManager::getLights()
@@ -89,23 +90,29 @@ std::vector<std::string> SceneManager::getMaterialNames()
 	return names;
 }
 
-SceneNode* SceneManager::getSelectedNode()
+SceneNode* SceneManager::getActiveNode()
 {
-	return selectedNode;
+	return activeNode;
 }
 
-void SceneManager::setSelectedNode(SceneNode* node, bool addToSelection)
+void SceneManager::setActiveNode(SceneNode* node, bool addToSelection)
 {
-	if (addToSelection)
-	{
-		selectedNodes[node] = true;
-	}
-	else
+	if (!addToSelection)
 	{
 		clearSelectedNodes();
-		selectedNodes[node] = true;
 	}
-	selectedNode = node;
+	selectedNodes[node] = true;
+
+	activeNode = node;
+}
+
+void SceneManager::deselectNode(SceneNode* node)
+{
+	if (activeNode == node)
+	{
+		activeNode = nullptr;
+	}
+	selectedNodes.erase(node);
 }
 
 void SceneManager::clearSelectedNodes()
@@ -118,118 +125,9 @@ bool SceneManager::isNodeSelected(SceneNode* node)
 	return selectedNodes.find(node) != selectedNodes.end();
 }
 
-
 void SceneManager::addMaterial(std::shared_ptr<Material>&& material)
 {
 	materials[material->name] = std::move(material);
-}
-
-void SceneManager::selectPrimitive(Primitive* primitive, bool addToSelection)
-{
-	const auto& it = selectedPrimitives.find(primitive);
-	if (it == selectedPrimitives.end())
-	{
-		if (!addToSelection)
-		{
-			clearSelectedPrimitives();
-		}
-		selectedPrimitives[primitive] = true;
-		selectedNode = primitive;
-		selectedNodes[primitive] = true;
-	}
-
-}
-
-void SceneManager::selectPrimitive(uint32_t id, bool addToSelection)
-{
-	const auto& it = selectedPrimitives.find(primitives[id].get());
-	if (it == selectedPrimitives.end())
-	{
-		Primitive* primitive = primitives[id].get();
-		if (!addToSelection)
-		{
-			clearSelectedPrimitives();
-		}
-		selectedPrimitives[primitive] = true;
-		selectedNode = primitive;
-		selectedNodes[primitive] = true;
-	}
-}
-
-void SceneManager::deselectPrimitive(Primitive* primitive)
-{
-	const auto& it = selectedPrimitives.find(primitive);
-	if (it != selectedPrimitives.end())
-	{
-		if (selectedNode == primitive)
-		{
-			selectedNode = nullptr;
-		}
-		selectedPrimitives.erase(it);
-		selectedNodes.erase(primitive);
-		if (selectedNode == primitive)
-		{
-			selectedNode = nullptr;
-		}
-	}
-}
-
-void SceneManager::deselectPrimitive(uint32_t id)
-{
-	const auto& it = selectedPrimitives.find(primitives[id].get());
-	if (it != selectedPrimitives.end())
-	{
-		selectedPrimitives.erase(it);
-		selectedNodes.erase(primitives[id].get());
-		if (selectedNode == primitives[id].get())
-		{
-			selectedNode = nullptr;
-		}
-	}
-}
-
-bool SceneManager::isPrimitiveSelected(Primitive* primitive)
-{
-	if (selectedPrimitives.find(primitive) == selectedPrimitives.end())
-	{
-
-		return false;
-	}
-	if (selectedPrimitives[primitive] == false)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-	return false;
-}
-
-bool SceneManager::isPrimitiveSelected(uint32_t id)
-{
-	if (selectedPrimitives.find(primitives[id].get()) == selectedPrimitives.end())
-	{
-
-		return false;
-	}
-	if (selectedPrimitives[primitives[id].get()] == false)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-	return false;
-}
-
-void SceneManager::clearSelectedPrimitives()
-{
-	selectedPrimitives.clear();
-	selectedNodes.clear();
-	selectedNode = nullptr;
-
 }
 
 bool SceneManager::areLightsDirty()
@@ -242,13 +140,4 @@ void SceneManager::setLightsDirty(bool dirty)
 	lightsAreDirty = dirty;
 }
 
-void SceneManager::setTransformsDirty(bool dirty)
-{
-	transformsAreDirty = dirty;
-}
-
-bool SceneManager::areTransformsDirty()
-{
-	return transformsAreDirty;
-}
 
