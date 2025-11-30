@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include "shaderManager.hpp"
+#include "scene.hpp"
 
 using namespace Microsoft::WRL;
 class DeferredPass
@@ -13,8 +14,10 @@ public:
 	~DeferredPass() = default;
 
 	void createOrResize();
-	void draw(const glm::mat4& view, const glm::mat4& projection,
+	void draw(const glm::mat4& view,
+		const glm::mat4& projection,
 		const glm::vec3& cameraPosition,
+		Scene* scene,
 		const ComPtr<ID3D11ShaderResourceView>& albedoSRV,
 		const ComPtr<ID3D11ShaderResourceView>& metallicRoughnessSRV,
 		const ComPtr<ID3D11ShaderResourceView>& normalSRV,
@@ -29,7 +32,7 @@ public:
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 private:
-	void updateLights();
+	void updateLights(Scene* scene);
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 

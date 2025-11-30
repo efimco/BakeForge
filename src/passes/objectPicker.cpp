@@ -1,6 +1,5 @@
 #include "objectPicker.hpp"
 #include <iostream>
-#include "sceneManager.hpp"
 #include "inputEventsHandler.hpp"
 
 ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
@@ -53,7 +52,7 @@ ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D
 	}
 }
 
-void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos)
+void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene)
 {
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedCB = {};
@@ -94,17 +93,17 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		std::cout << "Picked ID: " << readBackID << std::endl;
 		if (readBackID == 0)
 		{
-			SceneManager::clearSelectedNodes();
+			scene->clearSelectedNodes();
 		}
 		else
 		{
-			if (!SceneManager::isNodeSelected(SceneManager::getPrimitiveByID(readBackID - 1).get()))
+			if (!scene->isNodeSelected(scene->getPrimitiveByID(readBackID - 1).get()))
 			{
-				SceneManager::setActiveNode(SceneManager::getPrimitiveByID(readBackID - 1).get(), isShiftPressed);
+				scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1).get(), isShiftPressed);
 			}
 			else
 			{
-				SceneManager::deselectNode(SceneManager::getPrimitiveByID(readBackID - 1).get());
+				scene->deselectNode(scene->getPrimitiveByID(readBackID - 1).get());
 			}
 		}
 	}

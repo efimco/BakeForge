@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "shaderManager.hpp"
 #include "primitive.hpp"
+#include "scene.hpp"
 
 using namespace Microsoft::WRL;
 
@@ -14,7 +15,7 @@ public:
 	ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
 	~ZPrePass() = default;
 
-	void draw(const glm::mat4& view, const glm::mat4& projection);
+	void draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene);
 	ComPtr<ID3D11DepthStencilView>& getDSV();
 	void createOrResize();
 

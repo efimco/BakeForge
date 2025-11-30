@@ -2,7 +2,7 @@
 #include "texture.hpp"
 #include "primitiveData.hpp"
 #include "material.hpp"
-#include "sceneNode.hpp"
+#include "scene.hpp"
 #include <tiny_gltf.h>
 #include <string>
 #include <vector>
@@ -18,7 +18,7 @@ class GLTFModel
 {
 public:
 	std::string path;
-	GLTFModel(std::string path, ComPtr<ID3D11Device>& device, SceneNode* scene);
+	GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene);
 	~GLTFModel();
 
 private:
@@ -34,7 +34,7 @@ private:
 	void processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Tangents>& tangents);
 	Transform getTransformFromNode(size_t meshIndex, const tinygltf::Model& model);
 	ComPtr<ID3D11Device>& m_device;
-	SceneNode* m_scene;
+	Scene* m_scene;
 	std::unordered_map<uint32_t, uint32_t> m_textureIndex;
 	std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_imageIndex;
 	std::unordered_map<uint32_t, std::shared_ptr<Material>> m_materialIndex;

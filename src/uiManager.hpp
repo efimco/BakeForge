@@ -33,6 +33,7 @@ private:
 	ImFont* m_iconFont = nullptr;
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
+	Scene* m_scene;
 	void simpleWindow();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 	void showInvisibleDockWindow();
@@ -40,7 +41,7 @@ private:
 	void showGBufferImage(const GBuffer& gbuffer);
 	void processInputEvents();
 
-	void drawSceneGraph(Scene* scene);
+	void drawSceneGraph();
 	void handleNodeSelection(SceneNode* node);
 	void handleNodeDragDrop(SceneNode* node);
 	void drawNode(SceneNode* node);

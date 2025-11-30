@@ -46,7 +46,6 @@ static void SetHighDpiAwarenessAtRuntime()
 #include "camera.hpp"
 #include "dxDevice.hpp"
 #include "gltfImporter.hpp"
-#include "sceneManager.hpp"
 #include "uiManager.hpp"
 #include "renderer.hpp"
 

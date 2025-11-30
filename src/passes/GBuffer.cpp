@@ -1,7 +1,6 @@
 #include "GBuffer.hpp"
 #include "appConfig.hpp"
 #include <iostream>
-#include "sceneManager.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "debugPassMacros.hpp"
 
@@ -97,7 +96,11 @@ GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceCo
 	}
 }
 
-void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPosition, ComPtr<ID3D11DepthStencilView>& dsv)
+void GBuffer::draw(const glm::mat4& view,
+	const glm::mat4& projection,
+	const glm::vec3& cameraPosition,
+	Scene* scene,
+	ComPtr<ID3D11DepthStencilView>& dsv)
 {
 
 	DEBUG_PASS_START(L"GBuffer Draw");
@@ -127,11 +130,11 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, const glm
 
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
-	for (int i = 0; i < SceneManager::getPrimitiveCount(); i++)
+	for (int i = 0; i < scene->getPrimitiveCount(); i++)
 	{
 		auto objectID = i;
-		std::unique_ptr<Primitive>& prim = SceneManager::getPrimitives()[i];
-		update(view, projection, cameraPosition, objectID, prim);
+		std::unique_ptr<Primitive>& prim = scene->getPrimitives()[i];
+		update(view, projection, cameraPosition, scene, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		std::shared_ptr<Material>& material = prim->material;
@@ -147,7 +150,12 @@ void GBuffer::draw(const glm::mat4& view, const glm::mat4& projection, const glm
 
 }
 
-void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPosition, int objectID, std::unique_ptr<Primitive>& prim)
+void GBuffer::update(const glm::mat4& view,
+	const glm::mat4& projection,
+	const glm::vec3& cameraPosition,
+	Scene* scene,
+	int objectID,
+	std::unique_ptr<Primitive>& prim)
 {
 	glm::mat4 model = prim->getWorldMatrix();
 	glm::mat4 mvp = projection * view * model;
@@ -161,7 +169,7 @@ void GBuffer::update(const glm::mat4& view, const glm::mat4& projection, const g
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
-		cbData->isSelected = SceneManager::isNodeSelected(prim.get());
+		cbData->isSelected = scene->isNodeSelected(prim.get());
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
