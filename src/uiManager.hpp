@@ -35,6 +35,7 @@ private:
 	bool m_isMouseInViewport;
 	Scene* m_scene;
 	void simpleWindow();
+	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 	void showInvisibleDockWindow();
 	void showMaterialBrowser();
