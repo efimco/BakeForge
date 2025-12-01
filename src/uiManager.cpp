@@ -88,6 +88,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
+	showMainMenuBar();
 	showInvisibleDockWindow();
 	simpleWindow();
 	showViewport(srv);
@@ -113,11 +114,103 @@ uint32_t* UIManager::getMousePos()
 	return m_mousePos;
 }
 
+void UIManager::showMainMenuBar()
+{
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("New Scene", "Ctrl+N")) { /* TODO: New scene */ }
+			if (ImGui::MenuItem("Open...", "Ctrl+O")) { /* TODO: Open file dialog */ }
+			if (ImGui::MenuItem("Save", "Ctrl+S")) { /* TODO: Save scene */ }
+			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) { /* TODO: Save as dialog */ }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Import Model...", "Ctrl+I")) { /* TODO: Import model */ }
+			if (ImGui::MenuItem("Export...", "Ctrl+E")) { /* TODO: Export */ }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Exit", "Alt+F4")) { PostQuitMessage(0); }
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Edit"))
+		{
+			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false)) { /* TODO: Undo */ }
+			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) { /* TODO: Redo */ }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Cut", "Ctrl+X", false, false)) { /* TODO: Cut */ }
+			if (ImGui::MenuItem("Copy", "Ctrl+C", false, false)) { /* TODO: Copy */ }
+			if (ImGui::MenuItem("Paste", "Ctrl+V", false, false)) { /* TODO: Paste */ }
+			if (ImGui::MenuItem("Delete", "Del")) { /* TODO: Delete selected */ }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Select All", "Ctrl+A")) { /* TODO: Select all */ }
+			if (ImGui::MenuItem("Deselect All", "Ctrl+D")) { m_scene->clearSelectedNodes(); }
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View"))
+		{
+			if (ImGui::MenuItem("Viewport", nullptr, true)) { /* Toggle viewport */ }
+			if (ImGui::MenuItem("Scene Graph", nullptr, true)) { /* Toggle scene graph */ }
+			if (ImGui::MenuItem("Properties", nullptr, true)) { /* Toggle properties */ }
+			if (ImGui::MenuItem("Material Browser", nullptr, true)) { /* Toggle material browser */ }
+			if (ImGui::MenuItem("GBuffer", nullptr, true)) { /* Toggle GBuffer view */ }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Reset Layout")) { /* TODO: Reset docking layout */ }
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Add"))
+		{
+			if (ImGui::BeginMenu("Mesh"))
+			{
+				if (ImGui::MenuItem("Cube")) { /* TODO: Add cube */ }
+				if (ImGui::MenuItem("Sphere")) { /* TODO: Add sphere */ }
+				if (ImGui::MenuItem("Plane")) { /* TODO: Add plane */ }
+				if (ImGui::MenuItem("Cylinder")) { /* TODO: Add cylinder */ }
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Light"))
+			{
+				if (ImGui::MenuItem("Point Light")) { /* TODO: Add point light */ }
+				if (ImGui::MenuItem("Directional Light")) { /* TODO: Add directional light */ }
+				if (ImGui::MenuItem("Spot Light")) { /* TODO: Add spot light */ }
+				ImGui::EndMenu();
+			}
+			if (ImGui::MenuItem("Empty Node")) { /* TODO: Add empty node */ }
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Render"))
+		{
+			if (ImGui::MenuItem("Render Image")) { /* TODO: Render to file */ }
+			ImGui::Separator();
+			if (ImGui::BeginMenu("Debug Views"))
+			{
+				if (ImGui::MenuItem("Albedo")) { /* TODO: Show albedo only */ }
+				if (ImGui::MenuItem("Normals")) { /* TODO: Show normals */ }
+				if (ImGui::MenuItem("Metallic/Roughness")) { /* TODO: Show metallic/roughness */ }
+				if (ImGui::MenuItem("Depth")) { /* TODO: Show depth */ }
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Help"))
+		{
+			if (ImGui::MenuItem("About")) { /* TODO: Show about dialog */ }
+			if (ImGui::MenuItem("Documentation")) { /* TODO: Open docs */ }
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
+}
+
 void UIManager::showInvisibleDockWindow()
 {
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
-		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->Pos);
@@ -160,10 +253,22 @@ void UIManager::showMaterialBrowser()
 
 void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
+	ImGuiWindowFlags windowFlags =
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoScrollWithMouse |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNav |
+		ImGuiWindowFlags_NoBackground;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("Viewport");
+
+	ImGui::Begin("Viewport", nullptr, windowFlags);
 	m_isMouseInViewport = ImGui::IsWindowHovered();
 
 
