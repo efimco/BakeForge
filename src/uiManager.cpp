@@ -1,12 +1,15 @@
 #include "uiManager.hpp"
 #define IM_VEC2_CLASS_EXTRA
 #include "imgui_impl_win32.h"
+#include "imgui_internal.h"
 #include "imgui_impl_dx11.h"
 #include "appConfig.hpp"
 #include <iostream>
 #include "inputEventsHandler.hpp"
 #include "debugPassMacros.hpp"
 #include "scene.hpp"
+#include "ImGuizmo.h"
+#include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
@@ -20,6 +23,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	m_hwnd(hwnd),
 	m_context(deviceContext)
 {
+
 	ImGui_ImplWin32_EnableDpiAwareness();
 	float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
 
@@ -76,8 +80,10 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene, const glm::mat4& view, const glm::mat4& projection)
 {
+	m_view = view;
+	m_projection = projection;
 	DEBUG_PASS_START(L"UIManager Draw");
 	m_scene = scene;
 	// Always check window validity before starting a new frame
@@ -90,6 +96,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
 
 
 	showMainMenuBar();
@@ -296,7 +303,13 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	ImVec2 mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x, m_io->MousePos.y - ImGui::GetWindowPos().y);
 	m_mousePos[0] = static_cast<uint32_t>(mousePos.x);
 	m_mousePos[1] = static_cast<uint32_t>(mousePos.y);
+	
+	// Set up ImGuizmo to draw in this viewport
+	ImVec2 windowPos = ImGui::GetWindowPos();
+	ImGuizmo::SetRect(windowPos.x, windowPos.y, size.x, size.y);
+	
 	ImGui::Image(tex, size, uv0, uv1);
+	processGizmo();
 
 	ImGui::End();
 	ImGui::PopStyleVar(3);
@@ -357,6 +370,40 @@ void UIManager::processInputEvents()
 	InputEvents::setKeyDown(KeyButtons::KEY_E, ImGui::IsKeyDown(ImGuiKey_E));
 	InputEvents::setKeyDown(KeyButtons::KEY_LSHIFT, ImGui::IsKeyDown(ImGuiKey_LeftShift));
 
+}
+
+void UIManager::processGizmo()
+{
+	if (!m_scene->getActiveNode())
+		return;
+	ImGuizmo::SetDrawlist();
+	if (ImGui::IsKeyPressed(ImGuiKey_G))
+		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+	if (ImGui::IsKeyPressed(ImGuiKey_R))
+		mCurrentGizmoOperation = ImGuizmo::ROTATE;
+	if (ImGui::IsKeyPressed(ImGuiKey_S)) // r Key
+		mCurrentGizmoOperation = ImGuizmo::SCALE;
+
+	float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+	float* matrix = const_cast<float*>(glm::value_ptr(m_scene->getActiveNode()->getWorldMatrix()));
+
+	if (ImGui::IsKeyPressed(ImGuiKey_S))
+		useSnap = !useSnap;
+
+	float viewMatrix[16];
+	memcpy(viewMatrix, glm::value_ptr(m_view), sizeof(float) * 16);
+	float projectionMatrix[16];
+	memcpy(projectionMatrix, glm::value_ptr(m_projection), sizeof(float) * 16);
+
+	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+	if (ImGuizmo::IsUsing())
+	{
+		m_isMouseInViewport = false;
+		ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
+		m_scene->getActiveNode()->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
+		m_scene->getActiveNode()->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
+		m_scene->getActiveNode()->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
+	}
 }
 
 void UIManager::drawSceneGraph()

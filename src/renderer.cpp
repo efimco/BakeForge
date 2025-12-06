@@ -103,7 +103,7 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene.get());
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
 
