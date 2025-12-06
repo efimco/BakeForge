@@ -4,12 +4,13 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
 
 class SceneNode
 {
 public:
 	Transform transform;
-	std::vector<std::unique_ptr<SceneNode>> children;
+	std::list<std::unique_ptr<SceneNode>> children;
 	SceneNode* parent = nullptr;
 	bool visible = true;
 	bool dirty = false;

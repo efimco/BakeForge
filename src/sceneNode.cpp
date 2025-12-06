@@ -29,6 +29,9 @@ SceneNode::~SceneNode() = default;
 
 void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 {
+	if (!child)
+		return;
+
 	glm::mat4 worldTransform = child->getWorldMatrix();
 
 	if (child->parent)
@@ -93,7 +96,6 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 
 	auto removedChild = std::move(*it);
 	children.erase(it);
-
 
 	glm::vec3 scale;
 	glm::quat rotation;

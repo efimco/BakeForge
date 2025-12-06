@@ -40,6 +40,7 @@ private:
 	void showInvisibleDockWindow();
 	void showMaterialBrowser();
 	void showGBufferImage(const GBuffer& gbuffer);
+
 	void processInputEvents();
 
 	void drawSceneGraph();
