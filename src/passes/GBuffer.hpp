@@ -25,7 +25,7 @@ public:
 		const glm::vec3& cameraPosition,
 		Scene* scene,
 		int objectID,
-		std::unique_ptr<Primitive>& prim);
+		Primitive* prim);
 	void createOrResize();
 
 	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;

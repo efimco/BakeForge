@@ -110,7 +110,7 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 
 	for (int i = 0; i < scene->getPrimitiveCount(); i++)
 	{
-		std::unique_ptr<Primitive>& prim = scene->getPrimitives()[i];
+		Primitive* prim = scene->getPrimitives()[i];
 		update(view, projection, prim);
 		
 		// Bind albedo texture for alpha testing
@@ -139,7 +139,7 @@ ComPtr<ID3D11DepthStencilView>& ZPrePass::getDSV()
 	return dsv;
 }
 
-void ZPrePass::update(const glm::mat4& view, const glm::mat4& projection, std::unique_ptr<Primitive>& prim)
+void ZPrePass::update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim)
 {
 	glm::mat4 mvp = projection * view * prim->getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;

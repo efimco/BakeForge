@@ -5,6 +5,11 @@ Scene::Scene(std::string name)
 	this->name = name;
 }
 
+SceneNode* Scene::getRootNode()
+{
+	return children.front().get();
+}
+
 bool Scene::isNameUsed(std::string name)
 {
 	return m_nodeNames.find(name) != m_nodeNames.end();
@@ -15,30 +20,27 @@ uint32_t& Scene::getNameCounter(std::string name)
 	return m_nodeNames[name];
 }
 
-std::unique_ptr<Primitive>& Scene::addPrimitive(std::unique_ptr<Primitive>&& primitive)
+void Scene::addPrimitive(Primitive* primitive)
 {
-	m_primitives.push_back(std::move(primitive));
-	return m_primitives.back();
+	m_primitives.push_back(primitive);
 }
 
-std::unique_ptr<Light>& Scene::addLight(std::unique_ptr<Light>&& light)
+void Scene::addLight(Light* light)
 {
-	m_lights.push_back(std::move(light));
-	addChild(m_lights.back().get());
-	return m_lights.back();
+	m_lights.push_back(light);
 }
 
-std::vector<std::unique_ptr<Primitive>>& Scene::getPrimitives()
+std::vector<Primitive*>& Scene::getPrimitives()
 {
 	return m_primitives;
 }
 
-std::unique_ptr<Primitive>& Scene::getPrimitiveByID(size_t id)
+Primitive* Scene::getPrimitiveByID(size_t id)
 {
 	return m_primitives[id];
 }
 
-std::vector<std::unique_ptr<Light>>& Scene::getLights()
+std::vector<Light*>& Scene::getLights()
 {
 	return m_lights;
 }
@@ -131,6 +133,16 @@ bool Scene::areLightsDirty()
 void Scene::setLightsDirty(bool dirty)
 {
 	m_lightsAreDirty = dirty;
+}
+
+void Scene::setActiveCamera(Camera* camera)
+{
+	m_activeCamera = camera;
+}
+
+Camera* Scene::getActiveCamera()
+{
+	return m_activeCamera;
 }
 
 

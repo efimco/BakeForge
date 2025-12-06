@@ -106,8 +106,8 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(m_scene->getNameCounter(model.nodes[meshIndex].name));
 			}
 
-			std::unique_ptr<Primitive>& rPrim = m_scene->addPrimitive(std::move(primitive));
-			m_scene->addChild(rPrim.get());
+			m_scene->addPrimitive(primitive.get());
+			m_scene->addChild(std::move(primitive));
 
 			std::cout << "Added primitive. Total primitives now: " << m_scene->getPrimitiveCount() << std::endl;
 		}

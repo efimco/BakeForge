@@ -14,17 +14,17 @@ public:
 	Scene(std::string name = "Default Scene");
 	~Scene() = default;
 
-	SceneNode* getRootNode() { return children.front(); }
+	SceneNode* getRootNode();
 	bool isNameUsed(std::string name);
 	uint32_t& getNameCounter(std::string name);
 
-	std::unique_ptr<Primitive>& addPrimitive(std::unique_ptr<Primitive>&& primitive);
-	std::vector<std::unique_ptr<Primitive>>& getPrimitives();
-	std::unique_ptr<Primitive>& getPrimitiveByID(size_t id);
+	void addPrimitive(Primitive* primitive);
+	std::vector<Primitive*>& getPrimitives();
+	Primitive* getPrimitiveByID(size_t id);
 	size_t getPrimitiveCount();
 
-	std::unique_ptr<Light>& addLight(std::unique_ptr<Light>&& light);
-	std::vector<std::unique_ptr<Light>>& getLights();
+	void addLight(Light* light);
+	std::vector<Light*>& getLights();
 
 	std::shared_ptr<Texture> getTexture(std::string name);
 	void addTexture(std::shared_ptr<Texture>&& texture);
@@ -42,13 +42,17 @@ public:
 
 	bool areLightsDirty();
 	void setLightsDirty(bool dirty);
+	void setActiveCamera(Camera* camera);
+	Camera* getActiveCamera();
 
 private:
 	SceneNode m_rootNode;
-	std::vector<std::unique_ptr<Primitive>> m_primitives;
+	std::vector<Primitive*> m_primitives;
 	std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures; // path + actual texture
 	std::unordered_map<std::string, std::shared_ptr<Material>> m_materials; // path + actual material
-	std::vector<std::unique_ptr<Light>> m_lights;
+	std::vector<Light*> m_lights;
+	std::vector<Camera*> m_cameras;
+	Camera* m_activeCamera = nullptr;
 
 	SceneNode* m_activeNode = nullptr;
 
