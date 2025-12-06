@@ -8,7 +8,10 @@
 #include "debugPassMacros.hpp"
 #include "scene.hpp"
 
-const float TEXT_BASE_WIDTH = 1;
+static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
+static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
+static bool useSnap(false);
+static float snap[3] = { 1.f, 1.f, 1.f };
 
 UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const ComPtr<ID3D11DeviceContext>& deviceContext,
@@ -87,6 +90,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
 
 	showMainMenuBar();
 	showInvisibleDockWindow();
@@ -474,23 +478,26 @@ void UIManager::handleNodeSelection(SceneNode* node)
 	}
 }
 
-void UIManager::handleNodeDragDrop(SceneNode* node)
+void UIManager::handleNodeDragDrop(SceneNode* targetNode)
 {
 	if (ImGui::BeginDragDropSource())
 	{
-		ImGui::SetDragDropPayload("SCENE_NODE", &node, sizeof(SceneNode*));
-		ImGui::Text("%s", node->name.c_str());
+		ImGui::SetDragDropPayload("SCENE_NODE", &targetNode, sizeof(SceneNode*));
+		ImGui::Text("%s", targetNode->name.c_str());
 		ImGui::EndDragDropSource();
 	}
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 		{
-			SceneNode* draggedNode = *(SceneNode**)payload->Data;
-			if (draggedNode && draggedNode != node && draggedNode->parent)
+			SceneNode* draggedNode = *reinterpret_cast<SceneNode**>(payload->Data);
+			if (draggedNode && draggedNode != targetNode && draggedNode->parent)
 			{
 				std::unique_ptr<SceneNode> nodePtr = draggedNode->parent->removeChild(draggedNode);
-				node->addChild(std::move(nodePtr));
+				if (nodePtr)
+				{
+					targetNode->addChild(std::move(nodePtr));
+				}
 			}
 		}
 		ImGui::EndDragDropTarget();
