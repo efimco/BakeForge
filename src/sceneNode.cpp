@@ -4,6 +4,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include "scene.hpp"
 
+
+
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform), children(std::move(other.children)), visible(other.visible), dirty(other.dirty),
 	movable(other.movable)
@@ -17,21 +19,26 @@ SceneNode::SceneNode(SceneNode&& other) noexcept
 	other.children.clear();
 }
 
-SceneNode::SceneNode() : parent(nullptr) {};
+SceneNode::SceneNode(std::string name) : parent(nullptr)
+{
+	this->name = name;
+}
 
 SceneNode::~SceneNode() = default;
 
-void SceneNode::addChild(SceneNode* child)
+
+void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 {
 	glm::mat4 worldTransform = child->getWorldMatrix();
 
 	if (child->parent)
 	{
-		child->parent->removeChild(child);
+		child->parent->removeChild(child.get());
 	}
 
 	child->parent = this;
-	children.push_back(child);
+	SceneNode* childPtr = child.get();  // Get raw pointer before moving
+	children.push_back(std::move(child));
 
 	if (dynamic_cast<Scene*>(this))
 	{
@@ -43,10 +50,10 @@ void SceneNode::addChild(SceneNode* child)
 		glm::vec4 perspective;
 		glm::decompose(worldTransform, scale, rotation, position, skew, perspective);
 
-		child->transform.position = position;
-		child->transform.rotation = glm::degrees(glm::eulerAngles(rotation));
-		child->transform.scale = scale;
-		child->transform.updateMatrix();
+		childPtr->transform.position = position;
+		childPtr->transform.rotation = glm::degrees(glm::eulerAngles(rotation));
+		childPtr->transform.scale = scale;
+		childPtr->transform.updateMatrix();
 		return;
 	}
 	glm::mat4 parentWorldInverse = glm::inverse(this->getWorldMatrix());
@@ -59,31 +66,32 @@ void SceneNode::addChild(SceneNode* child)
 	glm::vec4 perspective;
 	glm::decompose(newLocalMatrix, scale, rotation, position, skew, perspective);
 
-	child->transform.position = position;
-	child->transform.rotation = glm::degrees(glm::eulerAngles(rotation));
-	child->transform.scale = scale;
-	child->transform.updateMatrix();
-
+	childPtr->transform.position = position;
+	childPtr->transform.rotation = glm::degrees(glm::eulerAngles(rotation));
+	childPtr->transform.scale = scale;
+	childPtr->transform.updateMatrix();
 }
 
-void SceneNode::removeChild(SceneNode* child)
+std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 {
 	if (child->parent != this)
-		return;
+		return nullptr;
 
 
 	glm::mat4 childWorldMatrix = child->getWorldMatrix();
 
 
 	child->parent = nullptr;
-	auto it = std::find(children.begin(), children.end(), child);
+	auto it = std::find_if(children.begin(), children.end(),
+		[child](const std::unique_ptr<SceneNode>& ptr) { return ptr.get() == child; });
 
 	if (it == children.end())
 	{
 		std::cerr << "Error: Child not found in parent's children list." << std::endl;
-		return;
+		return nullptr;
 	}
 
+	auto removedChild = std::move(*it);
 	children.erase(it);
 
 
@@ -93,12 +101,13 @@ void SceneNode::removeChild(SceneNode* child)
 	glm::vec3 skew;
 	glm::vec4 perspective;
 	glm::decompose(childWorldMatrix, scale, rotation, position, skew, perspective);
-
 	child->transform.position = position;
 	child->transform.rotation = glm::degrees(glm::eulerAngles(rotation));
 	child->transform.scale = scale;
 	child->transform.updateMatrix();
+	return removedChild;
 }
+
 
 glm::mat4 SceneNode::getWorldMatrix()
 {

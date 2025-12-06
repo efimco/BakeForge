@@ -376,8 +376,8 @@ void UIManager::drawSceneGraph()
 				SceneNode* draggedNode = *(SceneNode**)payload->Data;
 				if (draggedNode && draggedNode->parent)
 				{
-					draggedNode->parent->removeChild(draggedNode);
-					m_scene->addChild(draggedNode);
+					std::unique_ptr<SceneNode> nodePtr = draggedNode->parent->removeChild(draggedNode);
+					m_scene->addChild(std::move(nodePtr));
 				}
 			}
 			ImGui::EndDragDropTarget();
@@ -395,7 +395,7 @@ void UIManager::drawNode(SceneNode* node)
 	{
 		for (auto& child : node->children)
 		{
-			drawNode(child);
+			drawNode(child.get());
 		}
 		return;
 	}
@@ -420,7 +420,7 @@ void UIManager::drawNode(SceneNode* node)
 		{
 			for (auto& child : node->children)
 			{
-				drawNode(child);
+				drawNode(child.get());
 			}
 			ImGui::TreePop();
 		}
@@ -489,8 +489,8 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 			SceneNode* draggedNode = *(SceneNode**)payload->Data;
 			if (draggedNode && draggedNode != node && draggedNode->parent)
 			{
-				draggedNode->parent->removeChild(draggedNode);
-				node->addChild(draggedNode);
+				std::unique_ptr<SceneNode> nodePtr = draggedNode->parent->removeChild(draggedNode);
+				node->addChild(std::move(nodePtr));
 			}
 		}
 		ImGui::EndDragDropTarget();

@@ -26,11 +26,13 @@ Renderer::Renderer(const HWND& hwnd)
 
 
 	m_prevTime = std::chrono::system_clock::now();
-	m_scene = new Scene();
-	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene);
+	m_scene = std::make_unique<Scene>("Main Scene");
+	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene.get());
 	std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, glm::vec3(0.0f, 10.0f, -10.0f));
-	m_scene->addLight(std::move(dirLight));
-	m_scene->addChild(m_camera.get());
+	m_scene->addLight(dirLight.get());
+	m_scene->addChild(std::move(dirLight));
+	m_scene->setActiveCamera(m_camera.get());
+	m_scene->addChild(std::move(m_camera));
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
@@ -61,10 +63,10 @@ void Renderer::draw()
 	m_prevTime = currentTime;
 	AppConfig::setDeltaTime(m_deltaTime.count());
 
-	m_camera->processMovementControls();
-	m_view = m_camera->getViewMatrix();
+	m_scene->getActiveCamera()->processMovementControls();
+	m_view = m_scene->getActiveCamera()->getViewMatrix();
 	float aspectRatio = (float)AppConfig::getViewportWidth() / (float)AppConfig::getViewportHeight();
-	m_projection = glm::perspectiveLH(glm::radians(m_camera->fov), aspectRatio, 0.1f, 100.0f);
+	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov), aspectRatio, 0.1f, 100.0f);
 
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
@@ -73,15 +75,15 @@ void Renderer::draw()
 	}
 
 	// --- GPU Work ---
-	m_zPrePass->draw(m_view, m_projection, m_scene);
+	m_zPrePass->draw(m_view, m_projection, m_scene.get());
 	m_gBuffer->draw(m_view, m_projection,
-		m_camera->transform.position,
-		m_scene,
+		m_scene->getActiveCamera()->transform.position,
+		m_scene.get(),
 		m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view);
 	m_deferredPass->draw(m_view, m_projection,
-		m_camera->transform.position,
-		m_scene,
+		m_scene->getActiveCamera()->transform.position,
+		m_scene.get(),
 		m_gBuffer->getAlbedoSRV(),
 		m_gBuffer->getMetallicRoughnessSRV(),
 		m_gBuffer->getNormalSRV(),
@@ -101,8 +103,8 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene);
-	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene);
+	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene.get());
+	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
 
 }

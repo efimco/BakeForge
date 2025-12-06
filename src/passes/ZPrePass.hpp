@@ -21,7 +21,7 @@ public:
 
 	const ComPtr<ID3D11ShaderResourceView>& getDepthSRV() const;
 private:
-	void update(const glm::mat4& view, const glm::mat4& projection, std::unique_ptr<Primitive>& prim);
+	void update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim);
 	ComPtr<ID3D11Texture2D> t_depth;
 
 	ComPtr<ID3D11DepthStencilView> dsv;

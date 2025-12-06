@@ -133,7 +133,7 @@ void GBuffer::draw(const glm::mat4& view,
 	for (int i = 0; i < scene->getPrimitiveCount(); i++)
 	{
 		auto objectID = i;
-		std::unique_ptr<Primitive>& prim = scene->getPrimitives()[i];
+		Primitive* prim = scene->getPrimitives()[i];
 		update(view, projection, cameraPosition, scene, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -155,7 +155,7 @@ void GBuffer::update(const glm::mat4& view,
 	const glm::vec3& cameraPosition,
 	Scene* scene,
 	int objectID,
-	std::unique_ptr<Primitive>& prim)
+	Primitive* prim)
 {
 	glm::mat4 model = prim->getWorldMatrix();
 	glm::mat4 mvp = projection * view * model;
@@ -169,7 +169,7 @@ void GBuffer::update(const glm::mat4& view,
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
-		cbData->isSelected = scene->isNodeSelected(prim.get());
+		cbData->isSelected = scene->isNodeSelected(prim);
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
