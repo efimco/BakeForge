@@ -22,7 +22,7 @@ public:
 		const HWND& hwnd);
 	~UIManager();
 
-	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene);
+	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene, const glm::mat4& view, const glm::mat4& projection);
 	uint32_t* getMousePos();
 
 private:
@@ -42,6 +42,7 @@ private:
 	void showGBufferImage(const GBuffer& gbuffer);
 
 	void processInputEvents();
+	void processGizmo();
 
 	void drawSceneGraph();
 	void handleNodeSelection(SceneNode* node);
@@ -54,5 +55,8 @@ private:
 	void showMaterialProperties(std::shared_ptr<Material> material);
 	void showLightProperties(Light* light);
 	void showCameraProperties(Camera* camera);
+
+	glm::mat4 m_view;
+	glm::mat4 m_projection;
 
 };
