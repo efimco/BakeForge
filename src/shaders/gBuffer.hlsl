@@ -6,8 +6,7 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 inverseTransposedModel;
 	float4x4 model;
 	int objectID;
-	bool isSelected;
-	float2 _pad;
+	float3 _pad;
 	float3 cameraPosition;
 	float _pad2; // align to 16 bytes
 };
@@ -88,10 +87,6 @@ PSOutput PS(VertexOutput input)
 	if (output.albedo.a < 0.1f)
 	{
 		discard;
-	}
-	if (isSelected)
-	{
-		output.albedo.rgb = lerp(output.albedo.rgb, selectionColor, 1.0 - saturate(NdotV + .1));
 	}
 	float gammaFactor = 2.6f;
 	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);

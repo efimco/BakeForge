@@ -10,8 +10,7 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
 	int objectID;
-	bool isSelected;
-	float padding[2]; // Align to 16 bytes
+	float padding[3]; // Align to 16 bytes
 	glm::vec3 cameraPosition;
 	float padding2; // Align to 16 bytes
 };
@@ -169,7 +168,6 @@ void GBuffer::update(const glm::mat4& view,
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID + 1;
-		cbData->isSelected = scene->isNodeSelected(prim);
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
