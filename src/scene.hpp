@@ -34,6 +34,7 @@ public:
 	std::vector<std::string> getMaterialNames();
 
 	SceneNode* getActiveNode();
+	int32_t getActivePrimitiveID();
 	void setActiveNode(SceneNode* node, bool addToSelection = false);
 	void deselectNode(SceneNode* node);
 	void clearSelectedNodes();

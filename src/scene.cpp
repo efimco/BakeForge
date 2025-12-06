@@ -90,6 +90,21 @@ SceneNode* Scene::getActiveNode()
 	return m_activeNode;
 }
 
+int32_t Scene::getActivePrimitiveID()
+{
+	if (auto prim = dynamic_cast<Primitive*>(m_activeNode))
+	{
+		for (size_t i = 0; i < m_primitives.size(); i++)
+		{
+			if (m_primitives[i] == prim)
+			{
+				return static_cast<uint32_t>(i);
+			}
+		}
+	}
+	return -1;
+}
+
 void Scene::setActiveNode(SceneNode* node, bool addToSelection)
 {
 	if (!addToSelection)
@@ -113,6 +128,7 @@ void Scene::deselectNode(SceneNode* node)
 void Scene::clearSelectedNodes()
 {
 	m_selectedNodes.clear();
+	m_activeNode = nullptr;
 }
 
 bool Scene::isNodeSelected(SceneNode* node)

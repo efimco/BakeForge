@@ -8,7 +8,8 @@ struct alignas(16) DeferredConstantBuffer
 {
 	float IBLrotationY;
 	float IBLintensity;
-	float padding[2]; // Align to 16 bytes
+	int32_t selectedID;
+	float padding[1]; // Align to 16 bytes
 	float cameraPosition[3];
 	float padding2; // Padding to align to 16 bytes
 };
@@ -163,6 +164,7 @@ void DeferredPass::draw(const glm::mat4& view,
 		DeferredConstantBuffer* cbData = static_cast<DeferredConstantBuffer*>(mappedResource.pData);
 		cbData->IBLrotationY = AppConfig::getIBLRotation();
 		cbData->IBLintensity = AppConfig::getIBLIntensity();
+		cbData->selectedID = scene->getActivePrimitiveID();
 		cbData->cameraPosition[0] = cameraPosition.x;
 		cbData->cameraPosition[1] = cameraPosition.y;
 		cbData->cameraPosition[2] = cameraPosition.z;
