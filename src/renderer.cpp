@@ -153,7 +153,7 @@ void Renderer::resize()
 		assert(SUCCEEDED(hr));
 	}
 
-	D3D11_VIEWPORT viewport;
+	D3D11_VIEWPORT viewport = {};
 	viewport.Width = static_cast<float>(AppConfig::getWindowWidth());
 	viewport.Height = static_cast<float>(AppConfig::getWindowHeight());
 	viewport.TopLeftX = 0;
