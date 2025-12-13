@@ -49,10 +49,11 @@ tinygltf::Model GLTFModel::readGlb(const std::string& path)
 void GLTFModel::processGlb(const tinygltf::Model& model)
 {
 	std::cout << "Processing GLTF model with " << model.meshes.size() << " meshes" << std::endl;
-
+	processTextures(model);
+	processImages(model);
+	processMaterials(model);
 	for (const auto& mesh : model.meshes)
 	{
-
 		for (const auto& gltfPrimitive : mesh.primitives)
 		{
 			std::vector<Position> posBuffer;
@@ -60,15 +61,12 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			std::vector<Normals> normalBuffer;
 			std::vector<Tangents> tangentBuffer;
 			std::vector<uint32_t> indices;
-			processTextures(model);
-			processImages(model);
-			processMaterials(model);
+
 			processPosAttribute(model, mesh, gltfPrimitive, posBuffer);
 			processTexCoordAttribute(model, mesh, gltfPrimitive, texCoordsBuffer);
 			processIndexAttrib(model, mesh, gltfPrimitive, indices);
 			processNormalsAttribute(model, mesh, gltfPrimitive, normalBuffer);
 			processTangentAttribute(model, mesh, gltfPrimitive, tangentBuffer);
-
 
 			std::vector<InterleavedData> vertexData;
 			const auto numVert = posBuffer.size();
@@ -88,22 +86,16 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->setIndexData(std::move(indices));
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
+
 			if (m_scene->isNameUsed(model.nodes[meshIndex].name))
 			{
 				m_scene->getNameCounter(model.nodes[meshIndex].name)++;
+				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(m_scene->getNameCounter(model.nodes[meshIndex].name));
 			}
 			else
 			{
 				m_scene->getNameCounter(model.nodes[meshIndex].name) = 0;
-			}
-
-			if (m_scene->getNameCounter(model.nodes[meshIndex].name) == 0)
-			{
 				primitive->name = model.nodes[meshIndex].name;
-			}
-			else
-			{
-				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(m_scene->getNameCounter(model.nodes[meshIndex].name));
 			}
 
 			m_scene->addPrimitive(primitive.get());

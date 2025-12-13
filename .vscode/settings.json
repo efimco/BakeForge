@@ -76,7 +76,9 @@
 		"mutex": "cpp",
 		"stop_token": "cpp",
 		"thread": "cpp",
-		"cstdarg": "cpp"
+		"cstdarg": "cpp",
+		"condition_variable": "cpp",
+		"future": "cpp"
 	},
 	"C_Cpp.default.compilerPath": "cl.exe",
 	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

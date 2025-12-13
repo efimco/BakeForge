@@ -3,9 +3,9 @@
 #include <iostream>
 #include <d3dcompiler.h>
 
-std::unordered_map<std::string, ShaderInfo> ShaderManager::m_vertexShaders;
-std::unordered_map<std::string, ShaderInfo> ShaderManager::m_pixelShaders;
-std::unordered_map<std::string, ShaderInfo> ShaderManager::m_computeShaders;
+static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
+static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
+static std::unordered_map<std::string, ShaderInfo> m_computeShaders;
 
 ShaderManager::ShaderManager(const ComPtr<ID3D11Device>& device) : m_device(device) {}
 

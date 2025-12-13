@@ -39,7 +39,4 @@ public:
 
 private:
 	const ComPtr<ID3D11Device>& m_device;
-	static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
-	static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
-	static std::unordered_map<std::string, ShaderInfo> m_computeShaders;
 };
