@@ -381,6 +381,17 @@ void GBuffer::createOrResize()
 
 }
 
+GBufferTextures GBuffer::getGBufferTextures() const
+{
+	GBufferTextures gbufferTextures;
+	gbufferTextures.albedoSRV = srv_albedo;
+	gbufferTextures.metallicRoughnessSRV = srv_metallicRoughness;
+	gbufferTextures.normalSRV = srv_normal;
+	gbufferTextures.positionSRV = srv_position;
+	gbufferTextures.objectIDSRV = srv_objectID;
+	return gbufferTextures;
+}
+
 const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV() const
 {
 	return srv_albedo;
