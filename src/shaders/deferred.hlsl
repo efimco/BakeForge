@@ -263,7 +263,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	// finalColor = lights[0].intensity;
 
 	finalColor += outline(DTid, objectID);
-	// Gamma correction (Blender uses 2.2, but you have custom sRGB)
+	// Gamma correction (Blender uses 2.2, but we have custom sRGB)
 	finalColor.r = linear_rgb_to_srgb(finalColor.r);
 	finalColor.g = linear_rgb_to_srgb(finalColor.g);
 	finalColor.b = linear_rgb_to_srgb(finalColor.b);

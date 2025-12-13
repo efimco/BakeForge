@@ -13,8 +13,10 @@
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
-static bool useSnap(false);
-static float snap[3] = { 1.f, 1.f, 1.f };
+static bool gUseSnap(false);
+static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
+static glm::ivec3 gSnapRotate = { 15, 15, 15 };
+static glm::ivec3 gSnapScale = { 1, 1, 1 };
 
 UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const ComPtr<ID3D11DeviceContext>& deviceContext,
@@ -303,12 +305,42 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	ImVec2 mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x, m_io->MousePos.y - ImGui::GetWindowPos().y);
 	m_mousePos[0] = static_cast<uint32_t>(mousePos.x);
 	m_mousePos[1] = static_cast<uint32_t>(mousePos.y);
-	
+
 	// Set up ImGuizmo to draw in this viewport
 	ImVec2 windowPos = ImGui::GetWindowPos();
 	ImGuizmo::SetRect(windowPos.x, windowPos.y, size.x, size.y);
-	
+
 	ImGui::Image(tex, size, uv0, uv1);
+	// Snap toggle button in top right corner of viewport
+	// Gizmo controls overlay
+	ImGui::SetCursorPos(ImVec2(5.0f, 5.0f));
+	ImGui::BeginChild("GizmoControls", ImVec2(200.0f, 150.0f), true, ImGuiWindowFlags_NoScrollbar);
+	{
+		if (ImGui::Button(gUseSnap ? "Snap: On" : "Snap: Off", ImVec2(-1.0f, 20.0f)))
+		{
+			gUseSnap = !gUseSnap;
+		}
+
+		if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
+			mCurrentGizmoMode = ImGuizmo::LOCAL;
+		ImGui::SameLine();
+		if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
+			mCurrentGizmoMode = ImGuizmo::WORLD;
+
+		ImGui::PushItemWidth(-1.0f);
+		ImGui::Text("[T]");
+		ImGui::SameLine();
+		ImGui::SliderInt("##SnapTranslate", &gSnapTranslate[0], 0, 100);
+		ImGui::Text("[R]");
+		ImGui::SameLine();;
+		ImGui::SliderInt("##SnapRotate", &gSnapRotate[0], 1, 180);
+		ImGui::Text("[S]");
+		ImGui::SameLine();
+		ImGui::SliderInt("##SnapScale", &gSnapScale[0], 0, 100);
+		ImGui::PopItemWidth();
+	}
+	ImGui::EndChild();
+
 	processGizmo();
 
 	ImGui::End();
@@ -374,35 +406,70 @@ void UIManager::processInputEvents()
 
 void UIManager::processGizmo()
 {
-	if (!m_scene->getActiveNode())
+	SceneNode* activeNode = m_scene->getActiveNode();
+	if (activeNode == nullptr)
 		return;
 	ImGuizmo::SetDrawlist();
-	if (ImGui::IsKeyPressed(ImGuiKey_G))
-		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-	if (ImGui::IsKeyPressed(ImGuiKey_R))
-		mCurrentGizmoOperation = ImGuizmo::ROTATE;
-	if (ImGui::IsKeyPressed(ImGuiKey_S)) // r Key
-		mCurrentGizmoOperation = ImGuizmo::SCALE;
+	if (!ImGuizmo::IsUsing())
+	{
+		if (ImGui::IsKeyPressed(ImGuiKey_G))
+			mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+		if (ImGui::IsKeyPressed(ImGuiKey_R))
+			mCurrentGizmoOperation = ImGuizmo::ROTATE;
+		if (ImGui::IsKeyPressed(ImGuiKey_S)) // r Key
+			mCurrentGizmoOperation = ImGuizmo::SCALE;
+		if (ImGui::IsKeyPressed(ImGuiKey_M))
+			gUseSnap = !gUseSnap;
+	}
 
-	float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-	float* matrix = const_cast<float*>(glm::value_ptr(m_scene->getActiveNode()->getWorldMatrix()));
-
-	if (ImGui::IsKeyPressed(ImGuiKey_S))
-		useSnap = !useSnap;
-
-	float viewMatrix[16];
-	memcpy(viewMatrix, glm::value_ptr(m_view), sizeof(float) * 16);
-	float projectionMatrix[16];
-	memcpy(projectionMatrix, glm::value_ptr(m_projection), sizeof(float) * 16);
-
-	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
+	float* matrix = glm::value_ptr(worldMatrix);
+	float* viewMatrix = const_cast<float*>(glm::value_ptr(m_view));
+	float* projectionMatrix = const_cast<float*>(glm::value_ptr(m_projection));
+	glm::vec3 currentSnapValue;
+	switch (mCurrentGizmoOperation)
+	{
+	case ImGuizmo::TRANSLATE:
+		currentSnapValue = gSnapTranslate;
+		break;
+	case ImGuizmo::ROTATE:
+		currentSnapValue = glm::vec3(gSnapRotate);
+		break;
+	case ImGuizmo::SCALE:
+		currentSnapValue = gSnapScale;
+		break;
+	default:
+		currentSnapValue = glm::vec3(0.0f);
+		break;
+	}
+	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, gUseSnap ? &currentSnapValue[0] : NULL);
 	if (ImGuizmo::IsUsing())
 	{
 		m_isMouseInViewport = false;
-		ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
-		m_scene->getActiveNode()->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
-		m_scene->getActiveNode()->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
-		m_scene->getActiveNode()->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
+
+		// Convert the modified world matrix back to local space
+		glm::mat4 newWorldMatrix = worldMatrix; // matrix was modified in-place
+		glm::mat4 localMatrix;
+		if (activeNode->parent && !dynamic_cast<Scene*>(activeNode->parent))
+		{
+			// Has a non-Scene parent: convert world -> local
+			glm::mat4 parentWorldInverse = glm::inverse(activeNode->parent->getWorldMatrix());
+			localMatrix = parentWorldInverse * newWorldMatrix;
+		}
+		else
+		{
+			// No parent or parent is Scene: world == local
+			localMatrix = newWorldMatrix;
+		}
+		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation, matrixScale);
+		activeNode->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
+		activeNode->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
+		activeNode->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
+		if (gUseSnap && mCurrentGizmoOperation == ImGuizmo::TRANSLATE)
+		{
+			ImGuizmo::DrawGrid(viewMatrix, projectionMatrix, glm::value_ptr(newWorldMatrix), 100.0f);
+		}
 	}
 }
 

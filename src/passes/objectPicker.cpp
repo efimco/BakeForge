@@ -97,14 +97,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		}
 		else
 		{
-			if (!scene->isNodeSelected(scene->getPrimitiveByID(readBackID - 1)))
-			{
-				scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1), isShiftPressed);
-			}
-			else
-			{
-				scene->deselectNode(scene->getPrimitiveByID(readBackID - 1));
-			}
+			scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1), isShiftPressed);
 		}
 	}
 }
