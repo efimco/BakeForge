@@ -5,6 +5,7 @@
 #include <memory>
 #include "shaderManager.hpp"
 #include "scene.hpp"
+#include "GBufferTextures.hpp"
 
 using namespace Microsoft::WRL;
 class DeferredPass
@@ -18,11 +19,7 @@ public:
 		const glm::mat4& projection,
 		const glm::vec3& cameraPosition,
 		Scene* scene,
-		const ComPtr<ID3D11ShaderResourceView>& albedoSRV,
-		const ComPtr<ID3D11ShaderResourceView>& metallicRoughnessSRV,
-		const ComPtr<ID3D11ShaderResourceView>& normalSRV,
-		const ComPtr<ID3D11ShaderResourceView>& positionSRV,
-		const ComPtr<ID3D11ShaderResourceView>& objectIDSRV,
+		const GBufferTextures& gbufferTextures,
 		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
 		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
 		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,

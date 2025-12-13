@@ -6,9 +6,9 @@
 #include "shaderManager.hpp"
 #include "primitive.hpp"
 #include "scene.hpp"
+#include "GBufferTextures.hpp"
 
 using namespace Microsoft::WRL;
-
 class GBuffer
 {
 public:
@@ -27,7 +27,7 @@ public:
 		int objectID,
 		Primitive* prim);
 	void createOrResize();
-
+	GBufferTextures getGBufferTextures() const;
 	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;
 	const ComPtr<ID3D11ShaderResourceView>& getMetallicRoughnessSRV() const;
 	const ComPtr<ID3D11ShaderResourceView>& getNormalSRV() const;
