@@ -8,6 +8,11 @@
 
 using namespace Microsoft::WRL;
 
+struct Triangle
+{
+	InterleavedData v0, v1, v2;
+};
+
 class Primitive : public SceneNode
 {
 public:
@@ -21,12 +26,6 @@ public:
 	void setVertexData(std::vector<InterleavedData>&& vertexData);
 	void setIndexData(std::vector<uint32_t>&& indexData);
 
-	struct Triangle
-	{
-		InterleavedData v0, v1, v2;
-	};
-
-	std::vector<Triangle> getTriangles() const;
 	const std::vector<InterleavedData>& getVertexData() const { return m_vertexData; }
 	const std::vector<uint32_t>& getIndexData() const { return m_indexData; }
 	const ComPtr<ID3D11Buffer>& getIndexBuffer() const { return m_indexBuffer; };
@@ -36,7 +35,10 @@ public:
 private:
 	std::vector<InterleavedData> m_vertexData;
 	std::vector<uint32_t> m_indexData;
+	std::vector<Triangle> m_triangles;
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
+
+	void calculateTriangles();
 };

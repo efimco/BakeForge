@@ -35,27 +35,29 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
 	indexInitData.pSysMem = m_indexData.data();
 	HRESULT hr = m_device->CreateBuffer(&indexBufferDesc, &indexInitData, &m_indexBuffer);
 	assert(SUCCEEDED(hr));
+
+	if (!m_vertexData.empty())
+	{
+		calculateTriangles();
+	}
 }
 
 
-std::vector<Primitive::Triangle> Primitive::getTriangles() const
+void Primitive::calculateTriangles()
 {
-	std::vector<Primitive::Triangle> triangles;
-	triangles.reserve(m_indexData.size() / 3);
+	m_triangles.reserve(m_indexData.size() / 3);
 
 	for (size_t i = 0; i < m_indexData.size(); i += 3)
 	{
 		if (i + 2 < m_indexData.size())
 		{
-			Primitive::Triangle tri;
+			Triangle tri;
 			tri.v0 = m_vertexData[m_indexData[i]];
 			tri.v1 = m_vertexData[m_indexData[i + 1]];
 			tri.v2 = m_vertexData[m_indexData[i + 2]];
-			triangles.push_back(tri);
+			m_triangles.push_back(tri);
 		}
 	}
-
-	return triangles;
 }
 
 
