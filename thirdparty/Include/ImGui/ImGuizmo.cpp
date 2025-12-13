@@ -1634,16 +1634,18 @@ namespace IMGUIZMO_NAMESPACE
          vec_t dif = { destinationPosOnScreen.x - sourcePosOnScreen.x, destinationPosOnScreen.y - sourcePosOnScreen.y, 0.f, 0.f };
          dif.Normalize();
          dif *= 5.f;
-         drawList->AddCircle(sourcePosOnScreen, 6.f, translationLineColor);
-         drawList->AddCircle(destinationPosOnScreen, 6.f, translationLineColor);
-         drawList->AddLine(ImVec2(sourcePosOnScreen.x + dif.x, sourcePosOnScreen.y + dif.y), ImVec2(destinationPosOnScreen.x - dif.x, destinationPosOnScreen.y - dif.y), translationLineColor, 2.f);
+		 //COMMENMTED OUT FOR MORE CLEANER UI DURING TRANSLATION
+        //  drawList->AddCircle(sourcePosOnScreen, 6.f, translationLineColor);
+        //  drawList->AddCircle(destinationPosOnScreen, 6.f, translationLineColor);
+        //  drawList->AddLine(ImVec2(sourcePosOnScreen.x + dif.x, sourcePosOnScreen.y + dif.y), ImVec2(destinationPosOnScreen.x - dif.x, destinationPosOnScreen.y - dif.y), translationLineColor, 2.f);
 
          char tmps[512];
          vec_t deltaInfo = gContext.mModel.v.position - gContext.mMatrixOrigin;
          int componentInfoIndex = (type - MT_MOVE_X) * 3;
          ImFormatString(tmps, sizeof(tmps), translationInfoMask[type - MT_MOVE_X], deltaInfo[translationInfoIndex[componentInfoIndex]], deltaInfo[translationInfoIndex[componentInfoIndex + 1]], deltaInfo[translationInfoIndex[componentInfoIndex + 2]]);
-         drawList->AddText(ImVec2(destinationPosOnScreen.x + 15, destinationPosOnScreen.y + 15), GetColorU32(TEXT_SHADOW), tmps);
-         drawList->AddText(ImVec2(destinationPosOnScreen.x + 14, destinationPosOnScreen.y + 14), GetColorU32(TEXT), tmps);
+		//SAME HERE, COMMENTED OUT FOR CLEANER UI
+		 //  drawList->AddText(ImVec2(destinationPosOnScreen.x + 15, destinationPosOnScreen.y + 15), GetColorU32(TEXT_SHADOW), tmps);
+        //  drawList->AddText(ImVec2(destinationPosOnScreen.x + 14, destinationPosOnScreen.y + 14), GetColorU32(TEXT), tmps);
       }
    }
 
@@ -2913,7 +2915,7 @@ namespace IMGUIZMO_NAMESPACE
                col = (fmodf(fabsf(f), 10.f) < FLT_EPSILON) ? IM_COL32(0x90, 0x90, 0x90, 0xFF) : col;
                col = (fabsf(f) < FLT_EPSILON) ? IM_COL32(0x40, 0x40, 0x40, 0xFF): col;
 
-               float thickness = 1.f;
+               float thickness = 2.f;
                thickness = (fmodf(fabsf(f), 10.f) < FLT_EPSILON) ? 1.5f : thickness;
                thickness = (fabsf(f) < FLT_EPSILON) ? 2.3f : thickness;
 
