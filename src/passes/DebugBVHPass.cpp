@@ -1,5 +1,7 @@
 #include "DebugBVHPass.hpp"
 #include "scene.hpp"
+#include "shaderManager.hpp"
+#include "primitive.hpp"
 #include "debugPassMacros.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -75,17 +77,6 @@ DebugBVHPass::DebugBVHPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	dsDesc.StencilEnable = FALSE;
 	m_device->CreateDepthStencilState(&dsDesc, &m_depthStencilState);
 
-	// Alpha blending for semi-transparent lines
-	D3D11_BLEND_DESC blendDesc = {};
-	blendDesc.RenderTarget[0].BlendEnable = TRUE;
-	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	m_device->CreateBlendState(&blendDesc, &m_blendState);
 }
 
 void DebugBVHPass::addBoxLines(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color)
@@ -116,22 +107,22 @@ void DebugBVHPass::addPrimitiveBVHBoxes(Primitive* primitive, int maxDepth)
 {
 	const Bvh* bvh = primitive->getBVH();
 	if (!bvh || bvh->nodes.empty()) return;
-	
+
 	glm::mat4 worldMatrix = primitive->getWorldMatrix();
-	
+
 	std::vector<std::pair<size_t, int>> stack;
 	stack.push_back({ 0, 0 });
-	
+
 	while (!stack.empty())
 	{
 		auto [nodeIdx, depth] = stack.back();
 		stack.pop_back();
-		
+
 		if (nodeIdx >= bvh->nodes.size()) continue;
 		if (maxDepth >= 0 && depth > maxDepth) continue;
-		
+
 		const Node& node = bvh->nodes[nodeIdx];
-		
+
 		// Color: cyan/magenta gradient for primitive BVH (different from scene BVH)
 		float t = std::min(depth / 10.0f, 1.0f);
 		glm::vec4 color;
@@ -143,11 +134,11 @@ void DebugBVHPass::addPrimitiveBVHBoxes(Primitive* primitive, int maxDepth)
 		{
 			color = glm::vec4(1.0f, t, 1.0f - t, 0.4f); // Magenta to blue gradient
 		}
-		
+
 		// Get local bounds
 		glm::vec3 localMin(node.bounds[0], node.bounds[2], node.bounds[4]);
 		glm::vec3 localMax(node.bounds[1], node.bounds[3], node.bounds[5]);
-		
+
 		// Transform all 8 corners to world space and compute new AABB
 		glm::vec3 corners[8] = {
 			{localMin.x, localMin.y, localMin.z}, {localMax.x, localMin.y, localMin.z},
@@ -155,26 +146,26 @@ void DebugBVHPass::addPrimitiveBVHBoxes(Primitive* primitive, int maxDepth)
 			{localMin.x, localMin.y, localMax.z}, {localMax.x, localMin.y, localMax.z},
 			{localMin.x, localMax.y, localMax.z}, {localMax.x, localMax.y, localMax.z},
 		};
-		
+
 		glm::vec3 worldMin(FLT_MAX);
 		glm::vec3 worldMax(-FLT_MAX);
-		
+
 		for (int i = 0; i < 8; ++i)
 		{
 			glm::vec4 worldCorner = worldMatrix * glm::vec4(corners[i], 1.0f);
 			worldMin = glm::min(worldMin, glm::vec3(worldCorner));
 			worldMax = glm::max(worldMax, glm::vec3(worldCorner));
 		}
-		
+
 		addBoxLines(worldMin, worldMax, color);
-		
+
 		if (!node.is_leaf())
 		{
 			size_t firstChild = node.index.first_id();
 			stack.push_back({ firstChild, depth + 1 });
 			stack.push_back({ firstChild + 1, depth + 1 });
 		}
-		
+
 		if (m_vertices.size() > m_maxVertices - 24)
 		{
 			break;
@@ -304,9 +295,7 @@ void DebugBVHPass::draw(const glm::mat4& view, const glm::mat4& projection, Scen
 	// Disable blending - we're drawing opaque wireframe lines
 	m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
 
-	// Set render target - explicitly set only one RTV and clear others
-	ID3D11RenderTargetView* rtvs[8] = { rtv.Get(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->OMSetRenderTargets(8, rtvs, dsv.Get());
+	m_context->OMSetRenderTargets(1, rtv.GetAddressOf(), dsv.Get());
 
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
@@ -322,8 +311,8 @@ void DebugBVHPass::draw(const glm::mat4& view, const glm::mat4& projection, Scen
 	m_context->Draw(static_cast<UINT>(m_vertices.size()), 0);
 
 	// Unbind render targets to avoid resource hazards
-	ID3D11RenderTargetView* nullRTVs[8] = { nullptr };
-	m_context->OMSetRenderTargets(8, nullRTVs, nullptr);
+	ID3D11RenderTargetView* nullRTVs = nullptr;
+	m_context->OMSetRenderTargets(1, &nullRTVs, nullptr);
 
 	DEBUG_PASS_END();
 }

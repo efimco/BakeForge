@@ -4,12 +4,12 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
-#include "shaderManager.hpp"
-#include "primitive.hpp"
 
 using namespace Microsoft::WRL;
 
 class Scene;
+class ShaderManager;
+class Primitive;
 
 struct DebugLineVertex
 {
@@ -49,7 +49,6 @@ private:
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
-	ComPtr<ID3D11BlendState> m_blendState;
 
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	std::vector<DebugLineVertex> m_vertices;

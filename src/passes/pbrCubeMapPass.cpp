@@ -171,7 +171,9 @@ void CubeMapPass::draw(glm::mat4& view)
 
 	// Draw the cube
 	m_context->Draw(36, 0); // 36 vertices for a cube
-	m_context->OMSetRenderTargets(0, nullptr, nullptr);
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	ID3D11DepthStencilView* nullDSV = nullptr;
+	m_context->OMSetRenderTargets(1, &nullRTV, nullDSV);
 	DEBUG_PASS_END();
 
 }
