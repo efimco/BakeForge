@@ -639,9 +639,9 @@ namespace IMGUIZMO_NAMESPACE
       // default values
       TranslationLineThickness   = 3.0f;
       TranslationLineArrowSize   = 6.0f;
-      RotationLineThickness      = 2.0f;
+      RotationLineThickness      = 5.0f;
       RotationOuterLineThickness = 3.0f;
-      ScaleLineThickness         = 3.0f;
+      ScaleLineThickness         = 5.0f;
       ScaleLineCircleSize        = 6.0f;
       HatchedAxisLineThickness   = 6.0f;
       CenterCircleSize           = 6.0f;
@@ -1110,7 +1110,7 @@ namespace IMGUIZMO_NAMESPACE
       vec_t rightViewInverse = viewInverse.v.right;
       rightViewInverse.TransformVector(gContext.mModelInverse);
       float rightLength = GetSegmentLengthClipSpace(makeVect(0.f, 0.f), rightViewInverse);
-      gContext.mScreenFactor = gContext.mGizmoSizeClipSpace / rightLength;
+      gContext.mScreenFactor = gContext.mGizmoSizeClipSpace / rightLength * 2.f;
 
       ImVec2 centerSSpace = worldToPos(makeVect(0.f, 0.f), gContext.mMVP);
       gContext.mScreenSquareCenter = centerSSpace;
