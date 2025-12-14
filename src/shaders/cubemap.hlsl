@@ -15,12 +15,16 @@ cbuffer CubeMapCB : register(b0)
 {
 	float4x4 view;
 	float mapRotationY;
-	float3 padding; // align to 16 bytes
+	bool isBlurred;
+	float blurAmount;
+	float2 padding; // align to 16 bytes
 };
 
 static const float YAW = PI / 180.0;
 
-Texture2D hdrEquirect : register(t0);
+TextureCube prefilteredMap : register(t0);
+Texture2D  hdrEquirectMap : register(t1);
+
 SamplerState samplerState : register(s0);
 
 VertexOutput VS(CubeMapVertex input)
@@ -54,6 +58,15 @@ float4 PS(VertexOutput input) : SV_TARGET
 	float3x3 rotationMatrix = getMapRotation();
 	float3 direction = mul(rotationMatrix, input.localPos);
 	direction = normalize(direction);
+
+	if (isBlurred)
+	{
+		// Sample prefiltered cubemap for blurred effect
+		// The LOD level is determined by the blurAmount
+		float lod = blurAmount; // You can scale this value as needed
+		float3 prefilteredColor = prefilteredMap.SampleLevel(samplerState, direction, lod).rgb;
+		return float4(prefilteredColor, 1.0f);
+	}
 	// Convert direction to spherical coordinates for equirectangular sampling
 	float phi = atan2(direction.z, direction.x);
 	float theta = acos(direction.y);
@@ -64,6 +77,6 @@ float4 PS(VertexOutput input) : SV_TARGET
 	uv.y = theta / PI;
 
 	// Sample HDR equirectangular map
-	float3 hdrColor = hdrEquirect.Sample(samplerState, uv).rgb;
+	float3 hdrColor = hdrEquirectMap.Sample(samplerState, uv).rgb;
 	return float4(hdrColor, 1.0f);
 }

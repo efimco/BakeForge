@@ -107,9 +107,8 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 
 	showMainMenuBar();
 	showInvisibleDockWindow();
-	simpleWindow();
+	showSceneSettings();
 	showViewport(srv);
-	showGBufferImage(gbuffer);
 	drawSceneGraph();
 	showProperties();
 	showMaterialBrowser();
@@ -346,38 +345,6 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	ImGui::EndChild();
 
 	processGizmo();
-
-	ImGui::End();
-	ImGui::PopStyleVar(3);
-}
-
-void UIManager::showGBufferImage(const GBuffer& gbuffer)
-{
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("GBuffer");
-
-	ImVec2 uv0 = ImVec2(0, 0);
-	ImVec2 uv1 = ImVec2(1, 1);
-	ImVec2 contentSize = ImGui::GetContentRegionAvail();
-	float aspectRatio = static_cast<float>(AppConfig::getViewportWidth()) / static_cast<float>(AppConfig::getViewportHeight());
-
-	ImVec2 size;
-	if (contentSize.x / contentSize.y > aspectRatio)
-	{
-		// Content is wider than needed, fit by height
-		size.y = contentSize.y;
-		size.x = size.y * aspectRatio;
-	}
-	else
-	{
-		// Content is taller than needed, fit by width
-		size.x = contentSize.x;
-		size.y = size.x / aspectRatio;
-	}
-	ImTextureRef tex = gbuffer.getAlbedoSRV().Get();
-	ImGui::Image(tex, size, uv0, uv1);
 
 	ImGui::End();
 	ImGui::PopStyleVar(3);
@@ -760,16 +727,20 @@ void UIManager::showCameraProperties(Camera* camera)
 }
 
 
-void UIManager::simpleWindow()
+void UIManager::showSceneSettings()
 {
 	static float f = 0.0f;
 	static int counter = 0;
 
-	ImGui::Begin("Hello, world!");
+	ImGui::Begin("SceneSettings");
 	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
 	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
-	ImGui::TextWrapped("This is some useful text.");
-	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+	ImGui::Separator();
+	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
+	if (AppConfig::getIsBlurred())
+	{
+		ImGui::SliderFloat("Blur Amoungt", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
+	}
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
 
 	// Debug BVH visualization
@@ -782,11 +753,6 @@ void UIManager::simpleWindow()
 		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20,
 			AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
 	}
-
-	if (ImGui::Button("Button"))
-		counter++;
-	ImGui::SameLine();
-	ImGui::Text("counter = %d", counter);
 
 	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",
 		1000.0f / m_io->Framerate, m_io->Framerate);

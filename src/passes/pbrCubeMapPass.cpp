@@ -55,7 +55,9 @@ struct alignas(16) CubeMapConstantBufferData
 {
 	glm::mat4 view;
 	float mapRotationY;
-	float padding[3];
+	bool isBlurred;
+	float blurAmount;
+	float padding;
 };
 
 struct alignas(16) EquirectToCubempConstantBufferData
@@ -95,6 +97,8 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device>& device,
 	samplerDesc.AddressV = samplerDesc.AddressU;
 	samplerDesc.AddressW = samplerDesc.AddressU;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
 	HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
 	if (FAILED(hr))
@@ -165,8 +169,8 @@ void CubeMapPass::draw(glm::mat4& view)
 
 	m_context->VSSetShader(m_shaderManager->getVertexShader("cubemapVS"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("cubemapPS"), nullptr, 0);
-
-	m_context->PSSetShaderResources(0, 1, m_hdriTexture->srv.GetAddressOf());
+	m_context->PSSetShaderResources(0, 1, m_prefilteredSRV.GetAddressOf());
+	m_context->PSSetShaderResources(1, 1, m_hdriTexture->srv.GetAddressOf());
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
 	// Draw the cube
@@ -214,6 +218,8 @@ void CubeMapPass::update(glm::mat4& view)
 	CubeMapConstantBufferData* data = reinterpret_cast<CubeMapConstantBufferData*>(mappedResource.pData);
 	data->view = view;
 	data->mapRotationY = AppConfig::getIBLRotation();
+	data->isBlurred = AppConfig::getIsBlurred();
+	data->blurAmount = AppConfig::getIsBlurred() ? AppConfig::getBlurAmount() : 0.0f;
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }
 
@@ -474,8 +480,8 @@ void CubeMapPass::createPrefilteredMap()
 		m_prefilteredSRV.Reset();
 	}
 
-	const uint32_t prefilteredMapSize = 128;
-	const uint32_t numMips = 8; // 0-7 mip levels to match shader
+	const uint32_t prefilteredMapSize = 512;
+	const uint32_t numMips = 9; // 0-8 mip levels to match shader
 
 	D3D11_TEXTURE2D_DESC prefilteredMapDesc = {};
 	prefilteredMapDesc.ArraySize = 6; // 6 faces for cubemap
@@ -568,9 +574,9 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetConstantBuffers(0, 1, prefilteredConstantBuffer.GetAddressOf());
 		m_context->CSSetShader(m_shaderManager->getComputeShader("prefilteredMapCS"), nullptr, 0);
 
-		// Dispatch for this mip level
-		uint32_t gx = (currentMipSize + 7) / 8;
-		uint32_t gy = (currentMipSize + 7) / 8;
+		// Dispatch for this mip level (shader uses 32x32 threads)
+		uint32_t gx = (currentMipSize + 31) / 32;
+		uint32_t gy = (currentMipSize + 31) / 32;
 		m_context->Dispatch(gx, gy, 1);
 
 		// Unbind resources after each mip

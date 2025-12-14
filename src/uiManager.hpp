@@ -42,12 +42,11 @@ private:
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	Scene* m_scene;
-	void simpleWindow();
+	void showSceneSettings();
 	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 	void showInvisibleDockWindow();
 	void showMaterialBrowser();
-	void showGBufferImage(const GBuffer& gbuffer);
 
 	void processInputEvents();
 	void processGizmo();

@@ -14,6 +14,8 @@ static bool regeneratePrefilteredMap = false;
 static bool showBVH = false;
 static bool showPrimitiveBVH = false;
 static int bvhMaxDepth = -1;
+static bool isBackgroundBlurred = false;
+static float blurAmount = 0.5f;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -112,6 +114,14 @@ void AppConfig::setViewportWidth(int width)
 float* AppConfig::getClearColor()
 {
 	return clearColor;
+}
+bool& AppConfig::getIsBlurred()
+{
+	return isBackgroundBlurred;
+}
+float& AppConfig::getBlurAmount()
+{
+	return blurAmount;
 }
 void AppConfig::setClearColor(float r, float g, float b, float a)
 {
