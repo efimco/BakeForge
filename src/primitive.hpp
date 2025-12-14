@@ -3,7 +3,6 @@
 #include <wrl.h>
 #include <d3d11.h>
 #include "primitiveData.hpp"
-#include "material.hpp"
 #include "sceneNode.hpp"
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/vec.h>
@@ -12,6 +11,8 @@
 #include <bvh/v2/node.h>
 #include <bvh/v2/stream.h>
 #include <bvh/v2/default_builder.h>
+
+struct Material;
 
 using namespace Microsoft::WRL;
 

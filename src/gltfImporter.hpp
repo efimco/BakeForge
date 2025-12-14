@@ -1,8 +1,4 @@
 #pragma once
-#include "texture.hpp"
-#include "primitiveData.hpp"
-#include "material.hpp"
-#include "scene.hpp"
 #include <tiny_gltf.h>
 #include <string>
 #include <vector>
@@ -10,8 +6,13 @@
 #include <wrl.h>
 #include <d3d11.h>
 #include <unordered_map>
+#include "primitiveData.hpp"
 
-
+class Scene;
+struct Texture;
+struct Material;
+class Primitive;
+struct Transform;
 
 using namespace Microsoft::WRL;
 class GLTFModel

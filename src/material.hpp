@@ -1,8 +1,9 @@
 #pragma once
-#include "texture.hpp"
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
+
+struct Texture;
 
 struct Material
 {

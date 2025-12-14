@@ -2,9 +2,17 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include "imgui.h"
-#include "GBuffer.hpp"
-#include "scene.hpp"
-#include "light.hpp"
+#include "glm/glm.hpp"
+#include <memory>
+
+class Scene;
+class SceneNode;
+class Camera;
+class GBuffer;
+class Primitive;
+struct Material;
+class Light;
+
 
 #define ICON_FA_CUBE       "\xef\x86\xb2"     // Mesh/Primitive
 #define ICON_FA_LIGHTBULB  "\xef\x83\xab"     // Light

@@ -1,14 +1,23 @@
 #pragma once
 
-#include "sceneNode.hpp"
-#include "primitive.hpp"
-#include "texture.hpp"
-#include "material.hpp"
-#include "light.hpp"
-#include "camera.hpp"
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/thread_pool.h>
 #include <memory>
+#include "sceneNode.hpp"
+#include <memory>
+#include <unordered_map>
+
+class Primitive;
+struct Texture;
+struct Material;
+class Light;
+class Camera;
+
+using Scalar = float;
+using Vec3 = bvh::v2::Vec<Scalar, 3>;
+using BBox = bvh::v2::BBox<Scalar, 3>;
+using Node = bvh::v2::Node<Scalar, 3>;
+using Bvh = bvh::v2::Bvh<Node>;
 
 class Scene : public SceneNode
 {
@@ -44,7 +53,7 @@ public:
 
 
 	bool areLightsDirty();
-	void setLightsDirty(bool dirty);
+	void setLightsDirty(bool dirty = true);
 	void setActiveCamera(Camera* camera);
 	Camera* getActiveCamera();
 
