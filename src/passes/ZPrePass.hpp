@@ -1,11 +1,13 @@
 #pragma once
 #include <d3d11_1.h>
 #include <wrl.h>
-#include "camera.hpp"
 #include <glm/glm.hpp>
-#include "shaderManager.hpp"
-#include "primitive.hpp"
-#include "scene.hpp"
+#include <memory>
+
+class Camera;
+class ShaderManager;
+class Primitive;
+class Scene;
 
 using namespace Microsoft::WRL;
 

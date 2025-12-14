@@ -3,18 +3,13 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <glm/glm.hpp>
-#include "shaderManager.hpp"
 #include <memory>
-#include "scene.hpp"
+
 using namespace Microsoft::WRL;
 
+class Scene;
+class ShaderManager;
 
-struct cbPicking
-{
-	uint32_t mousePosX;
-	uint32_t mousePosY;
-	uint32_t padding[2];
-};
 
 class ObjectPicker
 {

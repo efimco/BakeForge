@@ -2,6 +2,11 @@
 #include "appConfig.hpp"
 #include <iostream>
 #include "debugPassMacros.hpp"
+#include "shaderManager.hpp"
+#include "scene.hpp"
+#include "GBufferTextures.hpp"
+#include "light.hpp"
+
 static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
 
 struct alignas(16) DeferredConstantBuffer
@@ -194,8 +199,8 @@ void DeferredPass::draw(const glm::mat4& view,
 	m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
 	// Dispatch compute shader
-	UINT dispatchX = static_cast<UINT>(std::ceil(AppConfig::getViewportWidth() / COMPUTE_THREAD_GROUP_SIZE));
-	UINT dispatchY = static_cast<UINT>(std::ceil(AppConfig::getViewportHeight() / COMPUTE_THREAD_GROUP_SIZE));
+	UINT dispatchX = static_cast<UINT>(std::ceil((AppConfig::getViewportWidth() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
+	UINT dispatchY = static_cast<UINT>(std::ceil((AppConfig::getViewportHeight() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
 	if (dispatchX == 0) dispatchX = 1;
 	if (dispatchY == 0) dispatchY = 1;
 	m_context->Dispatch(dispatchX, dispatchY, 1);
@@ -213,6 +218,11 @@ void DeferredPass::draw(const glm::mat4& view,
 ComPtr<ID3D11ShaderResourceView> DeferredPass::getFinalSRV() const
 {
 	return m_finalSRV;
+}
+
+ComPtr<ID3D11RenderTargetView> DeferredPass::getFinalRTV() const
+{
+	return m_finalRTV;
 }
 
 void DeferredPass::updateLights(Scene* scene)

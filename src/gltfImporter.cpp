@@ -1,7 +1,9 @@
 #include <iostream>
 #include "gltfImporter.hpp"
 #include "primitive.hpp"
+#include "texture.hpp"
 #include "material.hpp"
+#include "scene.hpp"
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 

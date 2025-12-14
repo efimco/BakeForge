@@ -1,24 +1,28 @@
 #pragma once
 #include <d3d11.h>
 #include <wrl.h>
-#include "dxDevice.hpp"
-#include "shaderManager.hpp"
-#include "uiManager.hpp"
-#include "camera.hpp"
-#include "GBuffer.hpp"
-#include "FSQuad.hpp"
-#include "objectPicker.hpp"
-#include "ZPrePass.hpp"
-#include "deferedPass.hpp"
-#include "scene.hpp"
-#include "pbrCubeMapPass.hpp"
+#include <chrono>
+#include <memory>
+
+class Scene;
+class Camera;
+class DXDevice;
+class ShaderManager;
+class UIManager;
+class ObjectPicker;
+class GBuffer;
+class ZPrePass;
+class FSQuad;
+class DeferredPass;
+class CubeMapPass;
+class DebugBVHPass;
 
 using namespace Microsoft::WRL;
 class Renderer
 {
 public:
 	Renderer(const HWND& hwnd);
-	~Renderer() = default;
+	~Renderer();
 	Renderer(const Renderer& other) = delete;
 
 	void draw();

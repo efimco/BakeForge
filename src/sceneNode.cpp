@@ -5,7 +5,6 @@
 #include "scene.hpp"
 
 
-
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform), children(std::move(other.children)), visible(other.visible), dirty(other.dirty),
 	movable(other.movable)

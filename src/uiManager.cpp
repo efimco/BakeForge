@@ -9,6 +9,10 @@
 #include "debugPassMacros.hpp"
 #include "scene.hpp"
 #include "ImGuizmo.h"
+#include "GBuffer.hpp"
+#include "light.hpp"
+#include "primitive.hpp"
+#include "camera.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
@@ -473,6 +477,10 @@ void UIManager::processGizmo()
 		if (dynamic_cast<Primitive*>(activeNode))
 		{
 			m_scene->markSceneBVHDirty();
+		}
+		if (dynamic_cast<Light*>(activeNode))
+		{
+			m_scene->setLightsDirty();
 		}
 	}
 }

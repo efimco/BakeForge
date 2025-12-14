@@ -1,6 +1,11 @@
 #include "scene.hpp"
 #include <iostream>
 #include "chrono"
+#include "primitive.hpp"
+#include "light.hpp"
+#include "texture.hpp"
+#include "material.hpp"
+#include "camera.hpp"
 
 Scene::Scene(std::string name)
 {
@@ -208,4 +213,9 @@ void Scene::rebuildSceneBVHIfDirty()
 	{
 		buildSceneBVH();
 	}
+}
+
+const Bvh* Scene::getSceneBVH() const
+{
+	return m_sceneBVH.get();
 }

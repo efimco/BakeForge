@@ -3,6 +3,12 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include "debugPassMacros.hpp"
+#include "material.hpp"
+#include "texture.hpp"
+#include "scene.hpp"
+#include "GBufferTextures.hpp"
+#include "primitive.hpp"
+#include "shaderManager.hpp"
 
 struct alignas(16) ConstantBufferData
 {

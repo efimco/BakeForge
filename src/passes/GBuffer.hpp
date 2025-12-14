@@ -1,12 +1,14 @@
 #pragma once
 #include <d3d11_1.h>
 #include <wrl.h>
-#include "camera.hpp"
 #include <glm/glm.hpp>
-#include "shaderManager.hpp"
-#include "primitive.hpp"
-#include "scene.hpp"
+#include <memory>
 #include "GBufferTextures.hpp"
+
+class Scene;
+class Primitive;
+class ShaderManager;
+class Camera;
 
 using namespace Microsoft::WRL;
 class GBuffer

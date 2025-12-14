@@ -3,9 +3,10 @@
 #include <wrl.h>
 #include <glm/glm.hpp>
 #include <memory>
-#include "shaderManager.hpp"
-#include "scene.hpp"
-#include "GBufferTextures.hpp"
+
+class Scene;
+class ShaderManager;
+struct GBufferTextures;
 
 using namespace Microsoft::WRL;
 class DeferredPass
@@ -28,6 +29,7 @@ public:
 	);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
+	ComPtr<ID3D11RenderTargetView> getFinalRTV() const;
 private:
 	void updateLights(Scene* scene);
 	ComPtr<ID3D11Device> m_device;

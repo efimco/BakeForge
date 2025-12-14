@@ -1,6 +1,16 @@
 #include "objectPicker.hpp"
 #include <iostream>
 #include "inputEventsHandler.hpp"
+#include "shaderManager.hpp"
+#include "scene.hpp"
+#include "primitive.hpp"
+
+struct cbPicking
+{
+	uint32_t mousePosX;
+	uint32_t mousePosY;
+	uint32_t padding[2];
+};
 
 ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
 {
