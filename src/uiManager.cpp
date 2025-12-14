@@ -470,6 +470,10 @@ void UIManager::processGizmo()
 		{
 			ImGuizmo::DrawGrid(viewMatrix, projectionMatrix, glm::value_ptr(newWorldMatrix), 100.0f);
 		}
+		if (dynamic_cast<Primitive*>(activeNode))
+		{
+			m_scene->markSceneBVHDirty();
+		}
 	}
 }
 

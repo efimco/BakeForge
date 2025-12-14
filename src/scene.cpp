@@ -1,4 +1,6 @@
 #include "scene.hpp"
+#include <iostream>
+#include "chrono"
 
 Scene::Scene(std::string name)
 {
@@ -161,4 +163,49 @@ Camera* Scene::getActiveCamera()
 	return m_activeCamera;
 }
 
+void Scene::buildSceneBVH()
+{
+	if (m_primitives.empty())
+	{
+		m_sceneBVH = nullptr;
+		std::cout << "No primitives in the scene to build BVH." << std::endl;
+		return;
+	}
+	auto startTime = std::chrono::high_resolution_clock::now();
 
+	const size_t primCount = m_primitives.size();
+	m_primBboxes.resize(primCount);
+	m_primCenters.resize(primCount);
+
+	for (size_t i = 0; i < primCount; i++)
+	{
+		Primitive* prim = m_primitives[i];
+		glm::mat4 worldMatrix = prim->getWorldMatrix();
+		m_primBboxes[i] = prim->getWorldBBox(worldMatrix);
+		m_primCenters[i] = m_primBboxes[i].get_center();
+	}
+
+	m_sceneBVH = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters));
+	m_sceneBVHDirty = false;
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+	std::cout << "Built scene BVH with " << m_sceneBVH->nodes.size() << " nodes for " << primCount << " primitives in " << duration << " ms." << std::endl;
+}
+
+void Scene::markSceneBVHDirty()
+{
+	m_sceneBVHDirty = true;
+}
+
+bool Scene::isSceneBVHDirty()
+{
+	return m_sceneBVHDirty;
+}
+
+void Scene::rebuildSceneBVHIfDirty()
+{
+	if (m_sceneBVHDirty)
+	{
+		buildSceneBVH();
+	}
+}

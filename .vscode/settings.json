@@ -78,7 +78,11 @@
 		"thread": "cpp",
 		"cstdarg": "cpp",
 		"condition_variable": "cpp",
-		"future": "cpp"
+		"future": "cpp",
+		"deque": "cpp",
+		"queue": "cpp",
+		"span": "cpp",
+		"stack": "cpp"
 	},
 	"C_Cpp.default.compilerPath": "cl.exe",
 	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

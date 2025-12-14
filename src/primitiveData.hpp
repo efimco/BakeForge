@@ -1,5 +1,7 @@
 #pragma once
 #include <d3d11.h>
+#include <bvh/v2/vec.h>
+using Vec3 = bvh::v2::Vec<float, 3>;
 inline static const D3D11_INPUT_ELEMENT_DESC genericInputLayoutDesc[] =
 {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -22,6 +24,7 @@ inline static const D3D11_INPUT_ELEMENT_DESC cubeMapInputLayoutDesc[] =
 struct Position
 {
 	float x, y, z;
+	operator Vec3() const { return Vec3{x, y, z}; }
 	Position() = default;
 	Position(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
 };
@@ -29,6 +32,7 @@ struct Position
 struct TexCoords
 {
 	float u, v;
+
 	TexCoords() = default;
 	TexCoords(float _u, float _v) : u(_u), v(_v) {};
 };
