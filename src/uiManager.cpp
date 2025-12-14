@@ -772,6 +772,17 @@ void UIManager::simpleWindow()
 	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
 
+	// Debug BVH visualization
+	ImGui::Separator();
+	ImGui::TextWrapped("Debug Visualization");
+	ImGui::Checkbox("Show BVH", &AppConfig::getShowBVH());
+	if (AppConfig::getShowBVH())
+	{
+		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
+		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20,
+			AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
+	}
+
 	if (ImGui::Button("Button"))
 		counter++;
 	ImGui::SameLine();

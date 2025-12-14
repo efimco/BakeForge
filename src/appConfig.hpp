@@ -16,6 +16,10 @@ namespace AppConfig
 	float& getIBLRotation();
 	bool& getRegeneratePrefilteredMap();
 
+	// Debug BVH visualization
+	bool& getShowBVH();
+	bool& getShowPrimitiveBVH();
+	int& getBVHMaxDepth();
 
 	void setDeltaTime(double value);
 	double getDeltaTime();

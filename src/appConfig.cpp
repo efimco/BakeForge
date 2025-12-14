@@ -11,6 +11,9 @@ static double deltaTime = 0.0;
 static float IBLintensity = 1.0f;
 static float IBLrotation = 0.0f;
 static bool regeneratePrefilteredMap = false;
+static bool showBVH = false;
+static bool showPrimitiveBVH = false;
+static int bvhMaxDepth = -1;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -65,6 +68,21 @@ float& AppConfig::getIBLRotation()
 bool& AppConfig::getRegeneratePrefilteredMap()
 {
 	return regeneratePrefilteredMap;
+}
+
+bool& AppConfig::getShowBVH()
+{
+	return showBVH;
+}
+
+bool& AppConfig::getShowPrimitiveBVH()
+{
+	return showPrimitiveBVH;
+}
+
+int& AppConfig::getBVHMaxDepth()
+{
+	return bvhMaxDepth;
 }
 
 void AppConfig::setDeltaTime(double value)
