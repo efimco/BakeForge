@@ -58,7 +58,7 @@ BVH_ALWAYS_INLINE T add_ulp_magnitude(T t, unsigned ulp) {
 template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
 BVH_ALWAYS_INLINE T safe_inverse(T x) {
     return std::fabs(x) <= std::numeric_limits<T>::epsilon()
-        ? std::copysign(std::numeric_limits<T>::max(), x)
+        ? std::copysign((std::numeric_limits<T>::max)(), x)
         : static_cast<T>(1.) / x;
 }
 

@@ -97,7 +97,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				m_scene->getNameCounter(model.nodes[meshIndex].name) = 0;
 				primitive->name = model.nodes[meshIndex].name;
 			}
-
+			primitive->buildBVH();
 			m_scene->addPrimitive(primitive.get());
 			m_scene->addChild(std::move(primitive));
 

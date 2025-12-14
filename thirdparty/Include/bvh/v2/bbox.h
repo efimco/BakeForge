@@ -1,6 +1,9 @@
 #ifndef BVH_V2_BBOX_H
 #define BVH_V2_BBOX_H
 
+#undef min
+#undef max
+
 #include "bvh/v2/vec.h"
 #include "bvh/v2/utils.h"
 

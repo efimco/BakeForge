@@ -6,7 +6,9 @@
 #include "material.hpp"
 #include "light.hpp"
 #include "camera.hpp"
-
+#include <bvh/v2/bvh.h>
+#include <bvh/v2/thread_pool.h>
+#include <memory>
 
 class Scene : public SceneNode
 {
@@ -46,6 +48,11 @@ public:
 	void setActiveCamera(Camera* camera);
 	Camera* getActiveCamera();
 
+	void buildSceneBVH();
+	void markSceneBVHDirty();
+	bool isSceneBVHDirty();
+	void rebuildSceneBVHIfDirty();
+	const Bvh* getSceneBVH() const;
 private:
 	SceneNode m_rootNode;
 	std::vector<Primitive*> m_primitives;
@@ -62,5 +69,11 @@ private:
 	bool m_lightsAreDirty;
 
 	std::unordered_map<std::string, uint32_t> m_nodeNames;
+
+	std::unique_ptr<Bvh> m_sceneBVH;
+	std::vector<BBox> m_primBboxes; // World-space bboxes for each primitive
+	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
+	bool m_sceneBVHDirty = true;
+	std::unique_ptr<bvh::v2::ThreadPool> m_threadPool;
 
 };

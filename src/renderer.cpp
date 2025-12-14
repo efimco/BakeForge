@@ -33,6 +33,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene->addChild(std::move(dirLight));
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
+	m_scene->buildSceneBVH();
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
@@ -56,7 +57,7 @@ void Renderer::draw()
 		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
-
+	m_scene->rebuildSceneBVHIfDirty();
 	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
