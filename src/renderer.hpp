@@ -58,4 +58,5 @@ private:
 	std::unique_ptr<FSQuad> m_fsquad;
 	std::unique_ptr<DeferredPass> m_deferredPass;
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
+	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
 };

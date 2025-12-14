@@ -7,10 +7,19 @@
 #include "renderer.hpp"
 #include "gltfImporter.hpp"
 #include "appConfig.hpp"
-
-
-
-
+#include "dxDevice.hpp"
+#include "shaderManager.hpp"
+#include "uiManager.hpp"
+#include "camera.hpp"
+#include "GBuffer.hpp"
+#include "FSQuad.hpp"
+#include "objectPicker.hpp"
+#include "ZPrePass.hpp"
+#include "deferedPass.hpp"
+#include "scene.hpp"
+#include "pbrCubeMapPass.hpp"
+#include "DebugBVHPass.hpp"
+#include "light.hpp"
 Renderer::Renderer(const HWND& hwnd)
 {
 	m_device = std::make_unique<DXDevice>(hwnd);
@@ -40,10 +49,11 @@ Renderer::Renderer(const HWND& hwnd)
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\rogland_clear_night_2k.hdr");
+	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
 	resize();
 }
 
-
+Renderer::~Renderer() = default;
 
 void Renderer::draw()
 {
@@ -92,6 +102,14 @@ void Renderer::draw()
 		m_cubeMapPass->getPrefilteredSRV(),
 		m_cubeMapPass->getBRDFLutSRV()
 	);
+
+	// Debug BVH visualization (draws on top of deferred output)
+	m_debugBVHPass->setEnabled(AppConfig::getShowBVH());
+	m_debugBVHPass->setShowPrimitiveBVH(AppConfig::getShowPrimitiveBVH());
+	m_debugBVHPass->setMaxDepth(AppConfig::getBVHMaxDepth());
+	m_debugBVHPass->draw(m_view, m_projection, m_scene.get(),
+		m_deferredPass->getFinalRTV(), m_zPrePass->getDSV());
+
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
