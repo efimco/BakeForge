@@ -46,6 +46,7 @@ public:
 	const Bvh* getBVH() const;
 	BBox getWorldBBox(glm::mat4 worldMatrix) const;
 	const BBox* getLocalBBox() const;
+	std::unique_ptr<SceneNode> clone() override;
 	std::shared_ptr<Material> material;
 
 private:

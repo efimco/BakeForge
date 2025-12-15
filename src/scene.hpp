@@ -55,6 +55,9 @@ public:
 	bool areLightsDirty();
 	void setLightsDirty(bool dirty = true);
 	void setActiveCamera(Camera* camera);
+
+	void deleteNode(SceneNode* node);
+	void duplicateNode(SceneNode* node);
 	Camera* getActiveCamera();
 
 	void buildSceneBVH();

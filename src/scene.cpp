@@ -163,6 +163,88 @@ void Scene::setActiveCamera(Camera* camera)
 	m_activeCamera = camera;
 }
 
+void Scene::deleteNode(SceneNode* node)
+{
+	std::unique_ptr<SceneNode>  ptr;
+	if (node->parent)
+	{
+		ptr = node->parent->removeChild(node);
+	}
+	if (m_activeNode == node)
+	{
+		m_activeNode = nullptr;
+	}
+	m_selectedNodes.erase(node);
+	if (auto prim = dynamic_cast<Primitive*>(node))
+	{
+		auto it = std::find(m_primitives.begin(), m_primitives.end(), prim);
+		if (it != m_primitives.end())
+		{
+			m_primitives.erase(it);
+		}
+	}
+	if (auto light = dynamic_cast<Light*>(node))
+	{
+		auto it = std::find(m_lights.begin(), m_lights.end(), light);
+		if (it != m_lights.end())
+		{
+			m_lights.erase(it);
+		}
+	}
+	if (auto camera = dynamic_cast<Camera*>(node))
+	{
+		if (m_cameras.size() < 1)
+		{
+			return;
+		}
+		auto it = std::find(m_cameras.begin(), m_cameras.end(), camera);
+		if (it != m_cameras.end())
+		{
+			m_cameras.erase(it);
+		}
+		if (m_activeCamera == camera)
+		{
+			m_activeCamera = nullptr;
+		}
+	}
+}
+
+void Scene::duplicateNode(SceneNode* node)
+{
+	if (node->parent)
+	{
+		std::unique_ptr<SceneNode> newNode = node->clone();
+		if (isNameUsed(newNode->name))
+		{
+			uint32_t& counter = getNameCounter(newNode->name);
+			counter++;
+			newNode->name = newNode->name + "." + std::to_string(counter);
+		}
+		else
+		{
+			getNameCounter(newNode->name) = 0;
+		}
+		node->parent->addChild(std::move(newNode));
+		if (auto prim = dynamic_cast<Primitive*>(node))
+		{
+			Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
+			m_primitives.push_back(newPrim);
+			markSceneBVHDirty();
+		}
+		if (auto light = dynamic_cast<Light*>(node))
+		{
+			Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
+			m_lights.push_back(newLight);
+			setLightsDirty();
+		}
+		if (auto camera = dynamic_cast<Camera*>(node))
+		{
+			Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
+			m_cameras.push_back(newCamera);
+		}
+	}
+}
+
 Camera* Scene::getActiveCamera()
 {
 	return m_activeCamera;

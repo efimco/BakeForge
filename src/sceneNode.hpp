@@ -24,6 +24,7 @@ public:
 	virtual ~SceneNode();
 
 	void addChild(std::unique_ptr<SceneNode>&& child);
+	virtual std::unique_ptr<SceneNode> clone();
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
 	glm::mat4 getWorldMatrix();
 };

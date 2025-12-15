@@ -50,6 +50,8 @@ private:
 
 	void processInputEvents();
 	void processGizmo();
+	void processNodeDuplication();
+	void processNodeDeletion();
 
 	void drawSceneGraph();
 	void handleNodeSelection(SceneNode* node);
