@@ -113,6 +113,8 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	showProperties();
 	showMaterialBrowser();
 	processInputEvents();
+	processNodeDeletion();
+	processNodeDuplication();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -452,6 +454,49 @@ void UIManager::processGizmo()
 	}
 }
 
+void UIManager::processNodeDuplication()
+{
+	SceneNode* activeNode = m_scene->getActiveNode();
+	std::cout << "Left Shift: " << ImGui::IsKeyPressed(ImGuiKey_LeftShift) << ", D: " << ImGui::IsKeyPressed(ImGuiKey_D) << std::endl;
+	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
+	{
+		Primitive* primitive = dynamic_cast<Primitive*>(activeNode);
+		Light* light = dynamic_cast<Light*>(activeNode);
+
+		if (primitive)
+		{
+			m_scene->duplicateNode(primitive);
+		}
+		if (light)
+		{
+			m_scene->duplicateNode(light);
+		}
+	}
+}
+
+void UIManager::processNodeDeletion()
+{
+	SceneNode* activeNode = m_scene->getActiveNode();
+	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
+	{
+		Primitive* primitive = dynamic_cast<Primitive*>(activeNode);
+		Light* light = dynamic_cast<Light*>(activeNode);
+		if (primitive)
+		{
+			m_scene->deleteNode(primitive);
+			m_scene->markSceneBVHDirty();
+			return;
+		}
+		if (light)
+		{
+			m_scene->deleteNode(light);
+			m_scene->setLightsDirty();
+			return;
+		}
+		m_scene->deleteNode(activeNode);
+	}
+}
+
 void UIManager::drawSceneGraph()
 {
 	ImGui::Begin("Scene Graph");
@@ -736,22 +781,22 @@ void UIManager::showSceneSettings()
 	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
 	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
 	ImGui::Separator();
+
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
 	if (AppConfig::getIsBlurred())
 	{
 		ImGui::SliderFloat("Blur Amoungt", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
 	}
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
+	ImGui::Separator();
 
 	// Debug BVH visualization
-	ImGui::Separator();
 	ImGui::TextWrapped("Debug Visualization");
 	ImGui::Checkbox("Show BVH", &AppConfig::getShowBVH());
 	if (AppConfig::getShowBVH())
 	{
 		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
-		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20,
-			AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
+		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20, AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
 	}
 
 	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",

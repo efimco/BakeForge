@@ -14,7 +14,7 @@ struct alignas(16) DeferredConstantBuffer
 	float IBLrotationY;
 	float IBLintensity;
 	int32_t selectedID;
-	float padding[1]; // Align to 16 bytes
+	float padding; // Align to 16 bytes
 	float cameraPosition[3];
 	float padding2; // Padding to align to 16 bytes
 };
@@ -166,9 +166,11 @@ void DeferredPass::draw(const glm::mat4& view,
 		cbData->IBLrotationY = AppConfig::getIBLRotation();
 		cbData->IBLintensity = AppConfig::getIBLIntensity();
 		cbData->selectedID = scene->getActivePrimitiveID();
+		cbData->padding = 0.0f;
 		cbData->cameraPosition[0] = cameraPosition.x;
 		cbData->cameraPosition[1] = cameraPosition.y;
 		cbData->cameraPosition[2] = cameraPosition.z;
+		cbData->padding2 = 0.0f;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 

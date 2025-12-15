@@ -74,6 +74,23 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	childPtr->transform.updateMatrix();
 }
 
+std::unique_ptr<SceneNode> SceneNode::clone()
+{
+	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
+	newNode->transform = this->transform;
+	newNode->visible = this->visible;
+	newNode->dirty = this->dirty;
+	newNode->movable = this->movable;
+
+	for (const auto& child : this->children)
+	{
+		std::unique_ptr<SceneNode> childClone = child->clone();
+		newNode->addChild(std::move(childClone));
+	}
+
+	return newNode;
+}
+
 std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 {
 	if (child->parent != this)
