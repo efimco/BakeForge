@@ -129,34 +129,25 @@ const BBox* Primitive::getLocalBBox() const
 std::unique_ptr<SceneNode> Primitive::clone()
 {
 	auto newPrimitive = std::make_unique<Primitive>(m_device);
-	
-	// Copy SceneNode properties
 	newPrimitive->name = this->name;
 	newPrimitive->transform = this->transform;
 	newPrimitive->visible = this->visible;
 	newPrimitive->dirty = this->dirty;
 	newPrimitive->movable = this->movable;
-	
-	// Copy primitive data (make copies of the vectors)
 	if (!m_vertexData.empty())
 	{
 		std::vector<InterleavedData> vertexCopy = m_vertexData;
 		newPrimitive->setVertexData(std::move(vertexCopy));
 	}
-	
 	if (!m_indexData.empty())
 	{
 		std::vector<uint32_t> indexCopy = m_indexData;
 		newPrimitive->setIndexData(std::move(indexCopy));
 	}
-	
-	// Share material (materials are typically shared)
+
 	newPrimitive->material = this->material;
-	
-	// Rebuild BVH for the clone
 	newPrimitive->buildBVH();
 	
-	// Clone children recursively
 	for (const auto& child : this->children)
 	{
 		std::unique_ptr<SceneNode> childClone = child->clone();
