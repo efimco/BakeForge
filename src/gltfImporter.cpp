@@ -61,15 +61,12 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			std::vector<Position> posBuffer;
 			std::vector<TexCoords> texCoordsBuffer;
 			std::vector<Normals> normalBuffer;
-			std::vector<Tangents> tangentBuffer;
 			std::vector<uint32_t> indices;
 
 			processPosAttribute(model, mesh, gltfPrimitive, posBuffer);
 			processTexCoordAttribute(model, mesh, gltfPrimitive, texCoordsBuffer);
 			processIndexAttrib(model, mesh, gltfPrimitive, indices);
 			processNormalsAttribute(model, mesh, gltfPrimitive, normalBuffer);
-			processTangentAttribute(model, mesh, gltfPrimitive, tangentBuffer);
-
 			std::vector<InterleavedData> vertexData;
 			const auto numVert = posBuffer.size();
 			for (int i = 0; i < numVert; i++)
@@ -78,7 +75,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				interData.position = posBuffer[i];
 				interData.texCoords = texCoordsBuffer[i];
 				interData.normals = normalBuffer[i];
-				interData.tangents = tangentBuffer[i];
 				vertexData.push_back(interData);
 			}
 			size_t meshIndex = &mesh - &model.meshes[0];
@@ -263,35 +259,6 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tiny
 			else if (j == 2) normal.nz = floatPtr[i * components + j];
 		}
 		normals.push_back(normal);
-	}
-}
-
-void GLTFModel::processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Tangents>& tangents)
-{
-	if (primitive.attributes.find("TANGENT") == primitive.attributes.end())
-	{
-		std::cerr << "No TANGENT attribute found in primitive " << mesh.name << std::endl;
-		return;
-	}
-	const tinygltf::Accessor& accessor = model.accessors[primitive.attributes.at("TANGENT")];
-	const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
-	const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
-
-	const unsigned char* dataPtr = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-	const float* floatPtr = reinterpret_cast<const float*>(dataPtr);
-	size_t vertexCount = accessor.count;
-	int components = (accessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
-
-	for (size_t i = 0; i < vertexCount; i++)
-	{
-		Tangents tangent(-INFINITY, -INFINITY, -INFINITY);
-		for (int j = 0; j < components; j++)
-		{
-			if (j == 0) tangent.tx = floatPtr[i * components + j];
-			else if (j == 1) tangent.ty = floatPtr[i * components + j];
-			else if (j == 2) tangent.tz = floatPtr[i * components + j];
-		}
-		tangents.push_back(tangent);
 	}
 }
 
