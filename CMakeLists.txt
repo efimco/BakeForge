@@ -6,8 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 file(GLOB SOURCE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
-	
-add_definitions(-DNOMINMAX)
+
 
 file(GLOB_RECURSE INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/*.cpp"
@@ -49,5 +48,5 @@ target_include_directories(TimeToDX
 )
 set_target_properties(TimeToDX PROPERTIES
     WIN32_EXECUTABLE TRUE
-    VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:TimeToDX>"
+    VS_DEBUGGER_WORKING_DIRECTORY "$(TARGET_FILE_DIR:TimeToDX)"
 )
