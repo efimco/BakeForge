@@ -779,6 +779,7 @@ void UIManager::showSceneSettings()
 	ImGui::Begin("SceneSettings");
 	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
 	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
+	ImGui::DragFloat("Environment Map Intensity", &AppConfig::getBackgroundIntensity(), 1.0f, 0.0f, 1.0f);
 	ImGui::Separator();
 
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());

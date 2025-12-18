@@ -14,6 +14,7 @@ namespace AppConfig
 	void setWindowMinimized(bool isMinimized);
 	float& getIBLIntensity();
 	float& getIBLRotation();
+	float& getBackgroundIntensity();
 	bool& getRegeneratePrefilteredMap();
 
 	// Debug BVH visualization

@@ -27,7 +27,7 @@ cbuffer CB : register(b0)
 	float IBLrotationY;
 	float IBLintensity;
 	int selectedID;
-	float padding; // Padding to align to 16 bytes
+	float backgroundIntensity;
 	float3 cameraPosition;
 	float padding2; // Padding to align to 16 bytes
 };
@@ -208,7 +208,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 		background.r = linear_rgb_to_srgb(background.r);
 		background.g = linear_rgb_to_srgb(background.g);
 		background.b = linear_rgb_to_srgb(background.b);
-		outColor[DTid.xy] = float4(background, 1.0);
+		outColor[DTid.xy] = float4(background * backgroundIntensity, 1.0);
 		return;
 	}
 
