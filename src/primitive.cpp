@@ -8,8 +8,7 @@ using StdOutputStream = bvh::v2::StdOutputStream;
 using StdInputStream = bvh::v2::StdInputStream;
 
 Primitive::Primitive(ComPtr<ID3D11Device> device) : m_device(device) {}
-static bool save_bvh(const Bvh& bvh, const std::string& file_name);
-static std::optional<Bvh> load_bvh(const std::string& file_name);
+
 void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
 {
 	m_vertexData = std::move(vertexData);
@@ -147,7 +146,7 @@ std::unique_ptr<SceneNode> Primitive::clone()
 
 	newPrimitive->material = this->material;
 	newPrimitive->buildBVH();
-	
+
 	for (const auto& child : this->children)
 	{
 		std::unique_ptr<SceneNode> childClone = child->clone();

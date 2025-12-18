@@ -457,7 +457,6 @@ void UIManager::processGizmo()
 void UIManager::processNodeDuplication()
 {
 	SceneNode* activeNode = m_scene->getActiveNode();
-	std::cout << "Left Shift: " << ImGui::IsKeyPressed(ImGuiKey_LeftShift) << ", D: " << ImGui::IsKeyPressed(ImGuiKey_D) << std::endl;
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
 		Primitive* primitive = dynamic_cast<Primitive*>(activeNode);
