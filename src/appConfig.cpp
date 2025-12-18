@@ -16,6 +16,7 @@ static bool showPrimitiveBVH = false;
 static int bvhMaxDepth = -1;
 static bool isBackgroundBlurred = false;
 static float blurAmount = 0.5f;
+static float backgroundIntensity = 1.0f;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -65,6 +66,11 @@ float& AppConfig::getIBLIntensity()
 float& AppConfig::getIBLRotation()
 {
 	return IBLrotation;
+}
+
+float& AppConfig::getBackgroundIntensity()
+{
+	return backgroundIntensity;
 }
 
 bool& AppConfig::getRegeneratePrefilteredMap()
