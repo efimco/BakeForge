@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
-
+#include <d3d11.h>
 struct Texture;
 
 struct Material
@@ -14,4 +14,7 @@ struct Material
 	float metallicValue;
 	float roughnessValue;
 	std::shared_ptr<Texture> normal;
+	ID3D11ShaderResourceView* const* getSRVs();
+private:
+	ID3D11ShaderResourceView* m_srvCache[3] = { nullptr, nullptr, nullptr };
 };

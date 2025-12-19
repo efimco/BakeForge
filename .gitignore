@@ -2,6 +2,11 @@
 *.d
 build/
 .vscode/
+
+# Large assets (use Git LFS or download separately)
+*.glb
+*.gltf
+*.hdr
 # Compiled Object files
 *.slo
 *.lo
