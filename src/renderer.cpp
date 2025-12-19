@@ -25,7 +25,6 @@ Renderer::Renderer(const HWND& hwnd)
 	m_device = std::make_unique<DXDevice>(hwnd);
 	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
-	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
 	m_camera = std::make_unique<Camera>(cameraPosition);
@@ -36,16 +35,17 @@ Renderer::Renderer(const HWND& hwnd)
 
 	m_prevTime = std::chrono::system_clock::now();
 	m_scene = std::make_unique<Scene>("Main Scene");
-	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene.get());
+	GLTFModel gltfModel(std::string("..\\..\\res\\sponza.glb"), m_device->getDevice(), m_scene.get());
 	std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, glm::vec3(0.0f, 1.0f, 1.0f));
 	m_scene->addLight(pointLight.get());
 	m_scene->addChild(std::move(pointLight));
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
-	m_scene->buildSceneBVH();
+	// m_scene->buildSceneBVH();
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
+	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\rogland_clear_night_2k.hdr");
@@ -67,7 +67,7 @@ void Renderer::draw()
 		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
-	m_scene->rebuildSceneBVHIfDirty();
+	// m_scene->rebuildSceneBVHIfDirty();
 	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;

@@ -27,7 +27,7 @@ tinygltf::Model GLTFModel::readGlb(const std::string& path)
 	tinygltf::Model model;
 	std::string err;
 	std::string warn;
-	printf("Loading...%s\n ", path.c_str());
+	std::cout << "Loading glTF file: " << path << std::endl;
 	bool ret = false;
 	if (path.ends_with("gltf"))
 	{
@@ -39,12 +39,12 @@ tinygltf::Model GLTFModel::readGlb(const std::string& path)
 	}
 
 	if (!warn.empty())
-		printf("Warn: %s\n", warn.c_str());
+		std::cout << "Warn: " << warn << std::endl;
 	if (!err.empty())
-		printf("Err: %s\n", err.c_str());
+		std::cout << "Err: " << err << std::endl;
 	if (!ret)
-		printf("Failed to parse glTF\n");
-	printf("Loaded %s\n", path.c_str());
+		std::cout << "Failed to parse glTF" << std::endl;
+	std::cout << "Loaded " << path << std::endl;
 	return model;
 }
 
@@ -95,7 +95,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				m_scene->getNameCounter(model.nodes[meshIndex].name) = 0;
 				primitive->name = model.nodes[meshIndex].name;
 			}
-			primitive->buildBVH();
+			// primitive->buildBVH();
 			m_scene->addPrimitive(primitive.get());
 			m_scene->addChild(std::move(primitive));
 
@@ -117,6 +117,10 @@ void GLTFModel::processImages(const tinygltf::Model& model)
 	for (int i = 0; i < model.images.size(); i++)
 	{
 		std::string name = model.images[i].name;
+		if (name.empty())
+		{
+			name = model.images[i].uri;
+		}
 		if (m_scene->getTexture(name) == nullptr)
 		{
 			std::shared_ptr<Texture> texture = std::make_shared<Texture>(model.images[i], m_device);
@@ -266,26 +270,35 @@ Transform GLTFModel::getTransformFromNode(size_t meshIndex, const tinygltf::Mode
 {
 	Transform transform;
 	transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
-	if (model.nodes[meshIndex].translation.size() != 0)
+	tinygltf::Node node;
+	for (const auto& n : model.nodes)
 	{
-		transform.position = glm::vec3(model.nodes[meshIndex].translation[0], model.nodes[meshIndex].translation[1],
-			model.nodes[meshIndex].translation[2]);
+		if (n.mesh == static_cast<int>(meshIndex))
+		{
+			node = n;
+			break;
+		}
+	}
+	if (node.translation.size() != 0)
+	{
+		transform.position = glm::vec3(node.translation[0], node.translation[1],
+			node.translation[2]);
 	}
 
 	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
-	if (model.nodes[meshIndex].rotation.size() != 0)
+	if (node.rotation.size() != 0)
 	{
-		glm::quat quatRot(static_cast<float>(model.nodes[meshIndex].rotation[3]),
-			static_cast<float>(model.nodes[meshIndex].rotation[0]),
-			static_cast<float>(model.nodes[meshIndex].rotation[1]),
-			static_cast<float>(model.nodes[meshIndex].rotation[2]));
+		glm::quat quatRot(static_cast<float>(node.rotation[3]),
+			static_cast<float>(node.rotation[0]),
+			static_cast<float>(node.rotation[1]),
+			static_cast<float>(node.rotation[2]));
 		transform.rotation = glm::eulerAngles(quatRot);
 	}
 
 	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
-	if (model.nodes[meshIndex].scale.size() != 0)
+	if (node.scale.size() != 0)
 	{
-		transform.scale = glm::vec3(model.nodes[meshIndex].scale[0], model.nodes[meshIndex].scale[1], model.nodes[meshIndex].scale[2]);
+		transform.scale = glm::vec3(node.scale[0], node.scale[1], node.scale[2]);
 	}
 	transform.matrix = glm::mat4(1.0f);
 	transform.updateMatrix();
