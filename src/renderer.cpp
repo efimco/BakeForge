@@ -35,7 +35,7 @@ Renderer::Renderer(const HWND& hwnd)
 
 	m_prevTime = std::chrono::system_clock::now();
 	m_scene = std::make_unique<Scene>("Main Scene");
-	GLTFModel gltfModel(std::string("..\\..\\res\\sponza.glb"), m_device->getDevice(), m_scene.get());
+	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene.get());
 	std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, glm::vec3(0.0f, 1.0f, 1.0f));
 	m_scene->addLight(pointLight.get());
 	m_scene->addChild(std::move(pointLight));
@@ -67,7 +67,7 @@ void Renderer::draw()
 		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
-	// m_scene->rebuildSceneBVHIfDirty();
+	m_scene->rebuildSceneBVHIfDirty();
 	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;

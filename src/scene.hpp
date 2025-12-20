@@ -64,6 +64,7 @@ public:
 	void markSceneBVHDirty();
 	bool isSceneBVHDirty();
 	void rebuildSceneBVHIfDirty();
+	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;
 private:
 	SceneNode m_rootNode;
