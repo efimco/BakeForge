@@ -29,11 +29,13 @@ uint32_t& Scene::getNameCounter(std::string name)
 
 void Scene::addPrimitive(Primitive* primitive)
 {
+	validateName(primitive);
 	m_primitives.push_back(primitive);
 }
 
 void Scene::addLight(Light* light)
 {
+	validateName(light);
 	m_lights.push_back(light);
 }
 
@@ -211,37 +213,27 @@ void Scene::deleteNode(SceneNode* node)
 
 void Scene::duplicateNode(SceneNode* node)
 {
-	if (node->parent)
+	if (!node->parent)
+		return;
+	std::unique_ptr<SceneNode> newNode = node->clone();
+	validateName(newNode.get());
+	node->parent->addChild(std::move(newNode));
+	if (auto prim = dynamic_cast<Primitive*>(node))
 	{
-		std::unique_ptr<SceneNode> newNode = node->clone();
-		if (isNameUsed(newNode->name))
-		{
-			uint32_t& counter = getNameCounter(newNode->name);
-			counter++;
-			newNode->name = newNode->name + "." + std::to_string(counter);
-		}
-		else
-		{
-			getNameCounter(newNode->name) = 0;
-		}
-		node->parent->addChild(std::move(newNode));
-		if (auto prim = dynamic_cast<Primitive*>(node))
-		{
-			Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
-			m_primitives.push_back(newPrim);
-			markSceneBVHDirty();
-		}
-		if (auto light = dynamic_cast<Light*>(node))
-		{
-			Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
-			m_lights.push_back(newLight);
-			setLightsDirty();
-		}
-		if (auto camera = dynamic_cast<Camera*>(node))
-		{
-			Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
-			m_cameras.push_back(newCamera);
-		}
+		Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
+		m_primitives.push_back(newPrim);
+		markSceneBVHDirty();
+	}
+	if (auto light = dynamic_cast<Light*>(node))
+	{
+		Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
+		m_lights.push_back(newLight);
+		setLightsDirty();
+	}
+	if (auto camera = dynamic_cast<Camera*>(node))
+	{
+		Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
+		m_cameras.push_back(newCamera);
 	}
 }
 
@@ -294,6 +286,21 @@ void Scene::rebuildSceneBVHIfDirty()
 	if (m_sceneBVHDirty)
 	{
 		buildSceneBVH();
+	}
+}
+
+void Scene::validateName(SceneNode* node)
+{
+	auto genericName = node->name.substr(0, node->name.find_last_of('.'));
+	if (isNameUsed(genericName))
+	{
+		uint32_t& counter = getNameCounter(genericName);
+		counter++;
+		node->name = genericName + "." + std::to_string(counter);
+	}
+	else
+	{
+		getNameCounter(node->name) = 0;
 	}
 }
 

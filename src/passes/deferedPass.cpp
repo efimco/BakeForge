@@ -8,6 +8,7 @@
 #include "light.hpp"
 
 static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
+static constexpr UINT MAX_LIGHTS = 100;
 
 struct alignas(16) DeferredConstantBuffer
 {
@@ -30,7 +31,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	lightsBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	lightsBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	lightsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	lightsBufferDesc.ByteWidth = sizeof(LightData);
+	lightsBufferDesc.ByteWidth = sizeof(LightData) * MAX_LIGHTS; // Allocate space for up to 100 lights
 	lightsBufferDesc.StructureByteStride = sizeof(LightData);
 
 	{
@@ -43,7 +44,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCont
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = 1;
+	srvDesc.Buffer.NumElements = MAX_LIGHTS; // Match the buffer size
 
 	{
 		HRESULT hr = m_device->CreateShaderResourceView(m_lightsBuffer.Get(), &srvDesc, &m_lightsSRV);
@@ -238,7 +239,6 @@ void DeferredPass::updateLights(Scene* scene)
 		for (size_t i = 0; i < lights.size(); ++i)
 		{
 			lightData[i] = lights[i]->getLightData();
-
 		}
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
 	}

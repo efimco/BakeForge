@@ -459,17 +459,7 @@ void UIManager::processNodeDuplication()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
-		Primitive* primitive = dynamic_cast<Primitive*>(activeNode);
-		Light* light = dynamic_cast<Light*>(activeNode);
-
-		if (primitive)
-		{
-			m_scene->duplicateNode(primitive);
-		}
-		if (light)
-		{
-			m_scene->duplicateNode(light);
-		}
+		m_scene->duplicateNode(activeNode);
 	}
 }
 

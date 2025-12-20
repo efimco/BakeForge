@@ -84,18 +84,8 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->setIndexData(std::move(indices));
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
-
-			if (m_scene->isNameUsed(model.nodes[meshIndex].name))
-			{
-				m_scene->getNameCounter(model.nodes[meshIndex].name)++;
-				primitive->name = model.nodes[meshIndex].name + "." + std::to_string(m_scene->getNameCounter(model.nodes[meshIndex].name));
-			}
-			else
-			{
-				m_scene->getNameCounter(model.nodes[meshIndex].name) = 0;
-				primitive->name = model.nodes[meshIndex].name;
-			}
-			// primitive->buildBVH();
+			primitive->name = model.nodes[meshIndex].name;
+			primitive->buildBVH();
 			m_scene->addPrimitive(primitive.get());
 			m_scene->addChild(std::move(primitive));
 
