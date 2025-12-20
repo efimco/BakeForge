@@ -24,6 +24,21 @@ using Tri = bvh::v2::Tri<Scalar, 3>;
 using Node = bvh::v2::Node<Scalar, 3>;
 using Bvh = bvh::v2::Bvh<Node>;
 
+struct SharedPrimitiveData
+{
+	std::vector<InterleavedData> vertexData;
+	std::vector<uint32_t> indexData;
+	std::vector<Tri> triangles;
+	std::vector<BBox> bboxes;
+	std::vector<Vec3> centers;
+	std::unique_ptr<Bvh> bvh;
+	std::unique_ptr<BBox> bbox;
+	ComPtr<ID3D11Buffer> indexBuffer;
+	ComPtr<ID3D11Buffer> vertexBuffer;
+};
+
+
+
 class Primitive : public SceneNode
 {
 public:
@@ -37,28 +52,21 @@ public:
 	void setVertexData(std::vector<InterleavedData>&& vertexData);
 	void setIndexData(std::vector<uint32_t>&& indexData);
 
-	const std::vector<InterleavedData>& getVertexData() const { return m_vertexData; }
-	const std::vector<uint32_t>& getIndexData() const { return m_indexData; }
-	const ComPtr<ID3D11Buffer>& getIndexBuffer() const { return m_indexBuffer; };
-	const ComPtr<ID3D11Buffer>& getVertexBuffer() const { return m_vertexBuffer; };
+	const std::vector<uint32_t>& getIndexData() const;
+	const ComPtr<ID3D11Buffer>& getIndexBuffer() const;
+	const ComPtr<ID3D11Buffer>& getVertexBuffer() const;
 
 	void buildBVH();
 	const Bvh* getBVH() const;
 	BBox getWorldBBox(glm::mat4 worldMatrix) const;
 	const BBox* getLocalBBox() const;
 	std::unique_ptr<SceneNode> clone() override;
+	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
+
 	std::shared_ptr<Material> material;
 
 private:
-	std::vector<InterleavedData> m_vertexData;
-	std::vector<uint32_t> m_indexData;
-	std::vector<Tri> m_triangles;
-	std::vector<BBox> m_bboxes;
-	std::vector<Vec3> m_centers;
-	std::unique_ptr<Bvh> m_bvh;
-	std::unique_ptr<BBox> m_bbox;
+	std::shared_ptr<SharedPrimitiveData> m_sharedData;
 	ComPtr<ID3D11Device> m_device;
-	ComPtr<ID3D11Buffer> m_indexBuffer;
-	ComPtr<ID3D11Buffer> m_vertexBuffer;
 
 };
