@@ -7,12 +7,13 @@ using PrecomputedTri = bvh::v2::PrecomputedTri<Scalar>;
 using StdOutputStream = bvh::v2::StdOutputStream;
 using StdInputStream = bvh::v2::StdInputStream;
 
-Primitive::Primitive(ComPtr<ID3D11Device> device) : m_device(device) {}
+Primitive::Primitive(ComPtr<ID3D11Device> device) : m_device(device) { m_sharedData = std::make_shared<SharedPrimitiveData>(); }
 
 void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
 {
-	m_vertexData = std::move(vertexData);
-	auto numVerts = m_vertexData.size();
+
+	m_sharedData->vertexData = std::move(vertexData);
+	auto numVerts = m_sharedData->vertexData.size();
 	D3D11_BUFFER_DESC vertexBufferDesc = {};
 	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	vertexBufferDesc.ByteWidth = static_cast<UINT>(numVerts * sizeof(InterleavedData));
@@ -22,73 +23,88 @@ void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
 	vertexBufferDesc.StructureByteStride = 0;
 
 	D3D11_SUBRESOURCE_DATA vertexSubresourceData;
-	vertexSubresourceData.pSysMem = m_vertexData.data();
+	vertexSubresourceData.pSysMem = m_sharedData->vertexData.data();
 	vertexSubresourceData.SysMemPitch = 0;
 	vertexSubresourceData.SysMemSlicePitch = 0;
-	HRESULT hr = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &m_vertexBuffer);
+	HRESULT hr = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &m_sharedData->vertexBuffer);
 	assert(SUCCEEDED(hr));
 }
 
 void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
 {
-	m_indexData = std::move(indexData);
+	m_sharedData->indexData = std::move(indexData);
 	D3D11_BUFFER_DESC indexBufferDesc = {};
 	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	indexBufferDesc.ByteWidth = static_cast<UINT>(m_indexData.size() * sizeof(uint32_t));
+	indexBufferDesc.ByteWidth = static_cast<UINT>(m_sharedData->indexData.size() * sizeof(uint32_t));
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
 	D3D11_SUBRESOURCE_DATA indexInitData = {};
-	indexInitData.pSysMem = m_indexData.data();
-	HRESULT hr = m_device->CreateBuffer(&indexBufferDesc, &indexInitData, &m_indexBuffer);
+	indexInitData.pSysMem = m_sharedData->indexData.data();
+	HRESULT hr = m_device->CreateBuffer(&indexBufferDesc, &indexInitData, &m_sharedData->indexBuffer);
 	assert(SUCCEEDED(hr));
 
 }
 
+const std::vector<uint32_t>& Primitive::getIndexData() const
+{
+	return m_sharedData->indexData;
+}
+
+const ComPtr<ID3D11Buffer>& Primitive::getIndexBuffer() const
+{
+	return m_sharedData->indexBuffer;
+}
+
+const ComPtr<ID3D11Buffer>& Primitive::getVertexBuffer() const
+{
+	return m_sharedData->vertexBuffer;
+}
+
 void Primitive::buildBVH()
 {
-	if (m_vertexData.empty())
+	if (m_sharedData->vertexData.empty())
 	{
 		return;
 	}
-	m_triangles.reserve(m_indexData.size() / 3);
+	m_sharedData->triangles.reserve(m_sharedData->indexData.size() / 3);
 
 
-	m_bbox = std::make_unique<BBox>();
+	m_sharedData->bbox = std::make_unique<BBox>();
 
-	for (size_t i = 0; i < m_indexData.size(); i += 3)
+	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
 	{
-		if (i + 2 < m_indexData.size())
+		if (i + 2 < m_sharedData->indexData.size())
 		{
 			Tri tri;
-			tri.p0 = Vec3(m_vertexData[m_indexData[i]].position);
-			tri.p1 = Vec3(m_vertexData[m_indexData[i + 1]].position);
-			tri.p2 = Vec3(m_vertexData[m_indexData[i + 2]].position);
-			m_triangles.push_back(tri);
+			tri.p0 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i]].position);
+			tri.p1 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i + 1]].position);
+			tri.p2 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i + 2]].position);
+			m_sharedData->triangles.push_back(tri);
 
-			m_bbox->extend(tri.p0);
-			m_bbox->extend(tri.p1);
-			m_bbox->extend(tri.p2);
+			m_sharedData->bbox->extend(tri.p0);
+			m_sharedData->bbox->extend(tri.p1);
+			m_sharedData->bbox->extend(tri.p2);
 		}
 	}
-	m_bboxes.resize(m_triangles.size());
-	m_centers.resize(m_triangles.size());
-	for (size_t i = 0; i < m_triangles.size(); ++i)
+	m_sharedData->bboxes.resize(m_sharedData->triangles.size());
+	m_sharedData->centers.resize(m_sharedData->triangles.size());
+	for (size_t i = 0; i < m_sharedData->triangles.size(); ++i)
 	{
-		m_bboxes[i] = m_triangles[i].get_bbox();
-		m_centers[i] = m_triangles[i].get_center();
+		m_sharedData->bboxes[i] = m_sharedData->triangles[i].get_bbox();
+		m_sharedData->centers[i] = m_sharedData->triangles[i].get_center();
 	}
-	m_bvh = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(m_bboxes, m_centers));
-	std::printf("Built BVH with %zu nodes for %zu triangles.\n", m_bvh->nodes.size(), m_triangles.size());
+	m_sharedData->bvh = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(m_sharedData->bboxes, m_sharedData->centers));
+	std::printf("Built BVH with %zu nodes for %zu triangles.\n", m_sharedData->bvh->nodes.size(), m_sharedData->triangles.size());
 }
 
 const Bvh* Primitive::getBVH() const
 {
-	return m_bvh.get();
+	return m_sharedData->bvh.get();
 }
 
 BBox Primitive::getWorldBBox(glm::mat4 worldMatrix) const
 {
-	if (m_vertexData.empty() || !m_bbox)
+	if (m_sharedData->vertexData.empty() || !m_sharedData->bbox)
 	{
 		return BBox::make_empty();
 	}
@@ -96,8 +112,8 @@ BBox Primitive::getWorldBBox(glm::mat4 worldMatrix) const
 	BBox worldBBox = BBox::make_empty();
 
 	// Transform all 8 corners of the local AABB to get a conservative world AABB
-	Vec3 localMin = m_bbox->min;
-	Vec3 localMax = m_bbox->max;
+	Vec3 localMin = m_sharedData->bbox->min;
+	Vec3 localMax = m_sharedData->bbox->max;
 
 	// All 8 corners of the local bbox
 	glm::vec4 corners[8] = {
@@ -122,7 +138,7 @@ BBox Primitive::getWorldBBox(glm::mat4 worldMatrix) const
 
 const BBox* Primitive::getLocalBBox() const
 {
-	return m_bbox.get();
+	return m_sharedData->bbox.get();
 }
 
 std::unique_ptr<SceneNode> Primitive::clone()
@@ -133,27 +149,26 @@ std::unique_ptr<SceneNode> Primitive::clone()
 	newPrimitive->visible = this->visible;
 	newPrimitive->dirty = this->dirty;
 	newPrimitive->movable = this->movable;
-	if (!m_vertexData.empty())
+
+	if (!m_sharedData->vertexData.empty())
 	{
-		std::vector<InterleavedData> vertexCopy = m_vertexData;
-		newPrimitive->setVertexData(std::move(vertexCopy));
-	}
-	if (!m_indexData.empty())
-	{
-		std::vector<uint32_t> indexCopy = m_indexData;
-		newPrimitive->setIndexData(std::move(indexCopy));
+		newPrimitive->setSharedPrimitiveData(m_sharedData);
 	}
 
 	newPrimitive->material = this->material;
-	newPrimitive->buildBVH();
 
 	for (const auto& child : this->children)
 	{
 		std::unique_ptr<SceneNode> childClone = child->clone();
 		newPrimitive->addChild(std::move(childClone));
 	}
-	
+
 	return newPrimitive;
+}
+
+void Primitive::setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData)
+{
+	m_sharedData = sharedData;
 }
 
 
