@@ -1,9 +1,11 @@
 #pragma once
+
+#include <memory>
+
 #include <d3d11.h>
 #include <wrl.h>
 #include "imgui.h"
 #include "glm/glm.hpp"
-#include <memory>
 
 class Scene;
 class SceneNode;
@@ -12,7 +14,7 @@ class GBuffer;
 class Primitive;
 struct Material;
 class Light;
-
+class UndoRedoManager;
 
 #define ICON_FA_CUBE       "\xef\x86\xb2"     // Mesh/Primitive
 #define ICON_FA_LIGHTBULB  "\xef\x83\xab"     // Light
@@ -36,6 +38,7 @@ public:
 private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
+	std::unique_ptr<UndoRedoManager> m_undoRedoManager;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
 	ImFont* m_iconFont = nullptr;
@@ -52,6 +55,7 @@ private:
 	void processGizmo();
 	void processNodeDuplication();
 	void processNodeDeletion();
+	void processUndoRedo();
 
 	void drawSceneGraph();
 	void handleNodeSelection(SceneNode* node);

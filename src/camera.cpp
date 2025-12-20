@@ -108,6 +108,39 @@ void Camera::processOrbit()
 		transform.rotation.x = -89.0f;
 }
 
+void Camera::onCommitTransaction(Scene* scene)
+{
+	updateCameraVectors();
+}
+
+void Camera::copyFrom(const SceneNode* node)
+{
+	SceneNode::copyFrom(node);
+	if (const auto cameraNode = dynamic_cast<const Camera*>(node))
+	{
+		fov = cameraNode->fov;
+	}
+}
+
+bool Camera::differsFrom(const SceneNode* node) const
+{
+	if (!SceneNode::differsFrom(node))
+	{
+		if (const auto cameraNode = dynamic_cast<const Camera*>(node))
+		{
+			return fov != cameraNode->fov;
+		}
+	}
+	return true;
+}
+
+std::unique_ptr<SceneNode> Camera::clone() const
+{
+	std::unique_ptr cameraNode = std::make_unique<Camera>(transform.position);
+	cameraNode->copyFrom(this);
+	return cameraNode;
+}
+
 // void Camera::focusOn(SceneNode* node)
 // {
 // 	if (dynamic_cast<Primitive*>(node) == nullptr)

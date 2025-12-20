@@ -1,10 +1,12 @@
 #include "uiManager.hpp"
+
+#include <iostream>
+
 #define IM_VEC2_CLASS_EXTRA
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
 #include "imgui_impl_dx11.h"
 #include "appConfig.hpp"
-#include <iostream>
 #include "inputEventsHandler.hpp"
 #include "debugPassMacros.hpp"
 #include "scene.hpp"
@@ -13,6 +15,7 @@
 #include "light.hpp"
 #include "primitive.hpp"
 #include "camera.hpp"
+#include "uiCommand.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
@@ -27,7 +30,8 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	const HWND& hwnd) :
 	m_device(device),
 	m_hwnd(hwnd),
-	m_context(deviceContext)
+	m_context(deviceContext),
+	m_undoRedoManager(std::make_unique<UndoRedoManager>())
 {
 
 	ImGui_ImplWin32_EnableDpiAwareness();
@@ -115,6 +119,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	processInputEvents();
 	processNodeDeletion();
 	processNodeDuplication();
+	processUndoRedo();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -395,6 +400,8 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
+	TScopedUITransaction<UICommand_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, activeNode};
+
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
 	float* matrix = glm::value_ptr(worldMatrix);
 	float* viewMatrix = const_cast<float*>(glm::value_ptr(m_view));
@@ -459,7 +466,8 @@ void UIManager::processNodeDuplication()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
-		m_scene->duplicateNode(activeNode);
+		SceneNode* nodeDuplicate = m_scene->duplicateNode(activeNode);
+		TScopedUITransaction<UICommand_AddNodeTransaction> duplicateTransaction{ m_undoRedoManager.get(), m_scene, nodeDuplicate };
 	}
 }
 
@@ -468,21 +476,45 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		Primitive* primitive = dynamic_cast<Primitive*>(activeNode);
-		Light* light = dynamic_cast<Light*>(activeNode);
-		if (primitive)
+		TScopedUITransaction<DataSnapshot_SceneNode> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
+		if (Primitive* primitive = dynamic_cast<Primitive*>(activeNode))
 		{
 			m_scene->deleteNode(primitive);
 			m_scene->markSceneBVHDirty();
 			return;
 		}
-		if (light)
+		if (Light* light = dynamic_cast<Light*>(activeNode))
 		{
 			m_scene->deleteNode(light);
 			m_scene->setLightsDirty();
 			return;
 		}
 		m_scene->deleteNode(activeNode);
+	}
+}
+
+void UIManager::processUndoRedo()
+{
+	// We put a merge fence when mouse is released
+	bool isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right);
+	if (isMouseReleased)
+	{
+		m_undoRedoManager->setMergeFence();
+	}
+
+	if (ImGui::IsKeyPressed(ImGuiKey_Z, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
+	{
+		if (m_undoRedoManager->hasUndoCommands())
+		{
+			m_undoRedoManager->undo();
+		}
+	}
+	if (ImGui::IsKeyPressed(ImGuiKey_Y, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
+	{
+		if (m_undoRedoManager->hasRedoCommands())
+		{
+			m_undoRedoManager->redo();
+		}
 	}
 }
 
@@ -655,55 +687,59 @@ void UIManager::showProperties()
 
 void UIManager::showPrimitiveProperties(Primitive* prim)
 {
-	ImGui::Text("Type: Primitive");
-	ImGui::Text("Name: %s", prim->name.c_str());
-	if (ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f))
+	// Cloning a Primitive is currently a very expensive operation - use different kind of transaction if we're only changing the transform
 	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f))
-	{
-		m_scene->setLightsDirty(true);
+		TScopedUITransaction<UICommand_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+
+		ImGui::Text("Type: Primitive");
+		ImGui::Text("Name: %s", prim->name.c_str());
+		ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f);
+		ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f);
+		ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f);
 	}
 
-	const auto& materialNames = m_scene->getMaterialNames();
-	int currentMaterialIndex = -1;
-	// Find current material index
-	if (currentMaterialIndex < 0 && prim->material)
 	{
-		int index = 0;
-		for (const auto& name : materialNames)
+		const auto& materialNames = m_scene->getMaterialNames();
+		int currentMaterialIndex = -1;
+		// Find current material index
+		if (currentMaterialIndex < 0 && prim->material)
 		{
-			if (m_scene->getMaterial(name) == prim->material)
+			int index = 0;
+			for (const auto& name : materialNames)
 			{
-				currentMaterialIndex = index;
-				break;
+				if (m_scene->getMaterial(name) == prim->material)
+				{
+					currentMaterialIndex = index;
+					break;
+				}
+				index++;
 			}
-			index++;
 		}
-	}
 
-	if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
-	{
-		for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
+		// Save previous material index
+		int previousMaterialIndex = currentMaterialIndex;
+		if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
 		{
-			bool isSelected = (currentMaterialIndex == n);
-			if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
+			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
-				currentMaterialIndex = n;
-				std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
-				prim->material = selectedMaterial;
+				bool isSelected = (currentMaterialIndex == n);
+				if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
+				{
+					currentMaterialIndex = n;
+					if (currentMaterialIndex != previousMaterialIndex)
+					{
+						TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+						std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
+						prim->material = selectedMaterial;
+					}
+				}
+				if (isSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			if (isSelected)
-			{
-				ImGui::SetItemDefaultFocus();
-			}
+			ImGui::EndCombo();
 		}
-		ImGui::EndCombo();
 	}
 }
 
@@ -714,52 +750,30 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 
 void UIManager::showLightProperties(Light* light)
 {
+	TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, light};
+
 	ImGui::Text("Name: %s", light->name.c_str());
 
-	if (ImGui::Combo("Type", reinterpret_cast<int*>(&light->type),
-		"Point Light\0Directional Light\0Spot Light\0"))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::ColorEdit3("Color", &light->color[0]))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat("Intensity", &light->intensity, 0.1f, 0.0f, 100.0f))
-	{
-		m_scene->setLightsDirty(true);
-	}
-	if (ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f))
-	{
-		m_scene->setLightsDirty(true);
-	}
+	ImGui::Combo(
+		"Type",
+		reinterpret_cast<int*>(&light->type),
+		"Point Light\0Directional Light\0Spot Light\0");
+	ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f);
+	ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f);
+	ImGui::ColorEdit3("Color", &light->color[0]);
+	ImGui::DragFloat("Intensity", &light->intensity, 0.1f, 0.0f, 100.0f);
+	ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f);
 }
 
 void UIManager::showCameraProperties(Camera* camera)
 {
-	ImGui::Text("Name: %s", camera->name.c_str());
-	if (ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f))
-	{
-		camera->updateCameraVectors();
-	}
-	if (ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f))
-	{
-		camera->updateCameraVectors();
-	}
-	if (ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f))
-	{
-		camera->updateCameraVectors();
-	}
-}
+	TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, camera};
 
+	ImGui::Text("Name: %s", camera->name.c_str());
+	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
+	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
+	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
+}
 
 void UIManager::showSceneSettings()
 {

@@ -57,7 +57,8 @@ public:
 	void setActiveCamera(Camera* camera);
 
 	void deleteNode(SceneNode* node);
-	void duplicateNode(SceneNode* node);
+	SceneNode* duplicateNode(SceneNode* node);
+	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode);
 	Camera* getActiveCamera();
 
 	void buildSceneBVH();

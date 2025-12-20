@@ -6,6 +6,8 @@
 #include <vector>
 #include <list>
 
+class Scene;
+
 class SceneNode
 {
 public:
@@ -23,8 +25,11 @@ public:
 	SceneNode(SceneNode&& other) noexcept;
 	virtual ~SceneNode();
 
+	virtual void onCommitTransaction(Scene* scene);
+	virtual void copyFrom(const SceneNode* node);
+	virtual bool differsFrom(const SceneNode* node) const;
+	virtual std::unique_ptr<SceneNode> clone() const;
 	void addChild(std::unique_ptr<SceneNode>&& child);
-	virtual std::unique_ptr<SceneNode> clone();
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
 	glm::mat4 getWorldMatrix();
 };

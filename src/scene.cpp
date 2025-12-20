@@ -211,30 +211,62 @@ void Scene::deleteNode(SceneNode* node)
 	}
 }
 
-void Scene::duplicateNode(SceneNode* node)
+SceneNode* Scene::duplicateNode(SceneNode* node)
 {
-	if (!node->parent)
-		return;
-	std::unique_ptr<SceneNode> newNode = node->clone();
-	validateName(newNode.get());
-	node->parent->addChild(std::move(newNode));
-	if (auto prim = dynamic_cast<Primitive*>(node))
+	SceneNode* nodeDuplicate = nullptr;
+	if (node->parent)
 	{
-		Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
-		m_primitives.push_back(newPrim);
+		std::unique_ptr<SceneNode> newNode = node->clone();
+		validateName(newNode);
+		node->parent->addChild(std::move(newNode));
+		if (auto prim = dynamic_cast<Primitive*>(node))
+		{
+			Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
+			m_primitives.push_back(newPrim);
+			markSceneBVHDirty();
+			nodeDuplicate = newPrim;
+		}
+		if (auto light = dynamic_cast<Light*>(node))
+		{
+			Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
+			m_lights.push_back(newLight);
+			setLightsDirty();
+			nodeDuplicate = newLight;
+		}
+		if (auto camera = dynamic_cast<Camera*>(node))
+		{
+			Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
+			m_cameras.push_back(newCamera);
+			nodeDuplicate = newCamera;
+		}
+	}
+	return nodeDuplicate;
+}
+
+SceneNode* Scene::adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode)
+{
+	// parent of a cloned node must be nullptr
+	assert(clonedNode->parent == nullptr);
+	addChild(std::move(clonedNode));
+	SceneNode* nodeClone = nullptr;
+	if (auto prim = dynamic_cast<Primitive*>(children.back().get()))
+	{
+		m_primitives.push_back(prim);
 		markSceneBVHDirty();
+		nodeClone = prim;
 	}
-	if (auto light = dynamic_cast<Light*>(node))
+	if (auto light = dynamic_cast<Light*>(children.back().get()))
 	{
-		Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
-		m_lights.push_back(newLight);
+		m_lights.push_back(light);
 		setLightsDirty();
+		nodeClone = light;
 	}
-	if (auto camera = dynamic_cast<Camera*>(node))
+	if (auto camera = dynamic_cast<Camera*>(children.back().get()))
 	{
-		Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
-		m_cameras.push_back(newCamera);
+		m_cameras.push_back(camera);
+		nodeClone = camera;
 	}
+	return nodeClone;
 }
 
 Camera* Scene::getActiveCamera()

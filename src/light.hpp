@@ -38,7 +38,5 @@ public:
 	float radius = 1.0f;
 	LightType type = POINT_LIGHT;
 
-	std::unique_ptr<SceneNode> clone() override;
-
 
 };
