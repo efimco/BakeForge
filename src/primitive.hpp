@@ -60,8 +60,10 @@ public:
 	const Bvh* getBVH() const;
 	BBox getWorldBBox(glm::mat4 worldMatrix) const;
 	const BBox* getLocalBBox() const;
-	std::unique_ptr<SceneNode> clone() override;
-	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
+	virtual void copyFrom(const SceneNode* node) override;
+	virtual bool differsFrom(const SceneNode* node) const override;
+	virtual std::unique_ptr<SceneNode> clone() const override;
+	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData)
 
 	std::shared_ptr<Material> material;
 
