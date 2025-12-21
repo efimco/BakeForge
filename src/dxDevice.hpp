@@ -1,5 +1,10 @@
 #pragma once
 
+// windows.h disahle minmax
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
+
 #include <d3d11.h>
 #include <wrl.h>
 

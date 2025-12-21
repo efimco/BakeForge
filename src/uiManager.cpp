@@ -15,7 +15,7 @@
 #include "light.hpp"
 #include "primitive.hpp"
 #include "camera.hpp"
-#include "uiCommand.hpp"
+#include "commands/uiCommand.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
@@ -400,7 +400,7 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
-	TScopedUITransaction<UICommand_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, activeNode};
+	TScopedTransaction<DataSnapshot_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, activeNode};
 
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
 	float* matrix = glm::value_ptr(worldMatrix);
@@ -476,7 +476,7 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		TScopedUITransaction<DataSnapshot_SceneNode> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
+		TScopedTransaction<DataSnapshot_SceneNode> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
 		if (Primitive* primitive = dynamic_cast<Primitive*>(activeNode))
 		{
 			m_scene->deleteNode(primitive);
@@ -689,7 +689,7 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 {
 	// Cloning a Primitive is currently a very expensive operation - use different kind of transaction if we're only changing the transform
 	{
-		TScopedUITransaction<UICommand_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+		TScopedTransaction<DataSnapshot_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
 
 		ImGui::Text("Type: Primitive");
 		ImGui::Text("Name: %s", prim->name.c_str());
@@ -728,7 +728,7 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-						TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+						TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
 						std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
 						prim->material = selectedMaterial;
 					}
@@ -750,7 +750,7 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 
 void UIManager::showLightProperties(Light* light)
 {
-	TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, light};
+	TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, light};
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
@@ -767,7 +767,7 @@ void UIManager::showLightProperties(Light* light)
 
 void UIManager::showCameraProperties(Camera* camera)
 {
-	TScopedUITransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, camera};
+	TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, camera};
 
 	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);

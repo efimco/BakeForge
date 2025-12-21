@@ -1,5 +1,7 @@
 #include "scene.hpp"
+
 #include <iostream>
+
 #include "chrono"
 #include "primitive.hpp"
 #include "light.hpp"
