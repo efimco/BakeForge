@@ -1,9 +1,15 @@
 #pragma once
 
-#include <string>
-#include <tiny_gltf.h>
+// windows.h disahle minmax
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
+
 #include <wrl.h>
 #include <d3d11.h>
+
+#include <string>
+#include <tiny_gltf.h>
 
 using namespace Microsoft::WRL;
 

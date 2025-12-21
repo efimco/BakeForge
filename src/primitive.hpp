@@ -1,7 +1,14 @@
 #pragma once
-#include <vector>
-#include <wrl.h>
+
+// windows.h disahle minmax
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
+
 #include <d3d11.h>
+#include <wrl.h>
+
+#include <vector>
 #include "primitiveData.hpp"
 #include "sceneNode.hpp"
 #include <bvh/v2/bvh.h>

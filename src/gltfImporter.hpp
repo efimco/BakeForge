@@ -1,10 +1,16 @@
 #pragma once
-#include <tiny_gltf.h>
-#include <string>
-#include <vector>
+
+// windows.h disahle minmax
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
 
 #include <wrl.h>
 #include <d3d11.h>
+
+#include <tiny_gltf.h>
+#include <string>
+#include <vector>
 #include <unordered_map>
 #include "primitiveData.hpp"
 

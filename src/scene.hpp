@@ -4,7 +4,6 @@
 #include <bvh/v2/thread_pool.h>
 #include <memory>
 #include "sceneNode.hpp"
-#include <memory>
 #include <unordered_map>
 
 class Primitive;

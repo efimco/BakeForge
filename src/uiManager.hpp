@@ -2,10 +2,18 @@
 
 #include <memory>
 
+// windows.h disahle minmax
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
+
 #include <d3d11.h>
 #include <wrl.h>
 #include "imgui.h"
 #include "glm/glm.hpp"
+
+#undef min
+#undef max
 
 class Scene;
 class SceneNode;
