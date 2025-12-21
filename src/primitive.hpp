@@ -70,7 +70,7 @@ public:
 	virtual void copyFrom(const SceneNode* node) override;
 	virtual bool differsFrom(const SceneNode* node) const override;
 	virtual std::unique_ptr<SceneNode> clone() const override;
-	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData)
+	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
 
 	std::shared_ptr<Material> material;
 

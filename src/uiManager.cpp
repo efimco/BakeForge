@@ -467,7 +467,7 @@ void UIManager::processNodeDuplication()
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
 		SceneNode* nodeDuplicate = m_scene->duplicateNode(activeNode);
-		TScopedUITransaction<UICommand_AddNodeTransaction> duplicateTransaction{ m_undoRedoManager.get(), m_scene, nodeDuplicate };
+		TScopedTransaction<DataSnapshot_SceneNodeCreation> duplicateTransaction{ m_undoRedoManager.get(), m_scene, nodeDuplicate };
 	}
 }
 
@@ -476,7 +476,7 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		TScopedTransaction<DataSnapshot_SceneNode> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
+		TScopedTransaction<DataSnapshot_SceneNodeRemoval> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
 		if (Primitive* primitive = dynamic_cast<Primitive*>(activeNode))
 		{
 			m_scene->deleteNode(primitive);
