@@ -219,7 +219,7 @@ SceneNode* Scene::duplicateNode(SceneNode* node)
 	if (node->parent)
 	{
 		std::unique_ptr<SceneNode> newNode = node->clone();
-		validateName(newNode);
+		validateName(newNode.get());
 		node->parent->addChild(std::move(newNode));
 		if (auto prim = dynamic_cast<Primitive*>(node))
 		{

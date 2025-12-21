@@ -151,22 +151,11 @@ void Primitive::copyFrom(const SceneNode* node)
 	dirty = node->dirty;
 	movable = node->movable;
 
-	if (!m_vertexData.empty())
-	{
-		std::vector<InterleavedData> vertexCopy = m_vertexData;
-		setVertexData(std::move(vertexCopy));
-	}
-	if (!m_indexData.empty())
-	{
-		std::vector<uint32_t> indexCopy = m_indexData;
-		setIndexData(std::move(indexCopy));
-	}
-
 	if (auto primitiveNode = dynamic_cast<const Primitive*>(node))
 	{
+	    m_sharedData = primitiveNode->m_sharedData;
 		material = primitiveNode->material;
 	}
-	buildBVH();
 
 	for (const auto& child : node->children)
 	{

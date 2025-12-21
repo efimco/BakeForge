@@ -29,6 +29,12 @@ LightData Light::getLightData()
 	return data;
 }
 
+void Light::onCommitTransaction(Scene* scene)
+{
+	dirty = true;
+	scene->setLightsDirty(true);
+}
+
 void Light::copyFrom(const SceneNode* node)
 {
 	SceneNode::copyFrom(node);
@@ -68,10 +74,4 @@ std::unique_ptr<SceneNode> Light::clone() const
 	std::unique_ptr<Light> lightNode = std::make_unique<Light>(type, transform.position, name);
 	lightNode->copyFrom(this);
 	return lightNode;
-}
-
-void Light::onCommitTransaction(Scene* scene)
-{
-	dirty = true;
-	scene->setLightsDirty(true);
 }
