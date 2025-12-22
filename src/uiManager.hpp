@@ -22,7 +22,7 @@ class GBuffer;
 class Primitive;
 struct Material;
 class Light;
-class UndoRedoManager;
+class CommandManager;
 
 #define ICON_FA_CUBE       "\xef\x86\xb2"     // Mesh/Primitive
 #define ICON_FA_LIGHTBULB  "\xef\x83\xab"     // Light
@@ -46,7 +46,7 @@ public:
 private:
 	const ComPtr<ID3D11Device>& m_device;
 	const ComPtr<ID3D11DeviceContext>& m_context;
-	std::unique_ptr<UndoRedoManager> m_undoRedoManager;
+	std::unique_ptr<CommandManager> m_commandManager;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
 	ImFont* m_iconFont = nullptr;

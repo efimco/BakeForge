@@ -49,7 +49,6 @@ target_include_directories(TimeToDX
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/
     ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/commands
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
 )
