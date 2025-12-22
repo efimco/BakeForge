@@ -470,7 +470,7 @@ void UIManager::processNodeDuplication()
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
 	    auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
-	    m_commandManager->commit(std::move(createSceneNode));
+	    m_commandManager->commitCommand(std::move(createSceneNode));
 	}
 }
 
@@ -482,7 +482,7 @@ void UIManager::processNodeDeletion()
         bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
         bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
 	    auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
-	    m_commandManager->commit(std::move(removeSceneNode));
+	    m_commandManager->commitCommand(std::move(removeSceneNode));
 	    if (isPrimitive)
 	    {
 	        m_scene->markSceneBVHDirty();
@@ -688,7 +688,6 @@ void UIManager::showProperties()
 
 void UIManager::showPrimitiveProperties(Primitive* prim)
 {
-	// Cloning a Primitive is currently a very expensive operation - use different kind of transaction if we're only changing the transform
 	{
 		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, prim};
 
