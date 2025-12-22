@@ -4,7 +4,7 @@
 
 #include <cassert>
 
-bool CommandManager::commit(std::unique_ptr<SnapshotBase>&& snapshotBase)
+bool CommandManager::commitSnapshot(std::unique_ptr<SnapshotBase>&& snapshotBase)
 {
     if (snapshotBase->containsChanges())
     {
@@ -29,7 +29,7 @@ bool CommandManager::commit(std::unique_ptr<SnapshotBase>&& snapshotBase)
     return true;
 }
 
-bool CommandManager::commit(std::unique_ptr<CommandBase>&& command)
+bool CommandManager::commitCommand(std::unique_ptr<CommandBase>&& command)
 {
     if (command->shouldBreakHistory())
     {
@@ -104,7 +104,7 @@ std::unique_ptr<CommandBase> CommandManager::commitInternal(CommandBase* command
     return redoCommand;
 }
 
-SnapshotBase * CommandManager::getLastUndoAsSnapshot()
+SnapshotBase* CommandManager::getLastUndoAsSnapshot()
 {
     return hasUndoCommands() ? dynamic_cast<SnapshotBase*>(m_undoBuffer.back().get()) : nullptr;
 }

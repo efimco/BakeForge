@@ -9,5 +9,5 @@ ScopedTransaction::ScopedTransaction(CommandManager* commandManager, std::unique
 
 ScopedTransaction::~ScopedTransaction()
 {
-    m_commandManager->commit(std::move(m_command));
+    m_commandManager->commitSnapshot(std::move(m_command));
 }

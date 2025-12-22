@@ -26,7 +26,8 @@ protected:
     // after which it would make sense to actualize the state of the nodes or perform heavy operations.
     virtual void onCommitTransaction() = 0;
 
-    // Whether this command could be merged with identical or similar snapshots - the exact specifics are dictated by 'merge' and 'commitChanges'
+    // Whether this command could be merged with identical or similar snapshots -
+    // the exact specifics are dictated by 'merge' and 'containsChanges'.
     bool m_allowMerging : 1 = true;
 
 };
