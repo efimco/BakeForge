@@ -15,7 +15,10 @@
 #include "light.hpp"
 #include "primitive.hpp"
 #include "camera.hpp"
-#include "commands/uiCommand.hpp"
+#include "commands/nodeCommand.hpp"
+#include "commands/nodeSnapshot.hpp"
+#include "commands/scopedTransaction.hpp"
+#include "commands/commandManager.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
@@ -31,7 +34,7 @@ UIManager::UIManager(const ComPtr<ID3D11Device>& device,
 	m_device(device),
 	m_hwnd(hwnd),
 	m_context(deviceContext),
-	m_undoRedoManager(std::make_unique<UndoRedoManager>())
+	m_commandManager(std::make_unique<CommandManager>())
 {
 
 	ImGui_ImplWin32_EnableDpiAwareness();
@@ -400,7 +403,7 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
-	TScopedTransaction<DataSnapshot_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, activeNode};
+	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, activeNode};
 
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
 	float* matrix = glm::value_ptr(worldMatrix);
@@ -466,8 +469,8 @@ void UIManager::processNodeDuplication()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
-		SceneNode* nodeDuplicate = m_scene->duplicateNode(activeNode);
-		TScopedTransaction<DataSnapshot_SceneNodeCreation> duplicateTransaction{ m_undoRedoManager.get(), m_scene, nodeDuplicate };
+	    auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
+	    m_commandManager->commit(std::move(createSceneNode));
 	}
 }
 
@@ -476,20 +479,18 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		TScopedTransaction<DataSnapshot_SceneNodeRemoval> removeTransaction{ m_undoRedoManager.get(), m_scene, activeNode };
-		if (Primitive* primitive = dynamic_cast<Primitive*>(activeNode))
-		{
-			m_scene->deleteNode(primitive);
-			m_scene->markSceneBVHDirty();
-			return;
-		}
-		if (Light* light = dynamic_cast<Light*>(activeNode))
-		{
-			m_scene->deleteNode(light);
-			m_scene->setLightsDirty();
-			return;
-		}
-		m_scene->deleteNode(activeNode);
+        bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
+        bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
+	    auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
+	    m_commandManager->commit(std::move(removeSceneNode));
+	    if (isPrimitive)
+	    {
+	        m_scene->markSceneBVHDirty();
+	    }
+	    if (isLight)
+	    {
+	        m_scene->setLightsDirty();
+	    }
 	}
 }
 
@@ -499,21 +500,21 @@ void UIManager::processUndoRedo()
 	bool isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right);
 	if (isMouseReleased)
 	{
-		m_undoRedoManager->setMergeFence();
+		m_commandManager->setMergeFence();
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Z, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
 	{
-		if (m_undoRedoManager->hasUndoCommands())
+		if (m_commandManager->hasUndoCommands())
 		{
-			m_undoRedoManager->undo();
+			m_commandManager->undo();
 		}
 	}
 	if (ImGui::IsKeyPressed(ImGuiKey_Y, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
 	{
-		if (m_undoRedoManager->hasRedoCommands())
+		if (m_commandManager->hasRedoCommands())
 		{
-			m_undoRedoManager->redo();
+			m_commandManager->redo();
 		}
 	}
 }
@@ -689,7 +690,7 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 {
 	// Cloning a Primitive is currently a very expensive operation - use different kind of transaction if we're only changing the transform
 	{
-		TScopedTransaction<DataSnapshot_SceneNodeTransform> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, prim};
 
 		ImGui::Text("Type: Primitive");
 		ImGui::Text("Name: %s", prim->name.c_str());
@@ -728,7 +729,7 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-						TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, prim};
+		                TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, prim};
 						std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
 						prim->material = selectedMaterial;
 					}
@@ -750,7 +751,7 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 
 void UIManager::showLightProperties(Light* light)
 {
-	TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, light};
+    TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light};
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
@@ -767,7 +768,7 @@ void UIManager::showLightProperties(Light* light)
 
 void UIManager::showCameraProperties(Camera* camera)
 {
-	TScopedTransaction<DataSnapshot_SceneNode> nodeTransaction{ m_undoRedoManager.get(), m_scene, camera};
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera};
 
 	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
@@ -789,7 +790,7 @@ void UIManager::showSceneSettings()
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
 	if (AppConfig::getIsBlurred())
 	{
-		ImGui::SliderFloat("Blur Amoungt", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
+		ImGui::SliderFloat("Blur Amount", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
 	}
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
 	ImGui::Separator();
