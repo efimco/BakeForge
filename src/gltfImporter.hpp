@@ -1,10 +1,11 @@
 #pragma once
-#include <tiny_gltf.h>
-#include <string>
-#include <vector>
 
 #include <wrl.h>
 #include <d3d11.h>
+
+#include <tiny_gltf.h>
+#include <string>
+#include <vector>
 #include <unordered_map>
 #include "primitiveData.hpp"
 

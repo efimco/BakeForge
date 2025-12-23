@@ -2,6 +2,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/rotate_vector.hpp>
 
+#include "scene.hpp"
+
 Light::Light(LightType type, glm::vec3 position, std::string _name)
 	: type(type)
 {
@@ -27,18 +29,49 @@ LightData Light::getLightData()
 	return data;
 }
 
-std::unique_ptr<SceneNode> Light::clone()
+void Light::onCommitTransaction(Scene* scene)
 {
-	auto newLight = std::make_unique<Light>(type, transform.position, name);
-	newLight->transform = this->transform;
-	newLight->visible = this->visible;
-	newLight->dirty = this->dirty;
-	newLight->movable = this->movable;
-	newLight->intensity = this->intensity;
-	newLight->color = this->color;
-	newLight->direction = this->direction;
-	newLight->attenuation = this->attenuation;
-	newLight->spotParams = this->spotParams;
-	newLight->radius = this->radius;
-	return newLight;
+	dirty = true;
+	scene->setLightsDirty(true);
+}
+
+void Light::copyFrom(const SceneNode* node)
+{
+	SceneNode::copyFrom(node);
+	if (const auto lightNode = dynamic_cast<const Light*>(node))
+	{
+		intensity = lightNode->intensity;
+		color = lightNode->color;
+		direction = lightNode->direction;
+		attenuation = lightNode->attenuation;
+		spotParams = lightNode->spotParams;
+		radius = lightNode->radius;
+		type = lightNode->type;
+	}
+}
+
+bool Light::differsFrom(const SceneNode* node) const
+{
+	if (!SceneNode::differsFrom(node))
+	{
+		if (const auto lightNode = dynamic_cast<const Light*>(node))
+		{
+			return
+				intensity != lightNode->intensity ||
+				color != lightNode->color ||
+				direction != lightNode->direction ||
+				attenuation != lightNode->attenuation ||
+				spotParams != lightNode->spotParams ||
+				radius != lightNode->radius ||
+				type != lightNode->type;
+		}
+	}
+	return true;
+}
+
+std::unique_ptr<SceneNode> Light::clone() const
+{
+	std::unique_ptr<Light> lightNode = std::make_unique<Light>(type, transform.position, name);
+	lightNode->copyFrom(this);
+	return lightNode;
 }

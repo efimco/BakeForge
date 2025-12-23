@@ -1,6 +1,8 @@
 #pragma once
+
 #include <d3d11.h>
 #include <bvh/v2/vec.h>
+
 using Vec3 = bvh::v2::Vec<float, 3>;
 inline static const D3D11_INPUT_ELEMENT_DESC genericInputLayoutDesc[] =
 {

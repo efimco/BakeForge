@@ -25,6 +25,39 @@ SceneNode::SceneNode(std::string name) : parent(nullptr)
 
 SceneNode::~SceneNode() = default;
 
+void SceneNode::onCommitTransaction(Scene* scene)
+{
+	dirty = true;
+}
+
+void SceneNode::copyFrom(const SceneNode* node)
+{
+	assert(node);
+
+	transform = node->transform;
+	parent = node->parent;
+	visible = node->visible;
+	movable = node->movable;
+	name = node->name;
+
+	children.clear();
+	for (const auto& child : this->children)
+	{
+		std::unique_ptr<SceneNode> childClone = child->clone();
+		addChild(std::move(childClone));
+	}
+}
+
+bool SceneNode::differsFrom(const SceneNode* node) const
+{
+	assert(node);
+	return
+		transform.position != node->transform.position ||
+		transform.rotation != node->transform.rotation ||
+		transform.scale != node->transform.scale ||
+		visible != node->visible ||
+		movable != node->movable;
+}
 
 void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 {
@@ -74,20 +107,10 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	childPtr->transform.updateMatrix();
 }
 
-std::unique_ptr<SceneNode> SceneNode::clone()
+std::unique_ptr<SceneNode> SceneNode::clone() const
 {
 	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
-	newNode->transform = this->transform;
-	newNode->visible = this->visible;
-	newNode->dirty = this->dirty;
-	newNode->movable = this->movable;
-
-	for (const auto& child : this->children)
-	{
-		std::unique_ptr<SceneNode> childClone = child->clone();
-		newNode->addChild(std::move(childClone));
-	}
-
+	newNode->copyFrom(this);
 	return newNode;
 }
 

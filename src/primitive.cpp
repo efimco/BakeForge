@@ -141,36 +141,49 @@ const BBox* Primitive::getLocalBBox() const
 	return m_sharedData->bbox.get();
 }
 
-std::unique_ptr<SceneNode> Primitive::clone()
+void Primitive::copyFrom(const SceneNode* node)
 {
-	auto newPrimitive = std::make_unique<Primitive>(m_device);
-	newPrimitive->name = this->name;
-	newPrimitive->transform = this->transform;
-	newPrimitive->visible = this->visible;
-	newPrimitive->dirty = this->dirty;
-	newPrimitive->movable = this->movable;
+	assert(node);
 
-	if (!m_sharedData->vertexData.empty())
+	name = node->name;
+	transform = node->transform;
+	visible = node->visible;
+	dirty = node->dirty;
+	movable = node->movable;
+
+	if (auto primitiveNode = dynamic_cast<const Primitive*>(node))
 	{
-		newPrimitive->setSharedPrimitiveData(m_sharedData);
+	    m_sharedData = primitiveNode->m_sharedData;
+		material = primitiveNode->material;
 	}
 
-	newPrimitive->material = this->material;
-
-	for (const auto& child : this->children)
+	for (const auto& child : node->children)
 	{
 		std::unique_ptr<SceneNode> childClone = child->clone();
-		newPrimitive->addChild(std::move(childClone));
+		addChild(std::move(childClone));
 	}
+}
 
-	return newPrimitive;
+bool Primitive::differsFrom(const SceneNode* node) const
+{
+	if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(node))
+	{
+		return SceneNode::differsFrom(node) || material != primitiveNode->material;
+	}
+	return true;
+}
+
+std::unique_ptr<SceneNode> Primitive::clone() const
+{
+	std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
+	primitive->copyFrom(this);
+	return primitive;
 }
 
 void Primitive::setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData)
 {
 	m_sharedData = sharedData;
 }
-
 
 static bool save_bvh(const Bvh& bvh, const std::string& file_name) {
 	std::ofstream out(file_name, std::ofstream::binary);

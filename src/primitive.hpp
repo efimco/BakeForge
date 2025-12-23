@@ -1,7 +1,9 @@
 #pragma once
-#include <vector>
-#include <wrl.h>
+
 #include <d3d11.h>
+#include <wrl.h>
+
+#include <vector>
 #include "primitiveData.hpp"
 #include "sceneNode.hpp"
 #include <bvh/v2/bvh.h>
@@ -60,7 +62,9 @@ public:
 	const Bvh* getBVH() const;
 	BBox getWorldBBox(glm::mat4 worldMatrix) const;
 	const BBox* getLocalBBox() const;
-	std::unique_ptr<SceneNode> clone() override;
+	virtual void copyFrom(const SceneNode* node) override;
+	virtual bool differsFrom(const SceneNode* node) const override;
+	virtual std::unique_ptr<SceneNode> clone() const override;
 	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
 
 	std::shared_ptr<Material> material;

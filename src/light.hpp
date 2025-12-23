@@ -38,7 +38,9 @@ public:
 	float radius = 1.0f;
 	LightType type = POINT_LIGHT;
 
-	std::unique_ptr<SceneNode> clone() override;
-
+	virtual void onCommitTransaction(Scene* scene) override;
+	virtual void copyFrom(const SceneNode* node) override;
+	virtual bool differsFrom(const SceneNode* node) const override;
+	virtual std::unique_ptr<SceneNode> clone() const override;
 
 };

@@ -26,15 +26,19 @@ file(GLOB PASSES
 file(GLOB CONTENT_RESOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/res/*.*")
 
+file(GLOB COMMANDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.hpp")
+
 source_group(TREE "${CMAKE_SOURCE_DIR}" FILES
     ${PASSES}
     ${SHADERS}
+    ${COMMANDS}
     ${SOURCE_FILES}
     ${INCLUDES}
     ${CONTENT_RESOURCES})
 
-
-add_executable(TimeToDX ${SOURCE_FILES} ${INCLUDES} ${SHADERS} ${PASSES} ${CONTENT_RESOURCES})
+add_executable(TimeToDX ${SOURCE_FILES} ${INCLUDES} ${SHADERS} ${PASSES} ${COMMANDS} ${CONTENT_RESOURCES})
 
 target_link_libraries(TimeToDX
     d3d11
