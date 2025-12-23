@@ -30,7 +30,7 @@ private:
 
 	// void focusOn(Primitive* primitive);
 
-	virtual void onCommitTransaction(Scene* scene);
+	virtual void onCommitTransaction(Scene* scene) override;
 	virtual void copyFrom(const SceneNode* node) override;
 	virtual bool differsFrom(const SceneNode* node) const override;
 	virtual std::unique_ptr<SceneNode> clone() const;
