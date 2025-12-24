@@ -10,25 +10,25 @@ class CommandBase;
 class CommandManager
 {
 public:
-    bool commitSnapshot(std::unique_ptr<SnapshotBase>&& snapshotBase);
-    bool commitCommand(std::unique_ptr<CommandBase>&& command);
-    void undo();
-    void redo();
+	bool commitSnapshot(std::unique_ptr<SnapshotBase>&& snapshotBase);
+	bool commitCommand(std::unique_ptr<CommandBase>&& command);
+	void undo();
+	void redo();
 
-    [[nodiscard]]
-    bool hasUndoCommands() const;
+	[[nodiscard]]
+	bool hasUndoCommands() const;
 
-    [[nodiscard]]
-    bool hasRedoCommands() const;
+	[[nodiscard]]
+	bool hasRedoCommands() const;
 
-    void setMergeFence();
-    void clearUndoBuffer();
-    void clearRedoBuffer();
+	void setMergeFence();
+	void clearUndoBuffer();
+	void clearRedoBuffer();
 
 private:
-    std::vector<std::unique_ptr<CommandBase>> m_undoBuffer;
-    std::vector<std::unique_ptr<CommandBase>> m_redoBuffer;
+	std::vector<std::unique_ptr<CommandBase>> m_undoBuffer;
+	std::vector<std::unique_ptr<CommandBase>> m_redoBuffer;
 
-    static std::unique_ptr<CommandBase> commitInternal(CommandBase* command);
-    SnapshotBase* getLastUndoAsSnapshot();
+	static std::unique_ptr<CommandBase> commitInternal(CommandBase* command);
+	SnapshotBase* getLastUndoAsSnapshot();
 };
