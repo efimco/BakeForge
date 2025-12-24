@@ -153,7 +153,7 @@ void Primitive::copyFrom(const SceneNode* node)
 
 	if (auto primitiveNode = dynamic_cast<const Primitive*>(node))
 	{
-	    m_sharedData = primitiveNode->m_sharedData;
+		m_sharedData = primitiveNode->m_sharedData;
 		material = primitiveNode->material;
 	}
 

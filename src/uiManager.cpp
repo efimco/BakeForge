@@ -403,7 +403,7 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
-	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, activeNode};
+	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, activeNode };
 
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
 	float* matrix = glm::value_ptr(worldMatrix);
@@ -469,8 +469,8 @@ void UIManager::processNodeDuplication()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
-	    auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
-	    m_commandManager->commitCommand(std::move(createSceneNode));
+		auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
+		m_commandManager->commitCommand(std::move(createSceneNode));
 	}
 }
 
@@ -479,18 +479,18 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-        bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
-        bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
-	    auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
-	    m_commandManager->commitCommand(std::move(removeSceneNode));
-	    if (isPrimitive)
-	    {
-	        m_scene->markSceneBVHDirty();
-	    }
-	    if (isLight)
-	    {
-	        m_scene->setLightsDirty();
-	    }
+		bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
+		bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
+		auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
+		m_commandManager->commitCommand(std::move(removeSceneNode));
+		if (isPrimitive)
+		{
+			m_scene->markSceneBVHDirty();
+		}
+		if (isLight)
+		{
+			m_scene->setLightsDirty();
+		}
 	}
 }
 
@@ -505,12 +505,22 @@ void UIManager::processUndoRedo()
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Z, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
 	{
-		if (m_commandManager->hasUndoCommands())
+		if (ImGui::IsKeyDown(ImGuiMod_Shift))
 		{
-			m_commandManager->undo();
+			if (m_commandManager->hasRedoCommands())
+			{
+				m_commandManager->redo();
+			}
+		}
+		else
+		{
+			if (m_commandManager->hasUndoCommands())
+			{
+				m_commandManager->undo();
+			}
 		}
 	}
-	if (ImGui::IsKeyPressed(ImGuiKey_Y, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
+	else if (ImGui::IsKeyPressed(ImGuiKey_Y, false) && ImGui::IsKeyDown(ImGuiMod_Ctrl))
 	{
 		if (m_commandManager->hasRedoCommands())
 		{
@@ -689,7 +699,7 @@ void UIManager::showProperties()
 void UIManager::showPrimitiveProperties(Primitive* prim)
 {
 	{
-		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, prim};
+		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, prim };
 
 		ImGui::Text("Type: Primitive");
 		ImGui::Text("Name: %s", prim->name.c_str());
@@ -728,7 +738,7 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-		                TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, prim};
+						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, prim };
 						std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
 						prim->material = selectedMaterial;
 					}
@@ -750,7 +760,7 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 
 void UIManager::showLightProperties(Light* light)
 {
-    TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light};
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light };
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
@@ -767,7 +777,7 @@ void UIManager::showLightProperties(Light* light)
 
 void UIManager::showCameraProperties(Camera* camera)
 {
-	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera};
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera };
 
 	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
