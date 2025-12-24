@@ -185,6 +185,7 @@ void Scene::deleteNode(SceneNode* node)
 		if (it != m_primitives.end())
 		{
 			m_primitives.erase(it);
+			markSceneBVHDirty();
 		}
 	}
 	if (auto light = dynamic_cast<Light*>(node))
@@ -193,6 +194,7 @@ void Scene::deleteNode(SceneNode* node)
 		if (it != m_lights.end())
 		{
 			m_lights.erase(it);
+			setLightsDirty();
 		}
 	}
 	if (auto camera = dynamic_cast<Camera*>(node))

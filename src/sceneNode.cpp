@@ -27,7 +27,7 @@ SceneNode::~SceneNode() = default;
 
 void SceneNode::onCommitTransaction(Scene* scene)
 {
-	dirty = true;
+	scene->markSceneBVHDirty();
 }
 
 void SceneNode::copyFrom(const SceneNode* node)
