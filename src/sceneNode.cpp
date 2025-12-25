@@ -35,7 +35,6 @@ void SceneNode::copyFrom(const SceneNode* node)
 	assert(node);
 
 	transform = node->transform;
-	parent = node->parent;
 	visible = node->visible;
 	movable = node->movable;
 	name = node->name;
