@@ -270,6 +270,7 @@ SceneNode* Scene::adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode)
 		m_cameras.push_back(camera);
 		nodeClone = camera;
 	}
+	setActiveNode(nodeClone);
 	return nodeClone;
 }
 
