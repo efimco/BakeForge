@@ -135,13 +135,12 @@ void GBuffer::draw(const glm::mat4& view,
 
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
-	for (int i = 0; i < scene->getPrimitiveCount(); i++)
+    for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		auto objectID = i;
-		Primitive* prim = scene->getPrimitives()[i];
+		auto objectID = static_cast<int>(handle);
 		if (!prim->material)
 		{
-			std::cerr << "Primitive " << i << " has no material!" << std::endl;
+			std::cerr << "Primitive " << objectID << " has no material!" << std::endl;
 			continue;
 		}
 		update(view, projection, cameraPosition, scene, objectID, prim);

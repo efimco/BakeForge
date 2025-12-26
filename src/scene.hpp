@@ -1,9 +1,13 @@
 #pragma once
 
+#include "sceneNode.hpp"
+#include "sceneNodeHandle.hpp"
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/thread_pool.h>
 #include <memory>
-#include "sceneNode.hpp"
+
+#include <string>
+#include <string_view>
 #include <unordered_map>
 
 class Primitive;
@@ -18,23 +22,31 @@ using BBox = bvh::v2::BBox<Scalar, 3>;
 using Node = bvh::v2::Node<Scalar, 3>;
 using Bvh = bvh::v2::Bvh<Node>;
 
+template<typename T>
+using SceneUnorderedMap = std::unordered_map<SceneNodeHandle, T>;
+
+template<typename T>
+using StringUnorderedMap = std::unordered_map<std::string, T>;
+
 class Scene : public SceneNode
 {
 public:
 	Scene(std::string name = "Default Scene");
 	~Scene() = default;
 
+    SceneNodeHandle getHandleOfNode(SceneNode* node);
+    SceneNode* getNodeByHandle(SceneNodeHandle handle);
 	SceneNode* getRootNode();
 	bool isNameUsed(std::string name);
 	uint32_t& getNameCounter(std::string name);
 
 	void addPrimitive(Primitive* primitive);
-	std::vector<Primitive*>& getPrimitives();
+	SceneUnorderedMap<Primitive*>& getPrimitives();
 	Primitive* getPrimitiveByID(size_t id);
 	size_t getPrimitiveCount();
 
 	void addLight(Light* light);
-	std::vector<Light*>& getLights();
+	SceneUnorderedMap<Light*>& getLights();
 
 	std::shared_ptr<Texture> getTexture(std::string name);
 	void addTexture(std::shared_ptr<Texture>&& texture);
@@ -57,7 +69,9 @@ public:
 
 	void deleteNode(SceneNode* node);
 	SceneNode* duplicateNode(SceneNode* node);
-	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode);
+	SceneNode* adoptClonedNode(
+	    std::unique_ptr<SceneNode>&& clonedNode,
+	    SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
 	Camera* getActiveCamera();
 
 	void buildSceneBVH();
@@ -68,20 +82,20 @@ public:
 	const Bvh* getSceneBVH() const;
 private:
 	SceneNode m_rootNode;
-	std::vector<Primitive*> m_primitives;
-	std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures; // path + actual texture
-	std::unordered_map<std::string, std::shared_ptr<Material>> m_materials; // path + actual material
-	std::vector<Light*> m_lights;
-	std::vector<Camera*> m_cameras;
+	SceneUnorderedMap<Primitive*> m_primitives;
+    SceneUnorderedMap<Light*> m_lights;
+    SceneUnorderedMap<Camera*> m_cameras;
+    StringUnorderedMap<std::shared_ptr<Texture>> m_textures; // path + actual texture
+    StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	Camera* m_activeCamera = nullptr;
 
 	SceneNode* m_activeNode = nullptr;
 
 	std::unordered_map<SceneNode*, bool> m_selectedNodes;
 
-	bool m_lightsAreDirty;
+	bool m_lightsAreDirty = false;
 
-	std::unordered_map<std::string, uint32_t> m_nodeNames;
+	StringUnorderedMap<uint32_t> m_nodeNames;
 
 	std::unique_ptr<Bvh> m_sceneBVH;
 	std::vector<BBox> m_primBboxes; // World-space bboxes for each primitive

@@ -8,7 +8,7 @@ bool CommandManager::commitSnapshot(std::unique_ptr<SnapshotBase>&& snapshotBase
 {
 	if (snapshotBase->containsChanges())
 	{
-		// If last entry in an undo buffer is a snapshot - attempt to merge
+        // If the last entry in an undo buffer is a snapshot - attempt to merge
 		if (SnapshotBase* dataSnapshot = getLastUndoAsSnapshot())
 		{
 			if (snapshotBase->merge(dataSnapshot))
@@ -96,12 +96,12 @@ void CommandManager::clearRedoBuffer()
 
 std::unique_ptr<CommandBase> CommandManager::commitInternal(CommandBase* command)
 {
-	std::unique_ptr<CommandBase> redoCommand = command->exec();
+    std::unique_ptr<CommandBase> commitCommand = command->exec();
 	if (auto snapshot = dynamic_cast<SnapshotBase*>(command))
 	{
 		snapshot->onCommitTransaction();
 	}
-	return redoCommand;
+    return commitCommand;
 }
 
 SnapshotBase* CommandManager::getLastUndoAsSnapshot()

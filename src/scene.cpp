@@ -11,47 +11,101 @@
 
 Scene::Scene(std::string name)
 {
-	this->name = name;
+    this->name = name;
 }
 
-SceneNode* Scene::getRootNode()
+SceneNodeHandle Scene::getHandleOfNode(SceneNode *node)
+{
+    if (auto prim = dynamic_cast<Primitive *>(node))
+    {
+        const auto it = std::ranges::find_if(
+            m_primitives, [prim](const std::pair<SceneNodeHandle, Primitive *> &x) { return x.second == prim; });
+        if (it != m_primitives.end())
+        {
+            return it->first;
+        }
+    }
+    if (auto light = dynamic_cast<Light *>(node))
+    {
+        const auto it = std::ranges::find_if(
+            m_lights, [light](const std::pair<SceneNodeHandle, Light *> &x) { return x.second == light; });
+        if (it != m_lights.end())
+        {
+            return it->first;
+        }
+    }
+    if (auto camera = dynamic_cast<Camera *>(node))
+    {
+        const auto it = std::ranges::find_if(
+            m_cameras, [camera](const std::pair<SceneNodeHandle, Camera *> &x) { return x.second == camera; });
+        if (it != m_cameras.end())
+        {
+            return it->first;
+        }
+    }
+    return SceneNodeHandle::invalidHandle();
+}
+
+SceneNode *Scene::getNodeByHandle(SceneNodeHandle handle)
+{
+    if (auto it = m_primitives.find(handle); it != m_primitives.end())
+    {
+        return it->second;
+    }
+    if (auto it = m_lights.find(handle); it != m_lights.end())
+    {
+        return it->second;
+    }
+    if (auto it = m_cameras.find(handle); it != m_cameras.end())
+    {
+        return it->second;
+    }
+    return nullptr;
+}
+
+SceneNode * Scene::getRootNode()
 {
 	return children.front().get();
 }
 
 bool Scene::isNameUsed(std::string name)
 {
-	return m_nodeNames.find(name) != m_nodeNames.end();
+	return m_nodeNames.contains(name);
 }
 
 uint32_t& Scene::getNameCounter(std::string name)
 {
-	return m_nodeNames[name];
+    return m_nodeNames[name];
 }
 
 void Scene::addPrimitive(Primitive* primitive)
 {
 	validateName(primitive);
-	m_primitives.push_back(primitive);
+	m_primitives.emplace(SceneNodeHandle::generateHandle(), primitive);
 }
 
 void Scene::addLight(Light* light)
 {
 	validateName(light);
-	m_lights.push_back(light);
+	m_lights.emplace(SceneNodeHandle::generateHandle(), light);
 }
 
-std::vector<Primitive*>& Scene::getPrimitives()
+std::unordered_map<SceneNodeHandle, Primitive*>& Scene::getPrimitives()
 {
 	return m_primitives;
 }
 
 Primitive* Scene::getPrimitiveByID(size_t id)
 {
-	return m_primitives[id];
+    auto it = m_primitives.find(SceneNodeHandle{ static_cast<int>(id) });
+    if (it != m_primitives.end())
+    {
+        return it->second;
+    }
+	return nullptr;
 }
 
-std::vector<Light*>& Scene::getLights()
+std::unordered_map<SceneNodeHandle, Light*>&Scene::getLights()
 {
 	return m_lights;
 }
@@ -103,15 +157,15 @@ SceneNode* Scene::getActiveNode()
 
 int32_t Scene::getActivePrimitiveID()
 {
-	if (auto prim = dynamic_cast<Primitive*>(m_activeNode))
+	if (auto activePrim = dynamic_cast<Primitive*>(m_activeNode))
 	{
-		for (size_t i = 0; i < m_primitives.size(); i++)
-		{
-			if (m_primitives[i] == prim)
-			{
-				return static_cast<uint32_t>(i);
-			}
-		}
+	    for (auto& [handle, prim] : m_primitives)
+	    {
+	        if (activePrim == prim)
+	        {
+	            return static_cast<int32_t>(handle);
+	        }
+	    }
 	}
 	return -1;
 }
@@ -144,12 +198,12 @@ void Scene::clearSelectedNodes()
 
 bool Scene::isNodeSelected(SceneNode* node)
 {
-	return m_selectedNodes.find(node) != m_selectedNodes.end();
+	return m_selectedNodes.contains(node);
 }
 
 void Scene::addMaterial(std::shared_ptr<Material>&& material)
 {
-	m_materials[material->name] = std::move(material);
+    m_materials.emplace(material->name, material);
 }
 
 bool Scene::areLightsDirty()
@@ -169,7 +223,7 @@ void Scene::setActiveCamera(Camera* camera)
 
 void Scene::deleteNode(SceneNode* node)
 {
-	std::unique_ptr<SceneNode>  ptr;
+	std::unique_ptr<SceneNode> ptr;
 	if (node->parent)
 	{
 		ptr = node->parent->removeChild(node);
@@ -179,35 +233,24 @@ void Scene::deleteNode(SceneNode* node)
 		m_activeNode = nullptr;
 	}
 	m_selectedNodes.erase(node);
-	if (auto prim = dynamic_cast<Primitive*>(node))
+    SceneNodeHandle nodeHandle = getHandleOfNode(node);
+	if (dynamic_cast<Primitive*>(node))
 	{
-		auto it = std::find(m_primitives.begin(), m_primitives.end(), prim);
-		if (it != m_primitives.end())
-		{
-			m_primitives.erase(it);
-			markSceneBVHDirty();
-		}
+	    m_primitives.erase(nodeHandle);
+		markSceneBVHDirty();
 	}
-	if (auto light = dynamic_cast<Light*>(node))
+	if (dynamic_cast<Light*>(node))
 	{
-		auto it = std::find(m_lights.begin(), m_lights.end(), light);
-		if (it != m_lights.end())
-		{
-			m_lights.erase(it);
-			setLightsDirty();
-		}
+	    m_lights.erase(nodeHandle);
+		setLightsDirty();
 	}
 	if (auto camera = dynamic_cast<Camera*>(node))
 	{
 		if (m_cameras.size() < 1)
 		{
-			return;
+		    return;
 		}
-		auto it = std::find(m_cameras.begin(), m_cameras.end(), camera);
-		if (it != m_cameras.end())
-		{
-			m_cameras.erase(it);
-		}
+	    m_cameras.erase(nodeHandle);
 		if (m_activeCamera == camera)
 		{
 			m_activeCamera = nullptr;
@@ -221,53 +264,58 @@ SceneNode* Scene::duplicateNode(SceneNode* node)
 	if (node->parent)
 	{
 		std::unique_ptr<SceneNode> newNode = node->clone();
-		validateName(newNode.get());
+	    // The pointer above would be moved, so let's copy it
+		nodeDuplicate = newNode.get();
+		validateName(nodeDuplicate);
 		node->parent->addChild(std::move(newNode));
-		if (auto prim = dynamic_cast<Primitive*>(node))
+		SceneNodeHandle preferredHandle = SceneNodeHandle::generateHandle();
+		if (auto newPrim = dynamic_cast<Primitive*>(nodeDuplicate))
 		{
-			Primitive* newPrim = dynamic_cast<Primitive*>(node->parent->children.back().get());
-			m_primitives.push_back(newPrim);
+			m_primitives.emplace(preferredHandle, newPrim);
 			markSceneBVHDirty();
-			nodeDuplicate = newPrim;
 		}
-		if (auto light = dynamic_cast<Light*>(node))
+		if (auto newLight = dynamic_cast<Light*>(nodeDuplicate))
 		{
-			Light* newLight = dynamic_cast<Light*>(node->parent->children.back().get());
-			m_lights.push_back(newLight);
+			m_lights.emplace(preferredHandle, newLight);
 			setLightsDirty();
-			nodeDuplicate = newLight;
 		}
-		if (auto camera = dynamic_cast<Camera*>(node))
+		if (auto newCamera = dynamic_cast<Camera*>(nodeDuplicate))
 		{
-			Camera* newCamera = dynamic_cast<Camera*>(node->parent->children.back().get());
-			m_cameras.push_back(newCamera);
-			nodeDuplicate = newCamera;
+			m_cameras.emplace(preferredHandle, newCamera);
 		}
 	}
 	return nodeDuplicate;
 }
 
-SceneNode* Scene::adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode)
+SceneNode* Scene::adoptClonedNode(
+    std::unique_ptr<SceneNode>&& clonedNode,
+    SceneNodeHandle preferredHandle
+    )
 {
-	// parent of a cloned node must be nullptr
+    if (!preferredHandle.isValid())
+    {
+        preferredHandle = SceneNodeHandle::generateHandle();
+    }
+
+	// the parent of a cloned node must be nullptr
 	assert(clonedNode->parent == nullptr);
 	addChild(std::move(clonedNode));
 	SceneNode* nodeClone = nullptr;
 	if (auto prim = dynamic_cast<Primitive*>(children.back().get()))
 	{
-		m_primitives.push_back(prim);
+		m_primitives.emplace(preferredHandle, prim);
 		markSceneBVHDirty();
 		nodeClone = prim;
 	}
 	if (auto light = dynamic_cast<Light*>(children.back().get()))
 	{
-		m_lights.push_back(light);
+		m_lights.emplace(preferredHandle, light);
 		setLightsDirty();
 		nodeClone = light;
 	}
 	if (auto camera = dynamic_cast<Camera*>(children.back().get()))
 	{
-		m_cameras.push_back(camera);
+		m_cameras.emplace(preferredHandle, camera);
 		nodeClone = camera;
 	}
 	setActiveNode(nodeClone);
@@ -293,12 +341,13 @@ void Scene::buildSceneBVH()
 	m_primBboxes.resize(primCount);
 	m_primCenters.resize(primCount);
 
-	for (size_t i = 0; i < primCount; i++)
+    int32_t i = 0;
+    for (auto& [handle, prim] : m_primitives)
 	{
-		Primitive* prim = m_primitives[i];
 		glm::mat4 worldMatrix = prim->getWorldMatrix();
 		m_primBboxes[i] = prim->getWorldBBox(worldMatrix);
 		m_primCenters[i] = m_primBboxes[i].get_center();
+        ++i;
 	}
 
 	m_sceneBVH = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters));

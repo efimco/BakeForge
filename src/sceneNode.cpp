@@ -4,6 +4,7 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include "scene.hpp"
 
+std::atomic_int32_t SceneNodeHandle::s_handleGenerator = 0;
 
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform), children(std::move(other.children)), visible(other.visible), dirty(other.dirty),
@@ -71,7 +72,7 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	}
 
 	child->parent = this;
-	SceneNode* childPtr = child.get();  // Get raw pointer before moving
+	SceneNode* childPtr = child.get();  // Get a raw pointer before moving
 	children.push_back(std::move(child));
 
 	if (dynamic_cast<Scene*>(this))
