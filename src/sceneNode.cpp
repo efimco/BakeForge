@@ -22,50 +22,41 @@ SceneNode::SceneNode(SceneNode&& other) noexcept
 	other.children.clear();
 }
 
-SceneNode::SceneNode(std::string name) : parent(nullptr)
+SceneNode::SceneNode(std::string name)
+	: parent(nullptr)
 {
 	this->name = name;
 }
 
 SceneNode::~SceneNode() = default;
 
-void SceneNode::onCommitTransaction(Scene* scene)
+void SceneNode::onCommitTransaction(Scene& scene)
 {
-	scene->markSceneBVHDirty();
+	scene.markSceneBVHDirty();
 }
 
-void SceneNode::copyFrom(const SceneNode* node)
+void SceneNode::copyFrom(const SceneNode& node)
 {
-	assert(node);
-
-	transform = node->transform;
-	visible = node->visible;
-	movable = node->movable;
-	name = node->name;
-
-	children.clear();
-	for (const auto& child : this->children)
-	{
-		std::unique_ptr<SceneNode> childClone = child->clone();
-		addChild(std::move(childClone));
-	}
+	transform = node.transform;
+	visible = node.visible;
+	movable = node.movable;
+	name = node.name;
 }
 
-bool SceneNode::differsFrom(const SceneNode* node) const
+bool SceneNode::differsFrom(const SceneNode& node) const
 {
-	assert(node);
 	return
-		transform.position != node->transform.position ||
-		transform.rotation != node->transform.rotation ||
-		transform.scale != node->transform.scale ||
-		visible != node->visible ||
-		movable != node->movable;
+		transform.position != node.transform.position ||
+		transform.rotation != node.transform.rotation ||
+		transform.scale != node.transform.scale ||
+		visible != node.visible ||
+		movable != node.movable;
 }
 
 std::unique_ptr<SceneNode> SceneNode::clone() const
 {
 	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
-	newNode->copyFrom(this);
+	newNode->copyFrom(*this);
 	return newNode;
 }
 

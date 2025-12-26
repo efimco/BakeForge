@@ -12,7 +12,7 @@ DuplicateSceneNode::DuplicateSceneNode(
 	SceneNode* inSceneNode,
 	bool reuseNodeHandle)
 	: m_scene(inScene)
-	, m_nodeHandle(reuseNodeHandle ? inScene->getHandleOfNode(inSceneNode) : SceneNodeHandle::invalidHandle())
+	, m_nodeHandle(reuseNodeHandle ? inScene->findHandleOfNode(inSceneNode) : SceneNodeHandle::invalidHandle())
 	, m_validateName(!reuseNodeHandle)
 {
 	assert(inSceneNode);
@@ -31,7 +31,7 @@ std::unique_ptr<CommandBase> DuplicateSceneNode::exec()
 
 RemoveSceneNode::RemoveSceneNode(Scene* inScene, SceneNode* inSceneNode)
 	: m_scene(inScene)
-	, m_nodeHandle(inScene->getHandleOfNode(inSceneNode))
+	, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
 {
 	assert(inSceneNode);
 }

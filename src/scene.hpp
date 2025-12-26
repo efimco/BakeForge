@@ -31,10 +31,10 @@ using StringUnorderedMap = std::unordered_map<std::string, T>;
 class Scene : public SceneNode
 {
 public:
-	Scene(std::string name = "Default Scene");
-	~Scene() = default;
+	explicit Scene(std::string_view name = "Default Scene");
+	~Scene() override = default;
 
-	SceneNodeHandle getHandleOfNode(SceneNode* node);
+	SceneNodeHandle findHandleOfNode(SceneNode* node);
 	SceneNode* getNodeByHandle(SceneNodeHandle handle);
 	SceneNode* getRootNode();
 	bool isNameUsed(std::string name);
@@ -62,7 +62,6 @@ public:
 	void clearSelectedNodes();
 	bool isNodeSelected(SceneNode* node);
 
-
 	bool areLightsDirty();
 	void setLightsDirty(bool dirty = true);
 	void setActiveCamera(Camera* camera);
@@ -87,19 +86,19 @@ private:
 	SceneUnorderedMap<Camera*> m_cameras;
 	StringUnorderedMap<std::shared_ptr<Texture>> m_textures; // path + actual texture
 	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
-	Camera* m_activeCamera = nullptr;
-
-	SceneNode* m_activeNode = nullptr;
-
-	std::unordered_map<SceneNode*, bool> m_selectedNodes;
-
-	bool m_lightsAreDirty = false;
-
 	StringUnorderedMap<uint32_t> m_nodeNames;
 
 	std::unique_ptr<Bvh> m_sceneBVH;
 	std::vector<BBox> m_primBboxes; // World-space bboxes for each primitive
 	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
-	bool m_sceneBVHDirty = true;
+
 	std::unique_ptr<bvh::v2::ThreadPool> m_threadPool;
+
+	std::unordered_map<SceneNode*, bool> m_selectedNodes;
+
+	Camera* m_activeCamera = nullptr;
+	SceneNode* m_activeNode = nullptr;
+
+	bool m_lightsAreDirty = false;
+	bool m_sceneBVHDirty = true;
 };

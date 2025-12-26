@@ -29,16 +29,15 @@ LightData Light::getLightData()
 	return data;
 }
 
-void Light::onCommitTransaction(Scene* scene)
+void Light::onCommitTransaction(Scene& scene)
 {
-	dirty = true;
-	scene->setLightsDirty(true);
+	scene.setLightsDirty(true);
 }
 
-void Light::copyFrom(const SceneNode* node)
+void Light::copyFrom(const SceneNode& node)
 {
 	SceneNode::copyFrom(node);
-	if (const auto lightNode = dynamic_cast<const Light*>(node))
+	if (const auto lightNode = dynamic_cast<const Light*>(&node))
 	{
 		intensity = lightNode->intensity;
 		color = lightNode->color;
@@ -50,11 +49,11 @@ void Light::copyFrom(const SceneNode* node)
 	}
 }
 
-bool Light::differsFrom(const SceneNode* node) const
+bool Light::differsFrom(const SceneNode& node) const
 {
 	if (!SceneNode::differsFrom(node))
 	{
-		if (const auto lightNode = dynamic_cast<const Light*>(node))
+		if (const auto lightNode = dynamic_cast<const Light*>(&node))
 		{
 			return
 				intensity != lightNode->intensity ||
@@ -72,6 +71,6 @@ bool Light::differsFrom(const SceneNode* node) const
 std::unique_ptr<SceneNode> Light::clone() const
 {
 	std::unique_ptr<Light> lightNode = std::make_unique<Light>(type, transform.position, name);
-	lightNode->copyFrom(this);
+	lightNode->copyFrom(*this);
 	return lightNode;
 }

@@ -9,12 +9,12 @@
 #include "material.hpp"
 #include "camera.hpp"
 
-Scene::Scene(std::string name)
+Scene::Scene(std::string_view name)
 {
 	this->name = name;
 }
 
-SceneNodeHandle Scene::getHandleOfNode(SceneNode* node)
+SceneNodeHandle Scene::findHandleOfNode(SceneNode* node)
 {
 	if (auto prim = dynamic_cast<Primitive*>(node))
 	{
@@ -245,7 +245,7 @@ void Scene::deleteNode(SceneNode* node)
 		m_activeNode = nullptr;
 	}
 	m_selectedNodes.erase(node);
-	SceneNodeHandle nodeHandle = getHandleOfNode(node);
+	SceneNodeHandle nodeHandle = findHandleOfNode(node);
 	if (dynamic_cast<Primitive*>(node))
 	{
 		m_primitives.erase(nodeHandle);
