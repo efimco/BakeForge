@@ -17,11 +17,11 @@ SceneNodeCopy::SceneNodeCopy(Scene* inScene, SceneNode* inSceneNode)
 
 std::unique_ptr<CommandBase> SceneNodeCopy::exec()
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
-    auto redoTransaction = std::make_unique<SceneNodeCopy>(m_scene, sceneNode);
-    sceneNode->copyFrom(m_sceneNodeClone.get());
-    return redoTransaction;
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
+	auto redoTransaction = std::make_unique<SceneNodeCopy>(m_scene, sceneNode);
+	sceneNode->copyFrom(m_sceneNodeClone.get());
+	return redoTransaction;
 }
 
 bool SceneNodeCopy::merge(SnapshotBase* command)
@@ -43,15 +43,15 @@ bool SceneNodeCopy::merge(SnapshotBase* command)
 
 bool SceneNodeCopy::containsChanges() const
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
 	return m_sceneNodeClone->differsFrom(sceneNode);
 }
 
 void SceneNodeCopy::onCommitTransaction()
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
 	sceneNode->onCommitTransaction(m_scene);
 }
 
@@ -64,11 +64,11 @@ SceneNodeTransform::SceneNodeTransform(Scene* inScene, SceneNode* inSceneNode)
 
 std::unique_ptr<CommandBase> SceneNodeTransform::exec()
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
-    auto redoTransaction = std::make_unique<SceneNodeTransform>(m_scene, sceneNode);
-    sceneNode->transform = m_savedTransform;
-    return redoTransaction;
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
+	auto redoTransaction = std::make_unique<SceneNodeTransform>(m_scene, sceneNode);
+	sceneNode->transform = m_savedTransform;
+	return redoTransaction;
 }
 
 bool SceneNodeTransform::merge(SnapshotBase* command)
@@ -89,8 +89,8 @@ bool SceneNodeTransform::merge(SnapshotBase* command)
 
 bool SceneNodeTransform::containsChanges() const
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
 	return
 		sceneNode->transform.position != m_savedTransform.position ||
 		sceneNode->transform.rotation != m_savedTransform.rotation ||
@@ -99,8 +99,8 @@ bool SceneNodeTransform::containsChanges() const
 
 void SceneNodeTransform::onCommitTransaction()
 {
-    SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
-    assert(sceneNode);
+	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+	assert(sceneNode);
 	sceneNode->onCommitTransaction(m_scene);
 }
 

@@ -46,4 +46,4 @@ protected:
     Transform m_savedTransform;
 };
 
-};
+}

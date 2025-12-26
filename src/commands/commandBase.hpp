@@ -19,5 +19,4 @@ protected:
 
 	// Whether this command would erase all previous history when committed
 	bool m_breakHistory : 1 = false;
-
 };

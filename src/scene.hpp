@@ -22,10 +22,10 @@ using BBox = bvh::v2::BBox<Scalar, 3>;
 using Node = bvh::v2::Node<Scalar, 3>;
 using Bvh = bvh::v2::Bvh<Node>;
 
-template<typename T>
+template <typename T>
 using SceneUnorderedMap = std::unordered_map<SceneNodeHandle, T>;
 
-template<typename T>
+template <typename T>
 using StringUnorderedMap = std::unordered_map<std::string, T>;
 
 class Scene : public SceneNode
@@ -34,8 +34,8 @@ public:
 	Scene(std::string name = "Default Scene");
 	~Scene() = default;
 
-    SceneNodeHandle getHandleOfNode(SceneNode* node);
-    SceneNode* getNodeByHandle(SceneNodeHandle handle);
+	SceneNodeHandle getHandleOfNode(SceneNode* node);
+	SceneNode* getNodeByHandle(SceneNodeHandle handle);
 	SceneNode* getRootNode();
 	bool isNameUsed(std::string name);
 	uint32_t& getNameCounter(std::string name);
@@ -68,10 +68,9 @@ public:
 	void setActiveCamera(Camera* camera);
 
 	void deleteNode(SceneNode* node);
-	SceneNode* duplicateNode(SceneNode* node);
 	SceneNode* adoptClonedNode(
-	    std::unique_ptr<SceneNode>&& clonedNode,
-	    SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
+		std::unique_ptr<SceneNode>&& clonedNode,
+		SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
 	Camera* getActiveCamera();
 
 	void buildSceneBVH();
@@ -80,13 +79,14 @@ public:
 	void rebuildSceneBVHIfDirty();
 	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;
+
 private:
 	SceneNode m_rootNode;
 	SceneUnorderedMap<Primitive*> m_primitives;
-    SceneUnorderedMap<Light*> m_lights;
-    SceneUnorderedMap<Camera*> m_cameras;
-    StringUnorderedMap<std::shared_ptr<Texture>> m_textures; // path + actual texture
-    StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
+	SceneUnorderedMap<Light*> m_lights;
+	SceneUnorderedMap<Camera*> m_cameras;
+	StringUnorderedMap<std::shared_ptr<Texture>> m_textures; // path + actual texture
+	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	Camera* m_activeCamera = nullptr;
 
 	SceneNode* m_activeNode = nullptr;
@@ -102,5 +102,4 @@ private:
 	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
 	bool m_sceneBVHDirty = true;
 	std::unique_ptr<bvh::v2::ThreadPool> m_threadPool;
-
 };
