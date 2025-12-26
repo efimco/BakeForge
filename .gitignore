@@ -2,6 +2,8 @@
 *.d
 build/
 .vscode/
+.vs/
+.idea/
 
 # Large assets (use Git LFS or download separately)
 *.glb
