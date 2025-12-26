@@ -23,13 +23,14 @@ public:
 
 	SceneNode(std::string name = "SceneNode");
 	SceneNode(const SceneNode&) = delete;
-	SceneNode& operator=(const SceneNode&) = delete;
 	SceneNode(SceneNode&& other) noexcept;
+	SceneNode& operator=(const SceneNode&) = delete;
+	SceneNode& operator=(SceneNode&&) = delete;
 	virtual ~SceneNode();
 
-	virtual void onCommitTransaction(Scene* scene);
-	virtual void copyFrom(const SceneNode* node);
-	virtual bool differsFrom(const SceneNode* node) const;
+	virtual void onCommitTransaction(Scene& scene);
+	virtual void copyFrom(const SceneNode& node);
+	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
 	void addChild(std::unique_ptr<SceneNode>&& child);
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);

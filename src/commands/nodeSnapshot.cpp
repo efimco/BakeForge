@@ -9,7 +9,7 @@ namespace Snapshot
 
 SceneNodeCopy::SceneNodeCopy(Scene* inScene, SceneNode* inSceneNode)
 	: m_scene(inScene)
-	, m_nodeHandle(inScene->getHandleOfNode(inSceneNode))
+	, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
 {
 	assert(inSceneNode);
 	m_sceneNodeClone = inSceneNode->clone();
@@ -20,7 +20,7 @@ std::unique_ptr<CommandBase> SceneNodeCopy::exec()
 	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 	assert(sceneNode);
 	auto redoTransaction = std::make_unique<SceneNodeCopy>(m_scene, sceneNode);
-	sceneNode->copyFrom(m_sceneNodeClone.get());
+	sceneNode->copyFrom(*m_sceneNodeClone);
 	return redoTransaction;
 }
 
@@ -45,19 +45,19 @@ bool SceneNodeCopy::containsChanges() const
 {
 	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 	assert(sceneNode);
-	return m_sceneNodeClone->differsFrom(sceneNode);
+	return m_sceneNodeClone->differsFrom(*sceneNode);
 }
 
 void SceneNodeCopy::onCommitTransaction()
 {
 	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 	assert(sceneNode);
-	sceneNode->onCommitTransaction(m_scene);
+	sceneNode->onCommitTransaction(*m_scene);
 }
 
 SceneNodeTransform::SceneNodeTransform(Scene* inScene, SceneNode* inSceneNode)
 	: m_scene(inScene)
-	, m_nodeHandle(inScene->getHandleOfNode(inSceneNode))
+	, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
 {
 	m_savedTransform = inSceneNode->transform;
 }
@@ -101,7 +101,7 @@ void SceneNodeTransform::onCommitTransaction()
 {
 	SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 	assert(sceneNode);
-	sceneNode->onCommitTransaction(m_scene);
+	sceneNode->onCommitTransaction(*m_scene);
 }
 
 }
