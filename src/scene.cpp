@@ -280,6 +280,8 @@ SceneNode* Scene::adoptClonedNode(
 		preferredHandle = SceneNodeHandle::generateHandle();
 	}
 
+	// it's an error if a preferred handle is taken
+	assert(getNodeByHandle(preferredHandle) == nullptr);
 	// the parent of a cloned node must be nullptr
 	assert(clonedNode->parent == nullptr);
 	addChild(std::move(clonedNode));
