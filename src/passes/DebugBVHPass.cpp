@@ -246,7 +246,7 @@ void DebugBVHPass::updateVertexBuffer(Scene* scene, int maxDepth)
 	// Also draw per-primitive BVHs if enabled
 	if (m_showPrimitiveBVH)
 	{
-		for (Primitive* prim : scene->getPrimitives())
+		for (auto& [handle, prim] : scene->getPrimitives())
 		{
 			addPrimitiveBVHBoxes(prim, maxDepth);
 			if (m_vertices.size() > m_maxVertices - 24) break;

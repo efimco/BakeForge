@@ -114,9 +114,8 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
 
-	for (int i = 0; i < scene->getPrimitiveCount(); i++)
+    for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		Primitive* prim = scene->getPrimitives()[i];
 		update(view, projection, prim);
 		
 		// Bind albedo texture for alpha testing

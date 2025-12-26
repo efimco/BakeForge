@@ -1,10 +1,12 @@
 #pragma once
-#include "transform.hpp"
-#include <glm/glm.hpp>
+
 #include <memory>
 #include <string>
-#include <vector>
 #include <list>
+
+#include <glm/glm.hpp>
+
+#include "transform.hpp"
 
 class Scene;
 
