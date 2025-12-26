@@ -122,6 +122,12 @@ SceneUnorderedMap<Light*>& Scene::getLights()
 	return m_lights;
 }
 
+void Scene::addCamera(Camera* camera)
+{
+	validateName(camera);
+	m_cameras.emplace(SceneNodeHandle::generateHandle(), camera);
+}
+
 size_t Scene::getPrimitiveCount()
 {
 	return m_primitives.size();

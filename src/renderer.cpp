@@ -39,6 +39,7 @@ Renderer::Renderer(const HWND& hwnd)
 	std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, glm::vec3(0.0f, 1.0f, 1.0f));
 	m_scene->addLight(pointLight.get());
 	m_scene->addChild(std::move(pointLight));
+	m_scene->addCamera(m_camera.get());
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
 	// m_scene->buildSceneBVH();
