@@ -13,19 +13,20 @@ public:
     static constexpr int32_t c_valueInvalid = 0;
 
     SceneNodeHandle() = default;
+
     explicit SceneNodeHandle(int32_t inHandle) : handle(inHandle) {}
     explicit operator int32_t() const { return handle; }
 
     bool operator==(const SceneNodeHandle& other) const { return handle == other.handle; }
     bool operator!=(const SceneNodeHandle& other) const { return !(*this == other); }
 
-    static SceneNodeHandle generateHandle() { return SceneNodeHandle{ ++s_handleGenerator };  }
-    static SceneNodeHandle invalidHandle() { return SceneNodeHandle{ c_valueInvalid }; }
+    static SceneNodeHandle generateHandle() { return SceneNodeHandle{++s_handleGenerator}; }
+    static SceneNodeHandle invalidHandle() { return SceneNodeHandle{c_valueInvalid}; }
 
     bool isValid() const { return handle != c_valueInvalid; }
 };
 
-template<>
+template <>
 struct std::hash<SceneNodeHandle>
 {
     std::size_t operator()(const SceneNodeHandle& s) const noexcept

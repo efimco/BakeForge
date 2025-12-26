@@ -7,8 +7,11 @@
 std::atomic_int32_t SceneNodeHandle::s_handleGenerator = 0;
 
 SceneNode::SceneNode(SceneNode&& other) noexcept
-	: transform(other.transform), children(std::move(other.children)), visible(other.visible), dirty(other.dirty),
-	movable(other.movable)
+	: transform(other.transform)
+	, children(std::move(other.children))
+	, visible(other.visible)
+	, dirty(other.dirty)
+	, movable(other.movable)
 {
 	this->parent = std::move(other.parent);
 	other.parent = nullptr;
@@ -59,6 +62,13 @@ bool SceneNode::differsFrom(const SceneNode* node) const
 		movable != node->movable;
 }
 
+std::unique_ptr<SceneNode> SceneNode::clone() const
+{
+	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
+	newNode->copyFrom(this);
+	return newNode;
+}
+
 void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 {
 	if (!child)
@@ -72,7 +82,7 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	}
 
 	child->parent = this;
-	SceneNode* childPtr = child.get();  // Get a raw pointer before moving
+	SceneNode* childPtr = child.get(); // Get a raw pointer before moving
 	children.push_back(std::move(child));
 
 	if (dynamic_cast<Scene*>(this))
@@ -107,26 +117,19 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	childPtr->transform.updateMatrix();
 }
 
-std::unique_ptr<SceneNode> SceneNode::clone() const
-{
-	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
-	newNode->copyFrom(this);
-	return newNode;
-}
-
 std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 {
 	if (child->parent != this)
 		return nullptr;
 
-
 	glm::mat4 childWorldMatrix = child->getWorldMatrix();
 
-
 	child->parent = nullptr;
-	auto it = std::find_if(children.begin(), children.end(),
-		[child](const std::unique_ptr<SceneNode>& ptr) { return ptr.get() == child; });
-
+	auto it = std::ranges::find_if(children,
+	   [child](const std::unique_ptr<SceneNode>& ptr)
+	   {
+		   return ptr.get() == child;
+	   });
 	if (it == children.end())
 	{
 		std::cerr << "Error: Child not found in parent's children list." << std::endl;
@@ -149,7 +152,6 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 	return removedChild;
 }
 
-
 glm::mat4 SceneNode::getWorldMatrix()
 {
 	transform.updateMatrix();
@@ -159,4 +161,3 @@ glm::mat4 SceneNode::getWorldMatrix()
 	}
 	return transform.matrix;
 };
-
