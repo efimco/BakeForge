@@ -48,6 +48,8 @@ public:
 	void addLight(Light* light);
 	SceneUnorderedMap<Light*>& getLights();
 
+	void addCamera(Camera* camera);
+
 	std::shared_ptr<Texture> getTexture(std::string name);
 	void addTexture(std::shared_ptr<Texture>&& texture);
 
