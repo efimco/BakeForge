@@ -1,8 +1,9 @@
 #include "commandManager.hpp"
-#include "commandBase.hpp"
-#include "snapshotBase.hpp"
 
 #include <cassert>
+
+#include "commandBase.hpp"
+#include "snapshotBase.hpp"
 
 bool CommandManager::commitSnapshot(std::unique_ptr<SnapshotBase>&& snapshotBase)
 {

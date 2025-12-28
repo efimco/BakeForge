@@ -1,7 +1,8 @@
 #pragma once
-#include "sceneNode.hpp"
+
 #include <glm/glm.hpp>
 
+#include "sceneNode.hpp"
 
 enum LightType
 {
@@ -27,7 +28,7 @@ struct alignas(16) LightData
 class Light : public SceneNode
 {
 public:
-	Light(LightType type, glm::vec3 position, std::string name = "Light");
+	Light(LightType type, glm::vec3 position, std::string_view nodeName = "Light");
 	LightData getLightData();
 
 	float intensity = 1.0f;

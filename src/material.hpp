@@ -1,8 +1,11 @@
 #pragma once
-#include <glm/glm.hpp>
+
 #include <string>
 #include <memory>
+
 #include <d3d11.h>
+#include <glm/glm.hpp>
+
 struct Texture;
 
 struct Material

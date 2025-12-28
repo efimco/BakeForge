@@ -1,5 +1,7 @@
 #include "sceneNode.hpp"
+
 #include <iostream>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include "scene.hpp"
@@ -9,23 +11,16 @@ std::atomic_int32_t SceneNodeHandle::s_handleGenerator = 0;
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform)
 	, children(std::move(other.children))
-	, visible(other.visible)
-	, dirty(other.dirty)
-	, movable(other.movable)
 {
 	this->parent = std::move(other.parent);
 	other.parent = nullptr;
-	other.visible = false;
-	other.dirty = false;
-	other.movable = false;
 	other.transform = Transform();
 	other.children.clear();
 }
 
-SceneNode::SceneNode(std::string name)
-	: parent(nullptr)
+SceneNode::SceneNode(std::string_view nodeName)
+	: name(nodeName)
 {
-	this->name = name;
 }
 
 SceneNode::~SceneNode() = default;
@@ -38,19 +33,12 @@ void SceneNode::onCommitTransaction(Scene& scene)
 void SceneNode::copyFrom(const SceneNode& node)
 {
 	transform = node.transform;
-	visible = node.visible;
-	movable = node.movable;
 	name = node.name;
 }
 
 bool SceneNode::differsFrom(const SceneNode& node) const
 {
-	return
-		transform.position != node.transform.position ||
-		transform.rotation != node.transform.rotation ||
-		transform.scale != node.transform.scale ||
-		visible != node.visible ||
-		movable != node.movable;
+	return !transform.exactlyEqual(node.transform);
 }
 
 std::unique_ptr<SceneNode> SceneNode::clone() const

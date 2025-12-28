@@ -1,14 +1,14 @@
 #include "FSQuad.hpp"
-#include <assert.h>
+
+#include <cassert>
 #include <iostream>
+
 #include "debugPassMacros.hpp"
 #include "appConfig.hpp"
 
-
 FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceContext>& _context)
-	:
-	m_device(_device),
-	m_context(_context)
+	: m_device(_device)
+	, m_context(_context)
 {
 
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);

@@ -1,7 +1,8 @@
 #include "window.hpp"
+
 #include <iostream>
-#include "appConfig.hpp"
 #include "imgui.h"
+#include "appConfig.hpp"
 
 Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
 {

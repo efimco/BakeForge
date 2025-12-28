@@ -1,11 +1,14 @@
 #include "DebugBVHPass.hpp"
+
+#include <iostream>
+#include <algorithm>
+
+#include <glm/gtc/type_ptr.hpp>
+
 #include "scene.hpp"
 #include "shaderManager.hpp"
 #include "primitive.hpp"
 #include "debugPassMacros.hpp"
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-#include <algorithm>
 
 struct alignas(16) DebugBVHConstantBuffer
 {
@@ -13,7 +16,8 @@ struct alignas(16) DebugBVHConstantBuffer
 };
 
 DebugBVHPass::DebugBVHPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device), m_context(context)
+	: m_device(device)
+	, m_context(context)
 {
 	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadVertexShader("debugBVH", L"..\\..\\src\\shaders\\debugBVH.hlsl", "VS");

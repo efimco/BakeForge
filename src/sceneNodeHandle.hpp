@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
+#include <unordered_map>
 
 class SceneNodeHandle
 {
@@ -34,3 +35,6 @@ struct std::hash<SceneNodeHandle>
         return static_cast<int>(s);
     }
 };
+
+template <typename T>
+using SceneUnorderedMap = std::unordered_map<SceneNodeHandle, T>;

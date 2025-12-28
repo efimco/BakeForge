@@ -1,10 +1,13 @@
 #pragma once
+
+#include <memory>
+
 #include <d3d11.h>
 #include <wrl.h>
-#include "shaderManager.hpp"
-#include <memory>
-using namespace Microsoft::WRL;
 
+#include "shaderManager.hpp"
+
+using namespace Microsoft::WRL;
 
 inline static const D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] =
 {
@@ -22,6 +25,9 @@ public:
 
 private:
 
+	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
+
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11InputLayout> m_inputLayout;
@@ -29,8 +35,6 @@ private:
 	ComPtr<ID3D11ShaderResourceView> m_srv;
 	ComPtr<ID3D11Texture2D> m_texture;
 	ComPtr<ID3D11SamplerState> m_samplerState;
-	const ComPtr<ID3D11Device>& m_device;
-	const ComPtr<ID3D11DeviceContext>& m_context;
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 
 	std::unique_ptr<ShaderManager> m_shaderManager;

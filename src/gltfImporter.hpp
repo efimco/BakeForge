@@ -1,12 +1,14 @@
 #pragma once
 
-#include <wrl.h>
-#include <d3d11.h>
-
-#include <tiny_gltf.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <memory>
+
+#include <wrl.h>
+#include <d3d11.h>
+#include <tiny_gltf.h>
+
 #include "primitiveData.hpp"
 
 class Scene;

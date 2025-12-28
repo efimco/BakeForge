@@ -1,12 +1,14 @@
 #include "GBuffer.hpp"
-#include "appConfig.hpp"
+
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "appConfig.hpp"
 #include "debugPassMacros.hpp"
+#include "GBufferTextures.hpp"
 #include "material.hpp"
 #include "texture.hpp"
 #include "scene.hpp"
-#include "GBufferTextures.hpp"
 #include "primitive.hpp"
 #include "shaderManager.hpp"
 
@@ -21,7 +23,9 @@ struct alignas(16) ConstantBufferData
 	float padding2; // Align to 16 bytes
 };
 
-GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) : m_device(device), m_context(context)
+GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context)
+	: m_device(device)
+	, m_context(context)
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
