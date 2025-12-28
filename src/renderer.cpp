@@ -1,25 +1,29 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include "renderer.hpp"
+
+#include <iostream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
-#include "renderer.hpp"
-#include "gltfImporter.hpp"
 #include "appConfig.hpp"
 #include "dxDevice.hpp"
+#include "gltfImporter.hpp"
 #include "shaderManager.hpp"
 #include "uiManager.hpp"
+
+#include "passes/DebugBVHPass.hpp"
+#include "passes/FSQuad.hpp"
+#include "passes/GBuffer.hpp"
+#include "passes/ZPrePass.hpp"
+#include "passes/deferedPass.hpp"
+#include "passes/objectPicker.hpp"
+#include "passes/pbrCubeMapPass.hpp"
+
 #include "camera.hpp"
-#include "GBuffer.hpp"
-#include "FSQuad.hpp"
-#include "objectPicker.hpp"
-#include "ZPrePass.hpp"
-#include "deferedPass.hpp"
 #include "scene.hpp"
-#include "pbrCubeMapPass.hpp"
-#include "DebugBVHPass.hpp"
 #include "light.hpp"
+
 Renderer::Renderer(const HWND& hwnd)
 {
 	m_device = std::make_unique<DXDevice>(hwnd);

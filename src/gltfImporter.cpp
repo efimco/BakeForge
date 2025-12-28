@@ -1,15 +1,18 @@
-#include <iostream>
 #include "gltfImporter.hpp"
+
+#include <iostream>
+#include <memory>
+
+#include <glm/gtc/type_ptr.hpp>
+
 #include "primitive.hpp"
 #include "texture.hpp"
 #include "material.hpp"
 #include "scene.hpp"
-#include <memory>
-#include <glm/gtc/type_ptr.hpp>
 
-
-
-GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene) : m_device(device), m_scene(scene)
+GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene)
+	: m_device(device)
+	, m_scene(scene)
 {
 	const tinygltf::Model model = readGlb(path);
 	processGlb(model);

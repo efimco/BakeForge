@@ -1,10 +1,12 @@
 #include "deferedPass.hpp"
-#include "appConfig.hpp"
+
 #include <iostream>
+
+#include "appConfig.hpp"
+#include "GBufferTextures.hpp"
 #include "debugPassMacros.hpp"
 #include "shaderManager.hpp"
 #include "scene.hpp"
-#include "GBufferTextures.hpp"
 #include "light.hpp"
 
 static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
@@ -21,7 +23,8 @@ struct alignas(16) DeferredConstantBuffer
 };
 
 DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device), m_context(context)
+	: m_device(device)
+	, m_context(context)
 {
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	createOrResize();

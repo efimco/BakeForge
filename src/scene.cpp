@@ -1,8 +1,8 @@
 #include "scene.hpp"
 
 #include <iostream>
+#include <chrono>
 
-#include "chrono"
 #include "primitive.hpp"
 #include "light.hpp"
 #include "texture.hpp"
@@ -14,7 +14,7 @@ Scene::Scene(std::string_view name)
 	this->name = name;
 }
 
-SceneNodeHandle Scene::findHandleOfNode(SceneNode* node)
+SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 {
 	if (auto prim = dynamic_cast<Primitive*>(node))
 	{
@@ -75,19 +75,24 @@ SceneNode* Scene::getNodeByHandle(SceneNodeHandle handle)
 	return nullptr;
 }
 
-SceneNode* Scene::getRootNode()
+SceneNode* Scene::getRootNode() const
 {
 	return children.front().get();
 }
 
-bool Scene::isNameUsed(std::string name)
+bool Scene::isNameUsed(std::string_view name) const
 {
 	return m_nodeNames.contains(name);
 }
 
-uint32_t& Scene::getNameCounter(std::string name)
+uint32_t& Scene::getNameCounter(std::string_view name)
 {
-	return m_nodeNames[name];
+	auto it = m_nodeNames.find(name);
+	if (it == m_nodeNames.end())
+	{
+		it = m_nodeNames.emplace(name, 0).first;
+	}
+	return it->second;
 }
 
 void Scene::addPrimitive(Primitive* primitive)
@@ -128,12 +133,12 @@ void Scene::addCamera(Camera* camera)
 	m_cameras.emplace(SceneNodeHandle::generateHandle(), camera);
 }
 
-size_t Scene::getPrimitiveCount()
+size_t Scene::getPrimitiveCount() const
 {
 	return m_primitives.size();
 }
 
-std::shared_ptr<Texture> Scene::getTexture(std::string name)
+std::shared_ptr<Texture> Scene::getTexture(std::string_view name)
 {
 	auto it = m_textures.find(name);
 	if (it != m_textures.end())
@@ -148,7 +153,7 @@ void Scene::addTexture(std::shared_ptr<Texture>&& texture)
 	m_textures[texture->name] = std::move(texture);
 }
 
-std::shared_ptr<Material> Scene::getMaterial(std::string name)
+std::shared_ptr<Material> Scene::getMaterial(std::string_view name)
 {
 	auto it = m_materials.find(name);
 	if (it != m_materials.end())
@@ -158,7 +163,7 @@ std::shared_ptr<Material> Scene::getMaterial(std::string name)
 	return nullptr;
 }
 
-std::vector<std::string> Scene::getMaterialNames()
+std::vector<std::string> Scene::getMaterialNames() const
 {
 	std::vector<std::string> materialNames;
 	for (const auto& pair : m_materials)
@@ -352,7 +357,7 @@ void Scene::markSceneBVHDirty()
 	m_sceneBVHDirty = true;
 }
 
-bool Scene::isSceneBVHDirty()
+bool Scene::isSceneBVHDirty() const
 {
 	return m_sceneBVHDirty;
 }

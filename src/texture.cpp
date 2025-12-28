@@ -1,5 +1,7 @@
 #include "texture.hpp"
-#include "iostream"
+
+#include <iostream>
+
 #include "stb_image.h"
 
 Texture::Texture(const ComPtr<ID3D11Device>& _device) : device(_device) {}

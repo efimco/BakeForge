@@ -1,6 +1,9 @@
 #include "camera.hpp"
-#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
+
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "inputEventsHandler.hpp"
 #include "appConfig.hpp"
 
@@ -9,9 +12,10 @@ static const float PITCH = 0.0f;
 static const float FOV = 45.f;
 static const glm::vec3 WORLD_UP = glm::vec3(0, 1, 0);
 
-Camera::Camera(glm::vec3 pos)
-	: front(glm::vec3(0.0f, 0.0f, -1.0f)), fov(FOV),
-	cameraReseted(true)
+Camera::Camera(glm::vec3 pos, std::string_view nodeName)
+	: SceneNode(nodeName)
+	, fov(FOV)
+	, front(0.0f, 0.0f, -1.0f)
 {
 	// Initialize transform using SceneNode's properties
 	transform.position = pos;

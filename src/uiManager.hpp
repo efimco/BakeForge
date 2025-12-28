@@ -4,8 +4,9 @@
 
 #include <d3d11.h>
 #include <wrl.h>
+
 #include "imgui.h"
-#include "glm/glm.hpp"
+#include <glm/glm.hpp>
 
 #undef min
 #undef max
@@ -30,12 +31,18 @@ using namespace Microsoft::WRL;
 class UIManager
 {
 public:
-	UIManager(const ComPtr<ID3D11Device>& device,
+	UIManager(
+		const ComPtr<ID3D11Device>& device,
 		const ComPtr<ID3D11DeviceContext>& deviceContext,
 		const HWND& hwnd);
 	~UIManager();
 
-	void draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene, const glm::mat4& view, const glm::mat4& projection);
+	void draw(
+		const ComPtr<ID3D11ShaderResourceView>& srv,
+		const GBuffer& gbuffer,
+		Scene* scene,
+		const glm::mat4& view,
+		const glm::mat4& projection);
 	uint32_t* getMousePos();
 
 private:

@@ -1,15 +1,16 @@
 #include "light.hpp"
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/rotate_vector.hpp>
 
 #include "scene.hpp"
 
-Light::Light(LightType type, glm::vec3 position, std::string _name)
-	: type(type)
+Light::Light(LightType type, glm::vec3 position, std::string_view nodeName)
+	: SceneNode(nodeName)
+	, type(type)
 {
 	transform.position = position;
 	transform.updateMatrix();
-	name = _name;
 }
 
 LightData Light::getLightData()

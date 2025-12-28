@@ -1,9 +1,10 @@
 #pragma once
 
+#include <memory>
+
 #include <d3d11.h>
 #include <wrl.h>
 #include <glm/glm.hpp>
-#include <memory>
 
 using namespace Microsoft::WRL;
 
@@ -18,8 +19,9 @@ public:
 	uint32_t readBackID;
 	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene);
 private:
-	const ComPtr<ID3D11Device>& m_device;
-	const ComPtr<ID3D11DeviceContext>& m_context;
+	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
+
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_structuredBuffer;
 	ComPtr<ID3D11Buffer> m_stagingBuffer;

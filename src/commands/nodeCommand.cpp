@@ -1,8 +1,8 @@
 #include "nodeCommand.hpp"
 
-#include "scene.hpp"
-
 #include <cassert>
+
+#include "scene.hpp"
 
 namespace Command
 {

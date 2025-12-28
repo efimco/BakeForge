@@ -14,14 +14,11 @@ class SceneNode
 {
 public:
 	Transform transform;
+	std::string name;
 	std::list<std::unique_ptr<SceneNode>> children;
 	SceneNode* parent = nullptr;
-	bool visible = true;
-	bool dirty = false;
-	bool movable = true;
-	std::string name;
 
-	SceneNode(std::string name = "SceneNode");
+	explicit SceneNode(std::string_view nodeName = "SceneNode");
 	SceneNode(const SceneNode&) = delete;
 	SceneNode(SceneNode&& other) noexcept;
 	SceneNode& operator=(const SceneNode&) = delete;

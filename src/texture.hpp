@@ -1,9 +1,10 @@
 #pragma once
 
+#include <string>
+
 #include <wrl.h>
 #include <d3d11.h>
 
-#include <string>
 #include <tiny_gltf.h>
 
 using namespace Microsoft::WRL;

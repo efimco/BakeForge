@@ -1,14 +1,16 @@
 #pragma once
 
-#include "sceneNode.hpp"
-#include "sceneNodeHandle.hpp"
-#include <bvh/v2/bvh.h>
-#include <bvh/v2/thread_pool.h>
 #include <memory>
-
 #include <string>
 #include <string_view>
 #include <unordered_map>
+
+#include <bvh/v2/bvh.h>
+#include <bvh/v2/thread_pool.h>
+
+#include "sceneNode.hpp"
+#include "sceneNodeHandle.hpp"
+#include "utility/stringUnorderedMap.hpp"
 
 class Primitive;
 struct Texture;
@@ -22,40 +24,34 @@ using BBox = bvh::v2::BBox<Scalar, 3>;
 using Node = bvh::v2::Node<Scalar, 3>;
 using Bvh = bvh::v2::Bvh<Node>;
 
-template <typename T>
-using SceneUnorderedMap = std::unordered_map<SceneNodeHandle, T>;
-
-template <typename T>
-using StringUnorderedMap = std::unordered_map<std::string, T>;
-
 class Scene : public SceneNode
 {
 public:
 	explicit Scene(std::string_view name = "Default Scene");
 	~Scene() override = default;
 
-	SceneNodeHandle findHandleOfNode(SceneNode* node);
+	SceneNodeHandle findHandleOfNode(SceneNode* node) const;
 	SceneNode* getNodeByHandle(SceneNodeHandle handle);
-	SceneNode* getRootNode();
-	bool isNameUsed(std::string name);
-	uint32_t& getNameCounter(std::string name);
+	SceneNode* getRootNode() const;
+	bool isNameUsed(std::string_view name) const;
+	uint32_t& getNameCounter(std::string_view name);
 
 	void addPrimitive(Primitive* primitive);
 	SceneUnorderedMap<Primitive*>& getPrimitives();
 	Primitive* getPrimitiveByID(size_t id);
-	size_t getPrimitiveCount();
+	size_t getPrimitiveCount() const;
 
 	void addLight(Light* light);
 	SceneUnorderedMap<Light*>& getLights();
 
 	void addCamera(Camera* camera);
 
-	std::shared_ptr<Texture> getTexture(std::string name);
+	std::shared_ptr<Texture> getTexture(std::string_view name);
 	void addTexture(std::shared_ptr<Texture>&& texture);
 
-	std::shared_ptr<Material> getMaterial(std::string name);
+	std::shared_ptr<Material> getMaterial(std::string_view name);
 	void addMaterial(std::shared_ptr<Material>&& material);
-	std::vector<std::string> getMaterialNames();
+	std::vector<std::string> getMaterialNames() const;
 
 	SceneNode* getActiveNode();
 	int32_t getActivePrimitiveID();
@@ -76,7 +72,7 @@ public:
 
 	void buildSceneBVH();
 	void markSceneBVHDirty();
-	bool isSceneBVHDirty();
+	bool isSceneBVHDirty() const;
 	void rebuildSceneBVHIfDirty();
 	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;

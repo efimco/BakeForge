@@ -1,14 +1,15 @@
 #include "ZPrePass.hpp"
-#include "appConfig.hpp"
+
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "appConfig.hpp"
 #include "debugPassMacros.hpp"
 #include "material.hpp"
 #include "texture.hpp"
 #include "shaderManager.hpp"
 #include "primitive.hpp"
 #include "scene.hpp"
-#include "debugPassMacros.hpp"
 
 struct alignas(16) ConstantBufferData
 {

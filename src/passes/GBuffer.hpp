@@ -1,8 +1,11 @@
 #pragma once
+
+#include <memory>
+
 #include <d3d11_1.h>
 #include <wrl.h>
 #include <glm/glm.hpp>
-#include <memory>
+
 #include "GBufferTextures.hpp"
 
 class Scene;
@@ -38,6 +41,8 @@ public:
 
 private:
 
+	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
 
 	ComPtr<ID3D11Texture2D> t_albedo;
 	ComPtr<ID3D11Texture2D> t_metallicRoughness;
@@ -65,9 +70,5 @@ private:
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
 
 	ID3D11RenderTargetView* m_rtvs[5];
-
-	const ComPtr<ID3D11Device>& m_device;
-	const ComPtr<ID3D11DeviceContext>& m_context;
-
 	std::unique_ptr<ShaderManager> m_shaderManager;
 };

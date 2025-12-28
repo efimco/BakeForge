@@ -3,20 +3,29 @@
 #endif
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include <assert.h>
+#include <cassert>
 #include <chrono>
 #include <ctime>
-#include <d3d11.h>
-#include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
-#include <wrl.h>
 #include <filesystem>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stb_image.h>
+
+#include <wrl.h>
+#include <d3d11.h>
+#include <d3dcompiler.h>
 #include <windows.h>
 #include <ShellScalingAPI.h>
+
+#include "window.hpp"
+#include "camera.hpp"
+#include "dxDevice.hpp"
+#include "gltfImporter.hpp"
+#include "uiManager.hpp"
+#include "renderer.hpp"
 
 // No manifest approach: set process DPI awareness at runtime
 // Tries Per-Monitor v2 first, then Per-Monitor, then System-aware as last resort.
@@ -41,14 +50,6 @@ static void SetHighDpiAwarenessAtRuntime()
 		}
 	}
 }
-
-#include "window.hpp"
-#include "camera.hpp"
-#include "dxDevice.hpp"
-#include "gltfImporter.hpp"
-#include "uiManager.hpp"
-#include "renderer.hpp"
-
 
 using namespace Microsoft::WRL;
 
