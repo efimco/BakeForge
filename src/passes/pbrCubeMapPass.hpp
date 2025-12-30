@@ -16,7 +16,7 @@ using namespace Microsoft::WRL;
 class CubeMapPass
 {
 public:
-	CubeMapPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, std::string hdrImagePath);
+	CubeMapPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, std::string hdrImagePath);
 	~CubeMapPass() = default;
 
 	void createOrResize();
@@ -26,7 +26,7 @@ public:
 	ComPtr<ID3D11ShaderResourceView>& getPrefilteredSRV();
 	ComPtr<ID3D11ShaderResourceView>& getBRDFLutSRV();
 	std::string& getHDRIPath();
-	
+
 private:
 	void update(glm::mat4& view);
 	void createCubeMapResources();
@@ -54,16 +54,16 @@ private:
 	ComPtr<ID3D11Texture2D> m_backgroundTexture;
 	ComPtr<ID3D11RenderTargetView> m_backgroundRTV;
 	ComPtr<ID3D11ShaderResourceView> m_backgroundSRV;
-	
+
 	// IBL resources
 	ComPtr<ID3D11Texture2D> m_irradianceTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_irradianceUAV;
 	ComPtr<ID3D11ShaderResourceView> m_irradianceSRV;
-	
+
 	ComPtr<ID3D11Texture2D> m_prefilteredTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_prefilteredUAV;
 	ComPtr<ID3D11ShaderResourceView> m_prefilteredSRV;
-	
+
 	ComPtr<ID3D11Texture2D> m_brdfLutTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_brdfLutUAV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfLutSRV;

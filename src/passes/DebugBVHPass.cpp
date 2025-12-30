@@ -15,10 +15,10 @@ struct alignas(16) DebugBVHConstantBuffer
 	glm::mat4 viewProjection;
 };
 
-DebugBVHPass::DebugBVHPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device)
-	, m_context(context)
+DebugBVHPass::DebugBVHPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
+	m_device = device;
+	m_context = context;
 	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadVertexShader("debugBVH", L"..\\..\\src\\shaders\\debugBVH.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("debugBVH", L"..\\..\\src\\shaders\\debugBVH.hlsl", "PS");

@@ -63,17 +63,17 @@ DXDevice::DXDevice(const HWND &hWindow)
 	assert(SUCCEEDED(hr));
 }
 
-ComPtr<ID3D11DeviceContext> &DXDevice::getContext()
+ComPtr<ID3D11DeviceContext> DXDevice::getContext()
 {
 	return m_d3dDeviceContext;
 }
 
-ComPtr<IDXGISwapChain> &DXDevice::getSwapChain()
+ComPtr<IDXGISwapChain> DXDevice::getSwapChain()
 {
 	return m_dxgiSwapChain;
 }
 
-ComPtr<ID3D11Device> &DXDevice::getDevice()
+ComPtr<ID3D11Device> DXDevice::getDevice()
 {
 	return m_d3dDevice;
 }

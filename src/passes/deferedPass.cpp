@@ -22,10 +22,10 @@ struct alignas(16) DeferredConstantBuffer
 	float padding2; // Padding to align to 16 bytes
 };
 
-DeferredPass::DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device)
-	, m_context(context)
+DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
+	m_device = device;
+	m_context = context;
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	createOrResize();
 	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");

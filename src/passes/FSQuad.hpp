@@ -18,8 +18,8 @@ inline static const D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] =
 class FSQuad
 {
 public:
-	FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceContext>& _context);
-	void draw(const ComPtr<ID3D11ShaderResourceView>& srv);
+	FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context);
+	void draw(ComPtr<ID3D11ShaderResourceView> srv);
 	void createOrResize();
 	const ComPtr<ID3D11ShaderResourceView>& getSRV() const;
 
