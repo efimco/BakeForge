@@ -65,6 +65,7 @@ float4 PS(VertexOutput input) : SV_TARGET
 		// The LOD level is determined by the blurAmount
 		float lod = blurAmount; // You can scale this value as needed
 		float3 prefilteredColor = prefilteredMap.SampleLevel(samplerState, direction, lod).rgb;
+		prefilteredColor *= 0.44;
 		return float4(prefilteredColor, 1.0f);
 	}
 	// Convert direction to spherical coordinates for equirectangular sampling
@@ -78,5 +79,6 @@ float4 PS(VertexOutput input) : SV_TARGET
 
 	// Sample HDR equirectangular map
 	float3 hdrColor = hdrEquirectMap.Sample(samplerState, uv).rgb;
+	hdrColor *= 0.44;
 	return float4(hdrColor, 1.0f);
 }

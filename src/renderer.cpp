@@ -53,7 +53,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
-	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\rogland_clear_night_2k.hdr");
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
 	resize();
 }
