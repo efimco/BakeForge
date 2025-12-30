@@ -237,7 +237,7 @@ void UIManager::showMainMenuBar()
 
 void UIManager::showInvisibleDockWindow()
 {
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
 		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
 
@@ -249,7 +249,7 @@ void UIManager::showInvisibleDockWindow()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("InvisibleDockSpaceWindow", nullptr, window_flags);
+	ImGui::Begin("InvisibleDockSpaceWindow", nullptr, windowFlags);
 	ImGui::PopStyleVar(3);
 
 	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
@@ -259,7 +259,8 @@ void UIManager::showInvisibleDockWindow()
 
 void UIManager::showMaterialBrowser()
 {
-	ImGui::Begin("Material Browser");
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
+	ImGui::Begin("Material Browser", nullptr, windowFlags);
 	std::vector<std::string> materialNames = m_scene->getMaterialNames();
 	ImVec2 contentRegion = ImGui::GetContentRegionAvail();
 	float maxItemSize = 100.0f;
