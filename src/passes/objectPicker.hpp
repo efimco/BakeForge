@@ -15,7 +15,7 @@ class ShaderManager;
 class ObjectPicker
 {
 public:
-	ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
+	ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	uint32_t readBackID;
 	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene);
 private:

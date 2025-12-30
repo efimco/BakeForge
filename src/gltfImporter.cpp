@@ -10,10 +10,12 @@
 #include "material.hpp"
 #include "scene.hpp"
 
-GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene)
-	: m_device(device)
-	, m_scene(scene)
+static bool g_buildBVHOnImport = false;
+
+GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device> device, Scene* scene)
 {
+	m_device = device;
+	m_scene = scene;
 	const tinygltf::Model model = readGlb(path);
 	processGlb(model);
 
@@ -88,7 +90,8 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
-			primitive->buildBVH();
+			if (g_buildBVHOnImport)
+				primitive->buildBVH();
 			m_scene->addPrimitive(primitive.get());
 			m_scene->addChild(std::move(primitive));
 

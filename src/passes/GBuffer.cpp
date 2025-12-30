@@ -31,10 +31,10 @@ struct alignas(16) ConstantBufferData
 	float padding2; // Align to 16 bytes
 };
 
-GBuffer::GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device)
-	, m_context(context)
+GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
+	m_device = device;
+	m_context = context;
 	D3D11_RASTERIZER_DESC rasterizerDesc;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
@@ -147,7 +147,7 @@ void GBuffer::draw(const glm::mat4& view,
 
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
-    for (auto& [handle, prim] : scene->getPrimitives())
+	for (auto& [handle, prim] : scene->getPrimitives())
 	{
 		auto objectID = static_cast<int>(handle);
 		if (!prim->material)
@@ -411,27 +411,27 @@ GBufferTextures GBuffer::getGBufferTextures() const
 	return gbufferTextures;
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getAlbedoSRV() const
+ComPtr<ID3D11ShaderResourceView> GBuffer::getAlbedoSRV() const
 {
 	return srv_albedo;
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getMetallicRoughnessSRV() const
+ComPtr<ID3D11ShaderResourceView> GBuffer::getMetallicRoughnessSRV() const
 {
 	return srv_metallicRoughness;
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getNormalSRV() const
+ComPtr<ID3D11ShaderResourceView> GBuffer::getNormalSRV() const
 {
 	return srv_normal;
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getPositionSRV() const
+ComPtr<ID3D11ShaderResourceView> GBuffer::getPositionSRV() const
 {
 	return srv_position;
 }
 
-const ComPtr<ID3D11ShaderResourceView>& GBuffer::getObjectIDSRV() const
+ComPtr<ID3D11ShaderResourceView> GBuffer::getObjectIDSRV() const
 {
 	return srv_objectID;
 }

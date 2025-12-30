@@ -17,7 +17,7 @@ using namespace Microsoft::WRL;
 class GBuffer
 {
 public:
-	GBuffer(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
+	GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~GBuffer() = default;
 
 	void draw(const glm::mat4& view,
@@ -33,11 +33,11 @@ public:
 		Primitive* prim);
 	void createOrResize();
 	GBufferTextures getGBufferTextures() const;
-	const ComPtr<ID3D11ShaderResourceView>& getAlbedoSRV() const;
-	const ComPtr<ID3D11ShaderResourceView>& getMetallicRoughnessSRV() const;
-	const ComPtr<ID3D11ShaderResourceView>& getNormalSRV() const;
-	const ComPtr<ID3D11ShaderResourceView>& getPositionSRV() const;
-	const ComPtr<ID3D11ShaderResourceView>& getObjectIDSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getAlbedoSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getMetallicRoughnessSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getNormalSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getPositionSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getObjectIDSRV() const;
 
 private:
 

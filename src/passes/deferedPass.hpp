@@ -15,7 +15,7 @@ using namespace Microsoft::WRL;
 class DeferredPass
 {
 public:
-	DeferredPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context);
+	DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~DeferredPass() = default;
 
 	void createOrResize();

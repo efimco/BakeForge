@@ -22,7 +22,7 @@ struct DebugLineVertex
 class DebugBVHPass
 {
 public:
-	DebugBVHPass(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context);
+	DebugBVHPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~DebugBVHPass() = default;
 
 	void draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene,

@@ -6,11 +6,10 @@
 #include "debugPassMacros.hpp"
 #include "appConfig.hpp"
 
-FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceContext>& _context)
-	: m_device(_device)
-	, m_context(_context)
+FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context)
 {
-
+	m_device = _device;
+	m_context = _context;
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	m_shaderManager->LoadPixelShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
@@ -78,7 +77,7 @@ FSQuad::FSQuad(const ComPtr<ID3D11Device>& _device, const ComPtr<ID3D11DeviceCon
 
 }
 
-void FSQuad::draw(const ComPtr<ID3D11ShaderResourceView>& srv)
+void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 {
 	static const UINT stride = 5 * sizeof(float);
 	static const UINT offset = 0;

@@ -14,10 +14,10 @@ struct cbPicking
 	uint32_t padding[2];
 };
 
-ObjectPicker::ObjectPicker(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device)
-	, m_context(context)
+ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
+	m_device = device;
+	m_context = context;
 	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	m_shaderManager->LoadComputeShader("colorPicker", L"../../src/shaders/colorPicker.hlsl", "CS");
 

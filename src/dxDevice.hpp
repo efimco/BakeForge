@@ -11,9 +11,9 @@ public:
 	DXDevice(const HWND &hWindow);
 	~DXDevice() = default;
 
-	ComPtr<ID3D11DeviceContext> &getContext();
-	ComPtr<IDXGISwapChain> &getSwapChain();
-	ComPtr<ID3D11Device> &getDevice();
+	ComPtr<ID3D11DeviceContext> getContext();
+	ComPtr<IDXGISwapChain> getSwapChain();
+	ComPtr<ID3D11Device> getDevice();
 
 private:
 	ComPtr<ID3D11Device> m_d3dDevice;

@@ -22,7 +22,7 @@ class GLTFModel
 {
 public:
 	std::string path;
-	GLTFModel(std::string path, ComPtr<ID3D11Device>& device, Scene* scene);
+	GLTFModel(std::string path, ComPtr<ID3D11Device> device, Scene* scene);
 	~GLTFModel();
 
 private:
@@ -36,7 +36,7 @@ private:
 	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies);
 	void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals);
 	Transform getTransformFromNode(size_t meshIndex, const tinygltf::Model& model);
-	ComPtr<ID3D11Device>& m_device;
+	ComPtr<ID3D11Device> m_device;
 	Scene* m_scene;
 	std::unordered_map<uint32_t, uint32_t> m_textureIndex;
 	std::unordered_map<uint32_t, std::shared_ptr<Texture>> m_imageIndex;
