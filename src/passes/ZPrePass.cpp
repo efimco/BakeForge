@@ -16,6 +16,12 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 modelViewProjection;
 };
 
+static const D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] =
+{
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
+
 
 ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context)
 	: m_device(device), m_context(context)
@@ -57,8 +63,8 @@ ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11Device
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(
-			zPrePassInputLayoutDesc,
-			ARRAYSIZE(zPrePassInputLayoutDesc),
+			s_zPrePassInputLayoutDesc,
+			ARRAYSIZE(s_zPrePassInputLayoutDesc),
 			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer(),
 			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize(),
 			&m_inputLayout);
