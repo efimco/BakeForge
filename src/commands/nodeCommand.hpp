@@ -40,4 +40,23 @@ namespace Command
 		SceneNodeHandle m_nodeHandle;
 	};
 
+	class ReparentSceneNode final : public CommandBase
+	{
+	public:
+		ReparentSceneNode(
+			Scene* inScene,
+			SceneNode* inSceneNode,
+			SceneNode* inNewParent);
+
+	protected:
+		virtual std::unique_ptr<CommandBase> exec() override;
+
+		Scene* m_scene = nullptr;
+		SceneNodeHandle m_nodeHandle;
+		SceneNodeHandle m_newParentHandle;
+		SceneNodeHandle m_oldParentHandle;
+		bool m_oldParentIsScene = false;
+		bool m_newParentIsScene = false;
+	};
+
 };

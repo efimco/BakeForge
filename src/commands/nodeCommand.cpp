@@ -45,4 +45,25 @@ namespace Command
 		return createCommand;
 	}
 
+	ReparentSceneNode::ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent)
+	{
+		m_scene = inScene;
+		m_nodeHandle = inScene->findHandleOfNode(inSceneNode);
+		m_newParentIsScene = inNewParent == inScene;
+		m_oldParentIsScene = inSceneNode->parent == inScene;
+		m_newParentHandle = inScene->findHandleOfNode(inNewParent);
+		m_oldParentHandle = inScene->findHandleOfNode(inSceneNode->parent);
+	}
+
+	std::unique_ptr<CommandBase> ReparentSceneNode::exec()
+	{
+		SceneNode* node = m_scene->getNodeByHandle(m_nodeHandle);
+		SceneNode* newParentNode = m_newParentIsScene ? m_scene : m_scene->getNodeByHandle(m_newParentHandle);
+		SceneNode* oldParentNode = m_oldParentIsScene ? m_scene : m_scene->getNodeByHandle(m_oldParentHandle);
+		std::unique_ptr<SceneNode> nodePtr = oldParentNode->removeChild(node);
+		newParentNode->addChild(std::move(nodePtr));
+		auto reparentCommand = std::make_unique<ReparentSceneNode>(m_scene, node, oldParentNode);
+		return reparentCommand;
+	}
+
 }

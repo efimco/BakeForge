@@ -553,8 +553,8 @@ void UIManager::drawSceneGraph()
 				SceneNode* draggedNode = *(SceneNode**)payload->Data;
 				if (draggedNode && draggedNode->parent)
 				{
-					std::unique_ptr<SceneNode> nodePtr = draggedNode->parent->removeChild(draggedNode);
-					m_scene->addChild(std::move(nodePtr));
+					auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
+					m_commandManager->commitCommand(std::move(reparentSceneNode));
 				}
 			}
 			ImGui::EndDragDropTarget();
@@ -666,11 +666,8 @@ void UIManager::handleNodeDragDrop(SceneNode* targetNode)
 			SceneNode* draggedNode = *reinterpret_cast<SceneNode**>(payload->Data);
 			if (draggedNode && draggedNode != targetNode && draggedNode->parent)
 			{
-				std::unique_ptr<SceneNode> nodePtr = draggedNode->parent->removeChild(draggedNode);
-				if (nodePtr)
-				{
-					targetNode->addChild(std::move(nodePtr));
-				}
+				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetNode);
+				m_commandManager->commitCommand(std::move(reparentSceneNode));
 			}
 		}
 		ImGui::EndDragDropTarget();
