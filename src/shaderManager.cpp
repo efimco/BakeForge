@@ -1,6 +1,9 @@
 #include "shaderManager.hpp"
+
 #include <filesystem>
 #include <iostream>
+#include <unordered_map>
+
 #include <d3dcompiler.h>
 
 static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;

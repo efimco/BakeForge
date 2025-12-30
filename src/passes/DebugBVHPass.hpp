@@ -1,9 +1,11 @@
 #pragma once
+
+#include <memory>
+#include <vector>
+
 #include <d3d11.h>
 #include <wrl.h>
 #include <glm/glm.hpp>
-#include <memory>
-#include <vector>
 
 using namespace Microsoft::WRL;
 
@@ -32,7 +34,7 @@ public:
 
 	void setMaxDepth(int depth) { m_maxDepth = depth; }
 	int getMaxDepth() const { return m_maxDepth; }
-	
+
 	void setShowPrimitiveBVH(bool show) { m_showPrimitiveBVH = show; }
 	bool getShowPrimitiveBVH() const { return m_showPrimitiveBVH; }
 

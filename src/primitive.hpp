@@ -1,11 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <d3d11.h>
 #include <wrl.h>
-
-#include <vector>
-#include "primitiveData.hpp"
-#include "sceneNode.hpp"
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/vec.h>
 #include <bvh/v2/ray.h>
@@ -13,6 +11,9 @@
 #include <bvh/v2/node.h>
 #include <bvh/v2/stream.h>
 #include <bvh/v2/default_builder.h>
+
+#include "primitiveData.hpp"
+#include "sceneNode.hpp"
 
 struct Material;
 
@@ -39,12 +40,10 @@ struct SharedPrimitiveData
 	ComPtr<ID3D11Buffer> vertexBuffer;
 };
 
-
-
 class Primitive : public SceneNode
 {
 public:
-	explicit Primitive(ComPtr<ID3D11Device> device);
+	Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName = "Primitive");
 	~Primitive() override = default;
 	Primitive(const Primitive&) = delete;
 	Primitive(Primitive&&) = default;

@@ -1,13 +1,20 @@
 #include "primitive.hpp"
-#include "assert.h"
+
 #include <fstream>
 #include <iostream>
+
+#include "assert.h"
 
 using PrecomputedTri = bvh::v2::PrecomputedTri<Scalar>;
 using StdOutputStream = bvh::v2::StdOutputStream;
 using StdInputStream = bvh::v2::StdInputStream;
 
-Primitive::Primitive(ComPtr<ID3D11Device> device) : m_device(device) { m_sharedData = std::make_shared<SharedPrimitiveData>(); }
+Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
+	: SceneNode(nodeName)
+	, m_sharedData(std::make_shared<SharedPrimitiveData>())
+	, m_device(device)
+{
+}
 
 void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
 {
@@ -42,7 +49,6 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
 	indexInitData.pSysMem = m_sharedData->indexData.data();
 	HRESULT hr = m_device->CreateBuffer(&indexBufferDesc, &indexInitData, &m_sharedData->indexBuffer);
 	assert(SUCCEEDED(hr));
-
 }
 
 const std::vector<uint32_t>& Primitive::getIndexData() const
@@ -67,8 +73,6 @@ void Primitive::buildBVH()
 		return;
 	}
 	m_sharedData->triangles.reserve(m_sharedData->indexData.size() / 3);
-
-
 	m_sharedData->bbox = std::make_unique<BBox>();
 
 	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
@@ -145,9 +149,6 @@ void Primitive::copyFrom(const SceneNode& node)
 {
 	name = node.name;
 	transform = node.transform;
-	visible = node.visible;
-	dirty = node.dirty;
-	movable = node.movable;
 
 	if (auto primitiveNode = dynamic_cast<const Primitive*>(&node))
 	{
@@ -158,9 +159,12 @@ void Primitive::copyFrom(const SceneNode& node)
 
 bool Primitive::differsFrom(const SceneNode& node) const
 {
-	if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(&node))
+	if (!SceneNode::differsFrom(node))
 	{
-		return SceneNode::differsFrom(node) || material != primitiveNode->material;
+		if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(&node))
+		{
+			return material != primitiveNode->material;
+		}
 	}
 	return true;
 }
@@ -177,7 +181,8 @@ void Primitive::setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> shar
 	m_sharedData = sharedData;
 }
 
-static bool save_bvh(const Bvh& bvh, const std::string& file_name) {
+static bool saveBVH(const Bvh& bvh, const std::string& file_name)
+{
 	std::ofstream out(file_name, std::ofstream::binary);
 	if (!out)
 		return false;
@@ -186,7 +191,8 @@ static bool save_bvh(const Bvh& bvh, const std::string& file_name) {
 	return true;
 }
 
-static std::optional<Bvh> load_bvh(const std::string& file_name) {
+static std::optional<Bvh> loadBVH(const std::string& file_name)
+{
 	std::ifstream in(file_name, std::ofstream::binary);
 	if (!in)
 		return std::nullopt;

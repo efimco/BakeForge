@@ -1,25 +1,28 @@
 #include "uiManager.hpp"
 
 #include <iostream>
+#include <glm/gtc/type_ptr.hpp>
 
 #define IM_VEC2_CLASS_EXTRA
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
 #include "imgui_impl_dx11.h"
+#include "ImGuizmo.h"
+
 #include "appConfig.hpp"
 #include "inputEventsHandler.hpp"
 #include "debugPassMacros.hpp"
+#include "passes/GBuffer.hpp"
+
 #include "scene.hpp"
-#include "ImGuizmo.h"
-#include "GBuffer.hpp"
 #include "light.hpp"
 #include "primitive.hpp"
 #include "camera.hpp"
+
 #include "commands/nodeCommand.hpp"
 #include "commands/nodeSnapshot.hpp"
 #include "commands/scopedTransaction.hpp"
 #include "commands/commandManager.hpp"
-#include <glm/gtc/type_ptr.hpp>
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);

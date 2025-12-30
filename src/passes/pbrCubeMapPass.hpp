@@ -1,11 +1,14 @@
 #pragma once
+
+#include <string>
+#include <memory>
+
 #include <d3d11.h>
 #include <wrl.h>
-#include <string>
-#include "Texture.hpp"
-#include <memory>
+#include <glm/glm.hpp>
+
+#include "texture.hpp"
 #include "shaderManager.hpp"
-#include "glm/glm.hpp"
 
 using namespace Microsoft::WRL;
 
@@ -31,16 +34,18 @@ private:
 	void createIrradianceMap();
 	void createPrefilteredMap();
 	void createBRDFLut();
+
 	std::string m_hdrImagePath;
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	std::unique_ptr<Texture> m_hdriTexture;
 
-	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
+
+	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11Buffer> m_backgroundConstantBuffer;
 	ComPtr<ID3D11Buffer> m_equirectToCubemapConstantBuffer;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11DeviceContext> m_context;
 
 	ComPtr<ID3D11Texture2D> m_CubeMapTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_CubeMapUAV;
