@@ -234,12 +234,14 @@ void DeferredPass::updateLights(Scene* scene)
 	HRESULT hr = m_context->Map(m_lightsBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
-		LightData* lightData = static_cast<LightData*>(mappedResource.pData);
+		auto* lightData = static_cast<LightData*>(mappedResource.pData);
 		const auto& lights = scene->getLights();
-		for (size_t i = 0; i < lights.size(); ++i)
-		{
-			lightData[i] = lights[i]->getLightData();
-		}
+	    int32_t i = 0;
+	    for (auto& [handle, light] : lights)
+	    {
+			lightData[i] = light->getLightData();
+	        ++i;
+	    }
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
 	}
 }

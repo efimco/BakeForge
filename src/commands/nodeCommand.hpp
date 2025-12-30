@@ -1,11 +1,13 @@
 #pragma once
 
+#include "sceneNodeHandle.hpp"
 #include "commandBase.hpp"
 
 class SceneNode;
 class Scene;
 
-namespace Command {
+namespace Command
+{
 
 	class DuplicateSceneNode final : public CommandBase
 	{
@@ -13,13 +15,13 @@ namespace Command {
 		DuplicateSceneNode(
 			Scene* inScene,
 			SceneNode* inSceneNode,
-			bool inValidateName = true);
+			bool reuseNodeHandle = false);
 
 	protected:
 		virtual std::unique_ptr<CommandBase> exec() override;
 
 		Scene* m_scene = nullptr;
-		SceneNode* m_sceneNode = nullptr;
+		SceneNodeHandle m_nodeHandle;
 		std::unique_ptr<SceneNode> m_sceneNodeClone = nullptr;
 		bool m_validateName = true;
 	};
@@ -34,9 +36,8 @@ namespace Command {
 	protected:
 		virtual std::unique_ptr<CommandBase> exec() override;
 
-		// TO-DO: switch from pointers to handles
 		Scene* m_scene = nullptr;
-		SceneNode* m_sceneNode = nullptr;
+		SceneNodeHandle m_nodeHandle;
 	};
 
 };

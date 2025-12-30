@@ -17,7 +17,7 @@ public:
 	float fov;
 	float distanceToOrbitPivot;
 
-	Camera(glm::vec3 pos);
+	explicit Camera(glm::vec3 pos);
 	void processMovementControls();
 	glm::mat4 getViewMatrix();
 
@@ -30,8 +30,8 @@ private:
 
 	// void focusOn(Primitive* primitive);
 
-	virtual void onCommitTransaction(Scene* scene) override;
-	virtual void copyFrom(const SceneNode* node) override;
-	virtual bool differsFrom(const SceneNode* node) const override;
+	virtual void onCommitTransaction(Scene& scene) override;
+	virtual void copyFrom(const SceneNode& node) override;
+	virtual bool differsFrom(const SceneNode& node) const override;
 	virtual std::unique_ptr<SceneNode> clone() const;
 };

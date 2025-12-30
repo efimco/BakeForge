@@ -45,11 +45,11 @@ class Primitive : public SceneNode
 {
 public:
 	explicit Primitive(ComPtr<ID3D11Device> device);
-	~Primitive() = default;
+	~Primitive() override = default;
 	Primitive(const Primitive&) = delete;
-	Primitive& operator=(const Primitive&) = delete;
 	Primitive(Primitive&&) = default;
-	Primitive& operator=(Primitive&&) = default;
+	Primitive& operator=(const Primitive&) = delete;
+	Primitive& operator=(Primitive&&) = delete;
 
 	void setVertexData(std::vector<InterleavedData>&& vertexData);
 	void setIndexData(std::vector<uint32_t>&& indexData);
@@ -62,8 +62,8 @@ public:
 	const Bvh* getBVH() const;
 	BBox getWorldBBox(glm::mat4 worldMatrix) const;
 	const BBox* getLocalBBox() const;
-	virtual void copyFrom(const SceneNode* node) override;
-	virtual bool differsFrom(const SceneNode* node) const override;
+	virtual void copyFrom(const SceneNode& node) override;
+	virtual bool differsFrom(const SceneNode& node) const override;
 	virtual std::unique_ptr<SceneNode> clone() const override;
 	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
 

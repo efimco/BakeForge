@@ -7,14 +7,16 @@
 namespace Command
 {
 
-	DuplicateSceneNode::DuplicateSceneNode(Scene* inScene, SceneNode* inSceneNode, bool inValidateName)
+	DuplicateSceneNode::DuplicateSceneNode(
+		Scene* inScene,
+		SceneNode* inSceneNode,
+		bool reuseNodeHandle)
 		: m_scene(inScene)
-		, m_sceneNode(inSceneNode)
-		, m_validateName(inValidateName)
+		, m_nodeHandle(reuseNodeHandle ? inScene->findHandleOfNode(inSceneNode) : SceneNodeHandle::invalidHandle())
+		, m_validateName(!reuseNodeHandle)
 	{
 		assert(inSceneNode);
-		m_breakHistory = true;
-		m_sceneNodeClone = m_sceneNode->clone();
+		m_sceneNodeClone = inSceneNode->clone();
 	}
 
 	std::unique_ptr<CommandBase> DuplicateSceneNode::exec()
@@ -23,24 +25,23 @@ namespace Command
 		{
 			m_scene->validateName(m_sceneNodeClone.get());
 		}
-		SceneNode* clonedNode = m_scene->adoptClonedNode(std::move(m_sceneNodeClone));
+		SceneNode* clonedNode = m_scene->adoptClonedNode(std::move(m_sceneNodeClone), m_nodeHandle);
 		return std::make_unique<RemoveSceneNode>(m_scene, clonedNode);
 	}
 
 	RemoveSceneNode::RemoveSceneNode(Scene* inScene, SceneNode* inSceneNode)
 		: m_scene(inScene)
-		, m_sceneNode(inSceneNode)
+		, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
 	{
 		assert(inSceneNode);
-
-		// Nodes in the registry are not memory-stable after recreation
-		m_breakHistory = true;
 	}
 
 	std::unique_ptr<CommandBase> RemoveSceneNode::exec()
 	{
-		auto createCommand = std::make_unique<DuplicateSceneNode>(m_scene, m_sceneNode, false);
-		m_scene->deleteNode(m_sceneNode);
+		SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+		assert(sceneNode);
+		auto createCommand = std::make_unique<DuplicateSceneNode>(m_scene, sceneNode, true);
+		m_scene->deleteNode(sceneNode);
 		return createCommand;
 	}
 

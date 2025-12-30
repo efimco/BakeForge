@@ -24,11 +24,11 @@ private:
 	CommandManager* m_commandManager;
 };
 
-template<typename TCommand>
+template <typename TCommand>
 class TScopedTransaction : public ScopedTransaction
 {
 public:
-	template<typename ... TArgs>
+	template <typename... TArgs>
 	TScopedTransaction(CommandManager* commandManager, Scene* scene, TArgs&&... args)
 		: ScopedTransaction(commandManager, std::make_unique<TCommand>(scene, std::forward<TArgs>(args)...))
 	{

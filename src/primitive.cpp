@@ -141,32 +141,24 @@ const BBox* Primitive::getLocalBBox() const
 	return m_sharedData->bbox.get();
 }
 
-void Primitive::copyFrom(const SceneNode* node)
+void Primitive::copyFrom(const SceneNode& node)
 {
-	assert(node);
+	name = node.name;
+	transform = node.transform;
+	visible = node.visible;
+	dirty = node.dirty;
+	movable = node.movable;
 
-	name = node->name;
-	transform = node->transform;
-	visible = node->visible;
-	dirty = node->dirty;
-	movable = node->movable;
-
-	if (auto primitiveNode = dynamic_cast<const Primitive*>(node))
+	if (auto primitiveNode = dynamic_cast<const Primitive*>(&node))
 	{
 		m_sharedData = primitiveNode->m_sharedData;
 		material = primitiveNode->material;
 	}
-
-	for (const auto& child : node->children)
-	{
-		std::unique_ptr<SceneNode> childClone = child->clone();
-		addChild(std::move(childClone));
-	}
 }
 
-bool Primitive::differsFrom(const SceneNode* node) const
+bool Primitive::differsFrom(const SceneNode& node) const
 {
-	if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(node))
+	if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(&node))
 	{
 		return SceneNode::differsFrom(node) || material != primitiveNode->material;
 	}
@@ -176,7 +168,7 @@ bool Primitive::differsFrom(const SceneNode* node) const
 std::unique_ptr<SceneNode> Primitive::clone() const
 {
 	std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
-	primitive->copyFrom(this);
+	primitive->copyFrom(*this);
 	return primitive;
 }
 
