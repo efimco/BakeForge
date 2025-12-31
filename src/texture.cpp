@@ -32,7 +32,7 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
 	else
 		format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.Format = format;
-	texDesc.MipLevels = 1;
+	texDesc.MipLevels = 0;  // Let D3D calculate mip count
 	texDesc.ArraySize = 1;
 	texDesc.SampleDesc.Count = 1;
 	texDesc.SampleDesc.Quality = 0;
@@ -40,26 +40,30 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
-	D3D11_SUBRESOURCE_DATA subresData;
-	subresData.pSysMem = image.image.data();
-	subresData.SysMemPitch = image.width * image.component;
-	subresData.SysMemSlicePitch = 0;
-
-
+	// When MipLevels = 0, cannot provide initial data - must pass nullptr
 	{
-		HRESULT hr = device->CreateTexture2D(&texDesc, &subresData, &textureResource);
+		HRESULT hr = device->CreateTexture2D(&texDesc, nullptr, &textureResource);
 		if (FAILED(hr))
 		{
 			std::cerr << "Failed to create texture resource = " << hr << std::endl;
 		}
 	}
+
+	// Get actual mip count after creation
+	textureResource->GetDesc(&texDesc);
+
+	// Upload base mip level data
+	ComPtr<ID3D11DeviceContext> context;
+	device->GetImmediateContext(&context);
+	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(), 
+		image.width * image.component, 0);
+
 	// Create Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = texDesc.Format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;  // Use all mip levels
 	{
 		HRESULT hr = device->CreateShaderResourceView(textureResource.Get(), &srvDesc, &srv);
 		if (FAILED(hr))
@@ -67,8 +71,6 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
 			std::cerr << "Failed to create shader resource view = " << hr << std::endl;
 		}
 	}
-	ComPtr<ID3D11DeviceContext> context;
-	device->GetImmediateContext(&context);
 	context->GenerateMips(srv.Get());
 }
 uint32_t GetBytesPerPixel(DXGI_FORMAT format);
