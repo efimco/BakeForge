@@ -16,14 +16,14 @@ using namespace Microsoft::WRL;
 class ZPrePass
 {
 public:
-	ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context);
+	ZPrePass( ComPtr<ID3D11Device> device,  ComPtr<ID3D11DeviceContext> context);
 	~ZPrePass() = default;
 
 	void draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene);
-	ComPtr<ID3D11DepthStencilView>& getDSV();
+	ComPtr<ID3D11DepthStencilView> getDSV();
 	void createOrResize();
 
-	const ComPtr<ID3D11ShaderResourceView>& getDepthSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getDepthSRV() const;
 private:
 	void update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim);
 

@@ -19,7 +19,7 @@ enum ShaderType
 class ShaderManager
 {
 public:
-	ShaderManager(const ComPtr<ID3D11Device>& device);
+	ShaderManager(ComPtr<ID3D11Device> device);
 
 	bool LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "VS");
 	bool LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "PS");
@@ -38,5 +38,5 @@ public:
 	std::filesystem::file_time_type getFileModifiedTime(const std::wstring& filename);
 
 private:
-	const ComPtr<ID3D11Device>& m_device;
+	ComPtr<ID3D11Device> m_device;
 };

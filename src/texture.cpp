@@ -6,8 +6,9 @@
 
 Texture::Texture(const ComPtr<ID3D11Device>& _device) : device(_device) {}
 
-Texture::Texture(Texture&& other, const ComPtr<ID3D11Device>& _device) : device(_device)
+Texture::Texture(Texture&& other, ComPtr<ID3D11Device> _device)
 {
+	device = _device;
 	texDesc = std::move(other.texDesc);
 	name = std::move(other.name);
 	filepath = std::move(other.filepath);
@@ -15,8 +16,9 @@ Texture::Texture(Texture&& other, const ComPtr<ID3D11Device>& _device) : device(
 }
 
 
-Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _device) : device(_device)
+Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
 {
+	device = _device;
 	name = image.name;
 	filepath = image.uri;
 	texDesc.Height = image.height;
@@ -71,8 +73,9 @@ Texture::Texture(const tinygltf::Image& image, const ComPtr<ID3D11Device>& _devi
 }
 uint32_t GetBytesPerPixel(DXGI_FORMAT format);
 
-Texture::Texture(std::string filepath, const ComPtr<ID3D11Device>& _device, bool isHdr) : device(_device)
+Texture::Texture(std::string filepath, ComPtr<ID3D11Device> _device, bool isHdr)
 {
+	device = _device;
 	int width, height, channels;
 	void* data = nullptr;
 	if (isHdr)

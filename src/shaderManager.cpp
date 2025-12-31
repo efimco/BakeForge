@@ -10,7 +10,10 @@ static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
 static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
 static std::unordered_map<std::string, ShaderInfo> m_computeShaders;
 
-ShaderManager::ShaderManager(const ComPtr<ID3D11Device>& device) : m_device(device) {}
+ShaderManager::ShaderManager(ComPtr<ID3D11Device> device)
+{
+	m_device = device;
+}
 
 bool ShaderManager::LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
 {

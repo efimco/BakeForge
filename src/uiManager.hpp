@@ -32,8 +32,8 @@ class UIManager
 {
 public:
 	UIManager(
-		const ComPtr<ID3D11Device>& device,
-		const ComPtr<ID3D11DeviceContext>& deviceContext,
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> deviceContext,
 		const HWND& hwnd);
 	~UIManager();
 
@@ -46,8 +46,8 @@ public:
 	uint32_t* getMousePos();
 
 private:
-	const ComPtr<ID3D11Device>& m_device;
-	const ComPtr<ID3D11DeviceContext>& m_context;
+	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
 	std::unique_ptr<CommandManager> m_commandManager;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
