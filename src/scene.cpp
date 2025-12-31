@@ -105,6 +105,7 @@ void Scene::addLight(Light* light)
 {
 	validateName(light);
 	m_lights.emplace(SceneNodeHandle::generateHandle(), light);
+	setLightsDirty();
 }
 
 SceneUnorderedMap<Primitive*>& Scene::getPrimitives()

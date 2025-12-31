@@ -143,11 +143,12 @@ void DeferredPass::draw(const glm::mat4& view,
 	const glm::vec3& cameraPosition,
 	Scene* scene,
 	const GBufferTextures& gbufferTextures,
-	const ComPtr<ID3D11ShaderResourceView>& depthSRV,
-	const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
-	const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,
-	const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV,
-	const ComPtr<ID3D11ShaderResourceView>& brdfLutSRV
+	ComPtr<ID3D11ShaderResourceView> depthSRV,
+	ComPtr<ID3D11ShaderResourceView> backgroundSRV,
+	ComPtr<ID3D11ShaderResourceView> irradianceSRV,
+	ComPtr<ID3D11ShaderResourceView> prefilteredSRV,
+	ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
+	ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV
 )
 {
 	DEBUG_PASS_START(L"Deferred Pass Draw");
@@ -192,9 +193,10 @@ void DeferredPass::draw(const glm::mat4& view,
 		backgroundSRV.Get(),
 		irradianceSRV.Get(),
 		prefilteredSRV.Get(),
-		brdfLutSRV.Get()
+		brdfLutSRV.Get(),
+		worldSpaceUISRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 11, srvs);
+	m_context->CSSetShaderResources(0, 12, srvs);
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
@@ -212,8 +214,8 @@ void DeferredPass::draw(const glm::mat4& view,
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs
-	ID3D11ShaderResourceView* nullSRVs[11] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->CSSetShaderResources(0, 11, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[12] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	m_context->CSSetShaderResources(0, 12, nullSRVs);
 	ID3D11UnorderedAccessView* nullUAVs[1] = { nullptr };
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAVs, nullptr);
 

@@ -37,6 +37,7 @@ Texture2D<float4> tBackground : register(t7);
 TextureCube tIrradianceMap : register(t8);
 TextureCube tPrefilteredMap : register(t9);
 Texture2D tBRDFLUT : register(t10);
+Texture2D worldSpaceUITexture : register(t11);
 
 SamplerState linearSampler : register(s0);
 RWTexture2D<unorm float4> outColor : register(u0);
@@ -46,6 +47,42 @@ RWTexture2D<unorm float4> outColor : register(u0);
 static const float MAX_REFLECTION_LOD = 7.0;
 static const float MIN_REFLECTANCE = 0.04;
 static const float YAW = PI / 180.0;
+
+static const float ICONS_TRANSPARENCY_FACTOR = 0.3;
+
+static float3 MOD3 = float3(443.8975, 397.2973, 491.1871);
+static const float c0 = 32.0;
+
+float hash11(float p)
+{
+	float3 p3 = frac(float3(p, p, p) * MOD3);
+	p3 += dot(p3, p3.yzx + 19.19);
+	return frac((p3.x + p3.y) * p3.z);
+}
+float hash12(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * MOD3);
+	p3 += dot(p3, p3.yzx + 19.19);
+	return frac((p3.x + p3.y) * p3.z);
+}
+float3 hash32(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * MOD3);
+	p3 += dot(p3, p3.yxz + 19.19);
+	return frac(float3((p3.x + p3.y) * p3.z, (p3.x + p3.z) * p3.y, (p3.y + p3.z) * p3.x));
+}
+
+
+
+void applyDitheredNoise(uint2 DTid, inout float3 outcol)
+{
+	float2 seed = float2(DTid);
+
+	float3 rnd = hash32(seed);
+
+	outcol += (rnd - 0.5) / 255.0;
+}
+
 
 float3x3 getIrradianceMapRotation()
 {
@@ -186,6 +223,13 @@ float3 outline(uint3 DTid, uint objectID)
 	return isEdge ? outlineColor : float3(0.0, 0.0, 0.0);
 }
 
+
+void applyWorldSpaceUI(uint3 DTid, inout float3 color)
+{
+	float4 uiColor = worldSpaceUITexture.Load(int3(DTid.xy, 0));
+	color = lerp(color, uiColor.rgb, uiColor.a);
+}
+
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
@@ -196,6 +240,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	uint objectID = tObjectID.Load(int3(DTid.xy, 0));
 	float depth = tDepth.Load(int3(DTid.xy, 0)).x;
 	float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
+	float4 uiColor = worldSpaceUITexture.Load(int3(DTid.xy, 0));
 
 	float3 N = normalize(normal * 2.0f - 1.0f);
 
@@ -208,7 +253,11 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 		background.r = linear_rgb_to_srgb(background.r);
 		background.g = linear_rgb_to_srgb(background.g);
 		background.b = linear_rgb_to_srgb(background.b);
-		outColor[DTid.xy] = float4(background * backgroundIntensity, 1.0);
+		float3 finalBackground = background * backgroundIntensity;
+		float3 finalUIColor = uiColor.rgb * uiColor.a * ICONS_TRANSPARENCY_FACTOR;
+		finalBackground = aces(finalBackground + finalUIColor);
+		applyDitheredNoise(DTid.xy, finalBackground);
+		outColor[DTid.xy] = float4(finalBackground, 1.0);
 		return;
 	}
 
@@ -271,5 +320,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	// ACES tone mapping
 	finalColor = aces(finalColor);
 
+
 	outColor[DTid.xy] = float4(finalColor, 1.0);
+	outColor[DTid.xy] += float4(uiColor.rgb * uiColor.a * ICONS_TRANSPARENCY_FACTOR, 0.0);
 }

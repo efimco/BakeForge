@@ -20,6 +20,7 @@ class FSQuad;
 class DeferredPass;
 class CubeMapPass;
 class DebugBVHPass;
+class WorldSpaceUIPass;
 
 using namespace Microsoft::WRL;
 class Renderer
@@ -63,4 +64,5 @@ private:
 	std::unique_ptr<DeferredPass> m_deferredPass;
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
 	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
+	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
 };

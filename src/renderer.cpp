@@ -19,6 +19,7 @@
 #include "passes/deferedPass.hpp"
 #include "passes/objectPicker.hpp"
 #include "passes/pbrCubeMapPass.hpp"
+#include "passes/wordSpaceUIPass.hpp"
 
 #include "camera.hpp"
 #include "scene.hpp"
@@ -55,6 +56,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
+	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	resize();
 }
 
@@ -67,6 +69,7 @@ void Renderer::draw()
 		resize();
 		m_zPrePass->createOrResize();
 		m_gBuffer->createOrResize();
+		m_worldSpaceUIPass->createOrResize();
 		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
 		m_cubeMapPass->createOrResize();
@@ -83,7 +86,6 @@ void Renderer::draw()
 	m_view = m_scene->getActiveCamera()->getViewMatrix();
 	float aspectRatio = (float)AppConfig::getViewportWidth() / (float)AppConfig::getViewportHeight();
 	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov), aspectRatio, 0.1f, 100.0f);
-
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
 	{
@@ -97,6 +99,7 @@ void Renderer::draw()
 		m_scene.get(),
 		m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view);
+	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get());
 	m_deferredPass->draw(m_view, m_projection,
 		m_scene->getActiveCamera()->transform.position,
 		m_scene.get(),
@@ -105,7 +108,8 @@ void Renderer::draw()
 		m_cubeMapPass->getBackgroundSRV(),
 		m_cubeMapPass->getIrradianceSRV(),
 		m_cubeMapPass->getPrefilteredSRV(),
-		m_cubeMapPass->getBRDFLutSRV()
+		m_cubeMapPass->getBRDFLutSRV(),
+		m_worldSpaceUIPass->getSRV()
 	);
 
 	// Debug BVH visualization (draws on top of deferred output)
