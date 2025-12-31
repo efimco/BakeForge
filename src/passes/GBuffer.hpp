@@ -24,7 +24,7 @@ public:
 		const glm::mat4& projection,
 		const glm::vec3& cameraPosition,
 		Scene* scene,
-		ComPtr<ID3D11DepthStencilView>& dsv);
+		ComPtr<ID3D11DepthStencilView> dsv);
 	void update(const glm::mat4& view,
 		const glm::mat4& projection,
 		const glm::vec3& cameraPosition,

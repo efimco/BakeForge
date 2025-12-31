@@ -21,10 +21,10 @@ public:
 
 	void createOrResize();
 	void draw(glm::mat4& view);
-	ComPtr<ID3D11ShaderResourceView>& getBackgroundSRV();
-	ComPtr<ID3D11ShaderResourceView>& getIrradianceSRV();
-	ComPtr<ID3D11ShaderResourceView>& getPrefilteredSRV();
-	ComPtr<ID3D11ShaderResourceView>& getBRDFLutSRV();
+	ComPtr<ID3D11ShaderResourceView> getBackgroundSRV();
+	ComPtr<ID3D11ShaderResourceView> getIrradianceSRV();
+	ComPtr<ID3D11ShaderResourceView> getPrefilteredSRV();
+	ComPtr<ID3D11ShaderResourceView> getBRDFLutSRV();
 	std::string& getHDRIPath();
 
 private:
@@ -67,5 +67,8 @@ private:
 	ComPtr<ID3D11Texture2D> m_brdfLutTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_brdfLutUAV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfLutSRV;
+
+	ComPtr<ID3D11RasterizerState> m_rasterizerState;
+	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
 
 };

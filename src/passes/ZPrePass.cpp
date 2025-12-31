@@ -23,9 +23,11 @@ static const D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] =
 };
 
 
-ZPrePass::ZPrePass(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context)
-	: m_device(device), m_context(context)
+ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
+	m_device = device;
+	m_context = context;
+
 	D3D11_RASTERIZER_DESC rasterizerDesc = {};
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
@@ -121,32 +123,32 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 	static const UINT stride = sizeof(InterleavedData);
 	static const UINT offset = 0;
 
-    for (auto& [handle, prim] : scene->getPrimitives())
+	for (auto& [handle, prim] : scene->getPrimitives())
 	{
 		update(view, projection, prim);
-		
+
 		// Bind albedo texture for alpha testing
 		if (prim->material && prim->material->albedo)
 		{
 			ID3D11ShaderResourceView* albedoSRV = prim->material->albedo->srv.Get();
 			m_context->PSSetShaderResources(0, 1, &albedoSRV);
 		}
-		
+
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
-	
+
 	// Unbind resources
 	ID3D11ShaderResourceView* nullSRV = nullptr;
 	m_context->PSSetShaderResources(0, 1, &nullSRV);
-	
+
 	m_context->VSSetShader(nullptr, nullptr, 0);
 	m_context->PSSetShader(nullptr, nullptr, 0);
 	DEBUG_PASS_END();
 }
 
-ComPtr<ID3D11DepthStencilView>& ZPrePass::getDSV()
+ComPtr<ID3D11DepthStencilView> ZPrePass::getDSV()
 {
 	return dsv;
 }
@@ -216,7 +218,7 @@ void ZPrePass::createOrResize()
 	}
 }
 
-const ComPtr<ID3D11ShaderResourceView>& ZPrePass::getDepthSRV() const
+ComPtr<ID3D11ShaderResourceView> ZPrePass::getDepthSRV() const
 {
 	return srv_depth;
 }

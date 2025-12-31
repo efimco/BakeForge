@@ -31,15 +31,14 @@ static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
 static glm::ivec3 gSnapRotate = { 15, 15, 15 };
 static glm::ivec3 gSnapScale = { 1, 1, 1 };
 
-UIManager::UIManager(const ComPtr<ID3D11Device>& device,
-	const ComPtr<ID3D11DeviceContext>& deviceContext,
+UIManager::UIManager(ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> deviceContext,
 	const HWND& hwnd) :
-	m_device(device),
 	m_hwnd(hwnd),
-	m_context(deviceContext),
 	m_commandManager(std::make_unique<CommandManager>())
 {
-
+	m_device = device;
+	m_context = deviceContext;
 	ImGui_ImplWin32_EnableDpiAwareness();
 	float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
 
@@ -103,7 +102,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 	DEBUG_PASS_START(L"UIManager Draw");
 	m_scene = scene;
 	// Always check window validity before starting a new frame
-	if (!IsWindow(m_hwnd))
+	if (!IsWindow(m_hwnd) || !m_scene)
 	{
 		DEBUG_PASS_END();
 		return;

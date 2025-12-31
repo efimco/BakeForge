@@ -135,6 +135,37 @@ CubeMapPass::CubeMapPass(
 			throw std::runtime_error("Failed to create cube vertex buffer.");
 		}
 	}
+
+	D3D11_RASTERIZER_DESC rasterizerDesc;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.DepthBias = 0;
+	rasterizerDesc.DepthBiasClamp = 0;
+	rasterizerDesc.SlopeScaledDepthBias = 0;
+	rasterizerDesc.AntialiasedLineEnable = false;
+	rasterizerDesc.FrontCounterClockwise = false;
+	rasterizerDesc.MultisampleEnable = false;
+	rasterizerDesc.DepthClipEnable = false;
+	rasterizerDesc.ScissorEnable = false;
+
+	{
+		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
+		if (FAILED(hr))
+			std::cerr << "Error Creating Rasterizer State: " << hr << std::endl;
+	}
+
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+	depthStencilDesc.DepthEnable = TRUE;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
+
+	{
+		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
+		if (FAILED(hr))
+			std::cerr << "Error Creating Depths Stencil State: " << hr << std::endl;
+	}
+
+
 	createCubeMapResources();
 	createIrradianceMap();
 	createPrefilteredMap();
@@ -157,6 +188,9 @@ void CubeMapPass::draw(glm::mat4& view)
 	}
 
 	update(view);
+	m_context->RSSetState(m_rasterizerState.Get());
+
+	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -183,22 +217,22 @@ void CubeMapPass::draw(glm::mat4& view)
 
 }
 
-ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getBackgroundSRV()
+ComPtr<ID3D11ShaderResourceView> CubeMapPass::getBackgroundSRV()
 {
 	return m_backgroundSRV;
 }
 
-ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getIrradianceSRV()
+ComPtr<ID3D11ShaderResourceView> CubeMapPass::getIrradianceSRV()
 {
 	return m_irradianceSRV;
 }
 
-ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getPrefilteredSRV()
+ComPtr<ID3D11ShaderResourceView> CubeMapPass::getPrefilteredSRV()
 {
 	return m_prefilteredSRV;
 }
 
-ComPtr<ID3D11ShaderResourceView>& CubeMapPass::getBRDFLutSRV()
+ComPtr<ID3D11ShaderResourceView> CubeMapPass::getBRDFLutSRV()
 {
 	return m_brdfLutSRV;
 }
