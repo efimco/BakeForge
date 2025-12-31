@@ -24,11 +24,12 @@ public:
 		const glm::vec3& cameraPosition,
 		Scene* scene,
 		const GBufferTextures& gbufferTextures,
-		const ComPtr<ID3D11ShaderResourceView>& depthSRV,
-		const ComPtr<ID3D11ShaderResourceView>& backgroundSRV,
-		const ComPtr<ID3D11ShaderResourceView>& irradianceSRV,
-		const ComPtr<ID3D11ShaderResourceView>& prefilteredSRV,
-		const ComPtr<ID3D11ShaderResourceView>& brdfLutSRV
+		ComPtr<ID3D11ShaderResourceView> depthSRV,
+		ComPtr<ID3D11ShaderResourceView> backgroundSRV,
+		ComPtr<ID3D11ShaderResourceView> irradianceSRV,
+		ComPtr<ID3D11ShaderResourceView> prefilteredSRV,
+		ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
+		ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV
 	);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
