@@ -6,8 +6,6 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include "scene.hpp"
 
-std::atomic_int32_t SceneNodeHandle::s_handleGenerator = 0;
-
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform)
 	, children(std::move(other.children))

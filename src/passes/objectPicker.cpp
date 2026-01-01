@@ -6,6 +6,7 @@
 #include "shaderManager.hpp"
 #include "scene.hpp"
 #include "primitive.hpp"
+#include "light.hpp"
 
 struct cbPicking
 {
@@ -111,7 +112,21 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		}
 		else
 		{
-			scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1), isShiftPressed);
+			size_t primitiveCount = scene->getPrimitiveCount();
+			if (readBackID <= primitiveCount)
+			{
+				// It's a primitive (IDs 1 to primitiveCount)
+				scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1), isShiftPressed);
+			}
+			else
+			{
+				// It's a light (IDs > primitiveCount)
+				Light* light = scene->getLightByID(readBackID);
+				if (light)
+				{
+					scene->setActiveNode(light, isShiftPressed);
+				}
+			}
 		}
 	}
 }

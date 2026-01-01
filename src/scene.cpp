@@ -108,6 +108,16 @@ void Scene::addLight(Light* light)
 	setLightsDirty();
 }
 
+Light* Scene::getLightByID(size_t id)
+{
+	auto it = m_lights.find(SceneNodeHandle{ static_cast<int>(id) });
+	if (it != m_lights.end())
+	{
+		return it->second;
+	}
+	return nullptr;
+}
+
 SceneUnorderedMap<Primitive*>& Scene::getPrimitives()
 {
 	return m_primitives;
@@ -115,7 +125,7 @@ SceneUnorderedMap<Primitive*>& Scene::getPrimitives()
 
 Primitive* Scene::getPrimitiveByID(size_t id)
 {
-	auto it = m_primitives.find(SceneNodeHandle{static_cast<int>(id)});
+	auto it = m_primitives.find(SceneNodeHandle{ static_cast<int>(id) });
 	if (it != m_primitives.end())
 	{
 		return it->second;
@@ -177,6 +187,15 @@ std::vector<std::string> Scene::getMaterialNames() const
 SceneNode* Scene::getActiveNode()
 {
 	return m_activeNode;
+}
+
+int32_t Scene::getActiveNodeID()
+{
+	if (m_activeNode)
+	{
+		return static_cast<int32_t>(findHandleOfNode(m_activeNode));
+	}
+	return -1;
 }
 
 int32_t Scene::getActivePrimitiveID()

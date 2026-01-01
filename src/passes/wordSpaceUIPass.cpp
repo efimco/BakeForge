@@ -22,7 +22,8 @@ struct alignas(16) ConstantBufferData
 	glm::vec3 cameraPosition;
 	float sizeInPixels;
 	glm::vec2 screenSize;
-	float padding[2]; // align to 16 bytes
+	uint32_t primitiveCount;
+	float padding; // align to 16 bytes
 };
 
 
@@ -159,8 +160,8 @@ void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::ma
 	dataPtr->sizeInPixels = 32.0f; // Example value, adjust as needed
 	glm::ivec2 screenSize = glm::ivec2(AppConfig::getViewportWidth(), AppConfig::getViewportHeight());
 	dataPtr->screenSize = screenSize;
-	dataPtr->padding[0] = 0.0f;
-	dataPtr->padding[1] = 0.0f;
+	dataPtr->primitiveCount = static_cast<uint32_t>(scene->getPrimitiveCount());
+	dataPtr->padding = 0.0f;
 
 	m_context->Unmap(m_constantBuffer.Get(), 0);
 }
@@ -276,7 +277,10 @@ void WorldSpaceUIPass::createQuad()
 	m_device->CreateBuffer(&ibd, &iinit, m_indexBuffer.GetAddressOf());
 }
 
-void WorldSpaceUIPass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene)
+void WorldSpaceUIPass::draw(const glm::mat4& view,
+	const glm::mat4& projection,
+	Scene* scene,
+	ComPtr<ID3D11RenderTargetView> objectIDRTV)
 {
 
 	DEBUG_PASS_START(L"World Space UI Pass Draw");
@@ -310,7 +314,9 @@ void WorldSpaceUIPass::draw(const glm::mat4& view, const glm::mat4& projection, 
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
-	m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+
+	ID3D11RenderTargetView* rtvs[2] = { m_rtv.Get(), objectIDRTV.Get() };
+	m_context->OMSetRenderTargets(2, rtvs, nullptr);
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	m_context->ClearRenderTargetView(m_rtv.Get(), clearColor);
 
@@ -319,10 +325,10 @@ void WorldSpaceUIPass::draw(const glm::mat4& view, const glm::mat4& projection, 
 	// Reset states to avoid affecting subsequent passes
 	ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
 	ID3D11ShaderResourceView* nullSRV = nullptr;
-	ID3D11RenderTargetView* nullRTV = nullptr;
+	ID3D11RenderTargetView* nullRTVs[2] = { nullptr, nullptr };
 	m_context->PSSetShaderResources(0, 2, nullSRVs);
 	m_context->VSSetShaderResources(1, 1, &nullSRV);
-	m_context->OMSetRenderTargets(1, &nullRTV, nullptr);
+	m_context->OMSetRenderTargets(2, nullRTVs, nullptr);
 	DEBUG_PASS_END();
 }
 

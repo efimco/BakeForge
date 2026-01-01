@@ -15,7 +15,10 @@ public:
 	explicit WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~WorldSpaceUIPass() = default;
 
-	void draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene);
+	void draw(const glm::mat4& view,
+		const glm::mat4& projection,
+		Scene* scene,
+		ComPtr<ID3D11RenderTargetView> objectIDRTV);
 	void createOrResize();
 	ComPtr<ID3D11RenderTargetView> getRTV();
 	ComPtr<ID3D11ShaderResourceView> getSRV();
@@ -49,7 +52,7 @@ private:
 
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 	void createRasterizerState();
-	
+
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
 	void createDepthStencilState();
 

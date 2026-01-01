@@ -99,7 +99,7 @@ void Renderer::draw()
 		m_scene.get(),
 		m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view);
-	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get());
+	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get(), m_gBuffer->getObjectIDRTV());
 	m_deferredPass->draw(m_view, m_projection,
 		m_scene->getActiveCamera()->transform.position,
 		m_scene.get(),

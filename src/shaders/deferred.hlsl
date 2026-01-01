@@ -22,6 +22,16 @@ struct Light
 	float radius; // radius for point lights
 };
 
+struct GBuffer
+{
+	float4 albedo;
+	float metallic;
+	float roughness;
+	float3 normal;
+	float3 fragPos;
+	uint objectID;
+};
+
 cbuffer CB : register(b0)
 {
 	float IBLrotationY;
@@ -29,7 +39,7 @@ cbuffer CB : register(b0)
 	int selectedID;
 	float backgroundIntensity;
 	float3 cameraPosition;
-	float padding2; // Padding to align to 16 bytes
+	uint primitiveCount;
 };
 
 StructuredBuffer<Light> lights : register(t6);
@@ -41,8 +51,6 @@ Texture2D worldSpaceUITexture : register(t11);
 
 SamplerState linearSampler : register(s0);
 RWTexture2D<unorm float4> outColor : register(u0);
-
-
 
 static const float MAX_REFLECTION_LOD = 7.0;
 static const float MIN_REFLECTANCE = 0.04;
@@ -72,17 +80,14 @@ float3 hash32(float2 p)
 	return frac(float3((p3.x + p3.y) * p3.z, (p3.x + p3.z) * p3.y, (p3.y + p3.z) * p3.x));
 }
 
-
-
-void applyDitheredNoise(uint2 DTid, inout float3 outcol)
+void applyDitheredNoise(uint2 DTid, inout float4 outcol)
 {
 	float2 seed = float2(DTid);
 
 	float3 rnd = hash32(seed);
 
-	outcol += (rnd - 0.5) / 255.0;
+	outcol += float4((rnd - 0.5) / 255.0, 0.0);
 }
-
 
 float3x3 getIrradianceMapRotation()
 {
@@ -92,19 +97,25 @@ float3x3 getIrradianceMapRotation()
 	return float3x3(cosA, 0.0, -sinA, 0.0, 1.0, 0.0, sinA, 0.0, cosA);
 }
 
-float linear_rgb_to_srgb(float color) // took it from blender's source code
+void linearRGBtoSRGB(inout float3 color) // took it from blender's source code
 {
-	if (color < 0.0031308)
+	[unroll]
+	for (int i = 0; i < 3; i++)
 	{
-		return (color < 0.0) ? 0.0 : color * 12.92;
+		if (color[i] < 0.0031308)
+		{
+			color[i] = (color[i] < 0.0) ? 0.0 : color[i] * 12.92;
+		}
+		else
+		{
+			color[i] = 1.055 * pow(color[i], 1.0 / 2.2) - 0.055;
+		}
 	}
-
-	return 1.055 * pow(color, 1.0 / 2.4) - 0.055;
 }
 
-float3 aces(float3 color)
+void aces(inout float3 color)
 {
-	return color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
+	color = color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
 }
 
 float3 agxDefaultContrastApprox(float3 x)
@@ -156,12 +167,12 @@ uint querySpecularTextureLevels()
 	tPrefilteredMap.GetDimensions(0, width, height, levels);
 	return levels;
 }
-float3 applyPointLight(Light light, float3 fragPos, float3 N, float3 V, float3 F0, float roughness, float3 albedo, float metallic)
+float3 applyPointLight(Light light, float3 V, float3 F0, GBuffer gbuffer)
 {
-	float3 L = normalize(light.position - fragPos);
+	float3 L = normalize(light.position - gbuffer.fragPos);
 	float3 H = normalize(V + L);
 
-	float distance = length(light.position - fragPos);
+	float distance = length(light.position - gbuffer.fragPos);
 
 	// Attenuation
 	float attenuation = saturate(pow(1.0 - pow(distance / light.radius, 4.0), 2.0)) / (pow(distance, 2.0) + 1.0);
@@ -173,25 +184,24 @@ float3 applyPointLight(Light light, float3 fragPos, float3 N, float3 V, float3 F
 
 	float3 radiance = light.color * light.intensity * attenuation;
 
-	float NdotL = max(dot(N, L), 0.0);
-	float NdotV = max(dot(N, V), 0.0);
-	float NdotH = max(dot(N, H), 0.0);
+	float NdotL = max(dot(gbuffer.normal, L), 0.0);
+	float NdotV = max(dot(gbuffer.normal, V), 0.0);
+	float NdotH = max(dot(gbuffer.normal, H), 0.0);
 	float HdotV = max(dot(H, V), 0.0);
 
-	float D = distributionGGX(NdotH, roughness);
-	float G = geometrySmith(NdotV, NdotL, roughness);
-	float3 F = fresnelSchlick(HdotV, F0, roughness);
+	float D = distributionGGX(NdotH, gbuffer.roughness);
+	float G = geometrySmith(NdotV, NdotL, gbuffer.roughness);
+	float3 F = fresnelSchlick(HdotV, F0, gbuffer.roughness);
 
 	// Energy conservation
 	float3 kS = F;
-	float3 kD = (1.0 - kS) * (1.0 - metallic);
-
+	float3 kD = (1.0 - kS) * (1.0 - gbuffer.metallic);
 	// Specular
 	float3 numerator = D * G * F;
 	float denominator = 4.0 * NdotV * NdotL + 0.001; // Add epsilon to prevent divide by zero
 	float3 specular = numerator / denominator;
 
-	float3 result = (kD * albedo / PI + specular) * radiance * NdotL;
+	float3 result = (kD * gbuffer.albedo.rgb / PI + specular) * radiance * NdotL;
 
 	return result;
 }
@@ -205,122 +215,137 @@ float3 outline(uint3 DTid, uint objectID)
 
 	// Simple outline based on object ID difference with neighboring pixels
 	bool isEdge = false;
-	for (int y = -1; y <= 1; y++)
-	{
-		for (int x = -1; x <= 1; x++)
+	[unroll]
+		for (int y = -1; y <= 1; y++)
 		{
-			if (x == 0 && y == 0) continue;
-			uint neighborID = tObjectID.Load(int3(DTid.xy + int2(x, y), 0));
-			if (neighborID != objectID)
+			[unroll]
+			for (int x = -1; x <= 1; x++)
 			{
-				isEdge = true;
-				break;
+				if (x == 0 && y == 0) continue;
+				uint neighborID = tObjectID.Load(int3(DTid.xy + int2(x, y), 0));
+				if (neighborID != objectID)
+				{
+					isEdge = true;
+					break;
+				}
 			}
+			if (isEdge) break;
 		}
-		if (isEdge) break;
-	}
 
 	return isEdge ? outlineColor : float3(0.0, 0.0, 0.0);
 }
 
-
-void applyWorldSpaceUI(uint3 DTid, inout float3 color)
+void applyLighting(inout float3 color, GBuffer gbuffer)
 {
-	float4 uiColor = worldSpaceUITexture.Load(int3(DTid.xy, 0));
-	color = lerp(color, uiColor.rgb, uiColor.a);
+	float3 V = normalize(cameraPosition - gbuffer.fragPos);
+	float3 F0 = lerp(float3(MIN_REFLECTANCE, MIN_REFLECTANCE, MIN_REFLECTANCE), gbuffer.albedo.rgb, gbuffer.metallic);
+	{
+		for (int i = 0; i < lights.Length; ++i)
+		{
+			Light light = lights[i];
+			if (light.lightType == 0) // Point
+			{
+				color += applyPointLight(light, V, F0, gbuffer);
+			}
+			else if (light.lightType == 1) // Directional
+			{
+				continue;
+			}
+			else if (light.lightType == 2) // Spot
+			{
+				continue;
+			}
+		}
+	}
+}
+
+GBuffer loadGBuffer(uint2 DTid)
+{
+	GBuffer gbuffer;
+	gbuffer.albedo = tAlbedo.Load(int3(DTid, 0));
+	float2 mr = tMetallicRoughness.Load(int3(DTid, 0)).xy;
+	gbuffer.metallic = saturate(mr.x);
+	gbuffer.roughness = saturate(mr.y);
+	gbuffer.normal = tNormal.Load(int3(DTid, 0)).xyz;
+	gbuffer.normal = normalize(gbuffer.normal * 2.0f - 1.0f);
+	gbuffer.fragPos = tFragPos.Load(int3(DTid, 0));
+	gbuffer.objectID = tObjectID.Load(int3(DTid, 0));
+	return gbuffer;
+}
+
+void applyIBL(inout float3 color, GBuffer gbuffer)
+{
+	float3 V = normalize(cameraPosition - gbuffer.fragPos);
+	float NdotV = clamp(dot(gbuffer.normal, V), 0.01, 0.99);
+
+	float3 R = reflect(-V, gbuffer.normal);
+
+	// Apply IBL rotation
+	float3x3 irradianceRotation = getIrradianceMapRotation();
+	float3 rotatedN = mul(irradianceRotation, gbuffer.normal);
+	float3 rotatedR = mul(irradianceRotation, R);
+
+	float3 F0 = lerp(float3(MIN_REFLECTANCE, MIN_REFLECTANCE, MIN_REFLECTANCE), gbuffer.albedo.rgb, gbuffer.metallic);
+	// Metallic workflow: interpolate between dielectric 0.04 and albedo by metallic
+	// IBL Diffuse
+	float3 irradiance = tIrradianceMap.SampleLevel(linearSampler, rotatedN, 0).rgb;
+	float3 F = fresnelSchlick(NdotV, F0, gbuffer.roughness);
+	float3 kS = F;
+	float3 kD = (1.0 - kS) * (1.0 - gbuffer.metallic);
+	// Lambert diffuse with irradiance convolution already accounting for 1/PI; omit /PI if irradiance is pre-integrated.
+	float3 diffuseIBL = irradiance * gbuffer.albedo.rgb * kD;
+
+	// IBL Specular
+	uint numMips = querySpecularTextureLevels();  // total mip levels
+	float mipLevel = gbuffer.roughness * max(float(numMips) - 1.0f, 0.0f);
+	float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, rotatedR, mipLevel).rgb;
+	float2 brdf = tBRDFLUT.SampleLevel(linearSampler, float2(NdotV, gbuffer.roughness), 0).rg;
+	float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y);
+
+	// Combine IBL
+	color = (diffuseIBL + specularIBL) * IBLintensity;
+}
+
+void drawBackground(uint2 DTid)
+{
+	float3 background = tBackground.Load(int3(DTid, 0)).xyz;
+	linearRGBtoSRGB(background);
+	float4 finalBackground = float4(background * backgroundIntensity, 1.0);
+	aces(finalBackground.rgb);
+	applyDitheredNoise(DTid, finalBackground);
+	outColor[DTid] = finalBackground;
+}
+
+void drawWorldSpaceUI(uint2 DTid)
+{
+	float4 uiColor = worldSpaceUITexture.Load(int3(DTid, 0));
+	uiColor.rgb *= uiColor.a * ICONS_TRANSPARENCY_FACTOR;
+	outColor[DTid] += float4(uiColor.rgb, 0.0);
 }
 
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
-	float3 fragPos = tFragPos.Load(int3(DTid.xy, 0)).xyz;
-	float3 normal = tNormal.Load(int3(DTid.xy, 0)).xyz; // encoded in [0,1]
-	float4 albedo = tAlbedo.Load(int3(DTid.xy, 0));
-	float2 metallicRoughness = tMetallicRoughness.Load(int3(DTid.xy, 0)).xy;
-	uint objectID = tObjectID.Load(int3(DTid.xy, 0));
-	float depth = tDepth.Load(int3(DTid.xy, 0)).x;
-	float3 background = tBackground.Load(int3(DTid.xy, 0)).xyz;
-	float4 uiColor = worldSpaceUITexture.Load(int3(DTid.xy, 0));
-
-	float3 N = normalize(normal * 2.0f - 1.0f);
-
-	float metallic = saturate(metallicRoughness.x);
-	float roughness = saturate(metallicRoughness.y);
+	GBuffer gbuffer = loadGBuffer(DTid.xy);
+	float4 finalColor = float4(0.0, 0.0, 0.0, 1.0);
 
 	// Early exit for background
-	if (objectID == 0)
+	if (gbuffer.albedo.a < 0.1)
 	{
-		background.r = linear_rgb_to_srgb(background.r);
-		background.g = linear_rgb_to_srgb(background.g);
-		background.b = linear_rgb_to_srgb(background.b);
-		float3 finalBackground = background * backgroundIntensity;
-		float3 finalUIColor = uiColor.rgb * uiColor.a * ICONS_TRANSPARENCY_FACTOR;
-		finalBackground = aces(finalBackground + finalUIColor);
-		applyDitheredNoise(DTid.xy, finalBackground);
-		outColor[DTid.xy] = float4(finalBackground, 1.0);
-		return;
+		drawBackground(DTid.xy);
+	}
+	applyIBL(finalColor.rgb, gbuffer);
+	finalColor.rgb += outline(DTid, gbuffer.objectID);
+	if (gbuffer.albedo.a > 0.1)
+	{
+		applyLighting(finalColor.rgb, gbuffer);
 	}
 
-	float3 V = normalize(cameraPosition - fragPos);
-	float NdotV = clamp(dot(N, V), 0.01, 0.99);
+	linearRGBtoSRGB(finalColor.rgb);
+	aces(finalColor.rgb);
+	applyDitheredNoise(DTid.xy, finalColor);
 
-	float3 R = reflect(-V, N);
+	outColor[DTid.xy] = lerp(outColor[DTid.xy], finalColor, gbuffer.albedo.a);
+	drawWorldSpaceUI(DTid.xy);
 
-	// Apply IBL rotation
-	float3x3 irradianceRotation = getIrradianceMapRotation();
-	float3 rotatedN = mul(irradianceRotation, N);
-	float3 rotatedR = mul(irradianceRotation, R);
-
-	// Metallic workflow: interpolate between dielectric 0.04 and albedo by metallic
-	float3 F0 = lerp(float3(MIN_REFLECTANCE, MIN_REFLECTANCE, MIN_REFLECTANCE), albedo.rgb, metallic);
-
-	// IBL Diffuse
-	float3 irradiance = tIrradianceMap.SampleLevel(linearSampler, rotatedN, 0).rgb;
-	float3 F = fresnelSchlick(NdotV, F0, roughness);
-	float3 kS = F;
-	float3 kD = (1.0 - kS) * (1.0 - metallic);
-	// Lambert diffuse with irradiance convolution already accounting for 1/PI; omit /PI if irradiance is pre-integrated.
-	float3 diffuseIBL = irradiance * albedo.rgb * kD;
-
-	// IBL Specular
-	uint numMips = querySpecularTextureLevels();  // total mip levels
-	float mipLevel = roughness * max(float(numMips) - 1.0f, 0.0f);
-	float3 prefilteredColor = tPrefilteredMap.SampleLevel(linearSampler, rotatedR, mipLevel).rgb;
-	float2 brdf = tBRDFLUT.SampleLevel(linearSampler, float2(NdotV, roughness), 0).rg;
-	float3 specularIBL = prefilteredColor * (F0 * brdf.x + brdf.y);
-
-	// Combine IBL
-	float3 finalColor = (diffuseIBL + specularIBL) * IBLintensity;
-
-	for (int i = 0; i < lights.Length; ++i)
-	{
-		Light light = lights[i];
-		if (light.lightType == 0) // Point
-		{
-			finalColor += applyPointLight(light, fragPos, N, V, F0, roughness, albedo.rgb, metallic);
-		}
-		else if (light.lightType == 1) // Directional
-		{
-			continue;
-		}
-		else if (light.lightType == 2) // Spot
-		{
-			continue;
-		}
-
-	}
-	// finalColor = lights[0].intensity;
-
-	finalColor += outline(DTid, objectID);
-	// Gamma correction (Blender uses 2.2, but we have custom sRGB)
-	finalColor.r = linear_rgb_to_srgb(finalColor.r);
-	finalColor.g = linear_rgb_to_srgb(finalColor.g);
-	finalColor.b = linear_rgb_to_srgb(finalColor.b);
-
-	// ACES tone mapping
-	finalColor = aces(finalColor);
-
-
-	outColor[DTid.xy] = float4(finalColor, 1.0);
-	outColor[DTid.xy] += float4(uiColor.rgb * uiColor.a * ICONS_TRANSPARENCY_FACTOR, 0.0);
 }

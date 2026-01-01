@@ -42,6 +42,7 @@ public:
 	size_t getPrimitiveCount() const;
 
 	void addLight(Light* light);
+	Light* getLightByID(size_t id);
 	SceneUnorderedMap<Light*>& getLights();
 
 	void addCamera(Camera* camera);
@@ -54,6 +55,7 @@ public:
 	std::vector<std::string> getMaterialNames() const;
 
 	SceneNode* getActiveNode();
+	int32_t getActiveNodeID();
 	int32_t getActivePrimitiveID();
 	void setActiveNode(SceneNode* node, bool addToSelection = false);
 	void deselectNode(SceneNode* node);

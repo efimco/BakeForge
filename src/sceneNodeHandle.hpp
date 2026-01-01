@@ -7,33 +7,33 @@
 class SceneNodeHandle
 {
 private:
-    static std::atomic_int32_t s_handleGenerator;
-    int32_t handle = c_valueInvalid;
+	inline static std::atomic_int32_t s_handleGenerator{0};
+	int32_t handle = c_valueInvalid;
 
 public:
-    static constexpr int32_t c_valueInvalid = 0;
+	static constexpr int32_t c_valueInvalid = 0;
 
-    SceneNodeHandle() = default;
+	SceneNodeHandle() = default;
 
-    explicit SceneNodeHandle(int32_t inHandle) : handle(inHandle) {}
-    explicit operator int32_t() const { return handle; }
+	explicit SceneNodeHandle(int32_t inHandle) : handle(inHandle) {}
+	explicit operator int32_t() const { return handle; }
 
-    bool operator==(const SceneNodeHandle& other) const { return handle == other.handle; }
-    bool operator!=(const SceneNodeHandle& other) const { return !(*this == other); }
+	bool operator==(const SceneNodeHandle& other) const { return handle == other.handle; }
+	bool operator!=(const SceneNodeHandle& other) const { return !(*this == other); }
 
-    static SceneNodeHandle generateHandle() { return SceneNodeHandle{++s_handleGenerator}; }
-    static SceneNodeHandle invalidHandle() { return SceneNodeHandle{c_valueInvalid}; }
+	static SceneNodeHandle generateHandle() { return SceneNodeHandle{ ++s_handleGenerator }; }
+	static SceneNodeHandle invalidHandle() { return SceneNodeHandle{ c_valueInvalid }; }
 
-    bool isValid() const { return handle != c_valueInvalid; }
+	bool isValid() const { return handle != c_valueInvalid; }
 };
 
 template <>
 struct std::hash<SceneNodeHandle>
 {
-    std::size_t operator()(const SceneNodeHandle& s) const noexcept
-    {
-        return static_cast<int>(s);
-    }
+	std::size_t operator()(const SceneNodeHandle& s) const noexcept
+	{
+		return static_cast<int>(s);
+	}
 };
 
 template <typename T>

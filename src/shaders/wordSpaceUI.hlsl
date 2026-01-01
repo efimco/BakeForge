@@ -9,7 +9,8 @@ cbuffer ConstantBuffer : register(b0)
 	float3 cameraPosition;
 	float sizeInPixels;
 	float2 screenSize;
-	float2 padding; 
+	uint primitiveCount;
+	float padding; 
 };
 
 struct Light
@@ -46,6 +47,7 @@ struct VS_OUT
 struct PS_OUT
 {
 	float4 color : SV_TARGET0;
+	uint objectID : SV_TARGET1;
 };
 
 
@@ -68,6 +70,7 @@ PS_OUT PS(VS_OUT input)
 {
 	PS_OUT output;
 	float4 iconColor = lightIcon.Sample(samplerState, input.uv);
+	output.objectID = primitiveCount + input.iid + 1; // Light IDs start after primitive IDs
 	if (iconColor.a < 0.1f)
 	{
 		discard;

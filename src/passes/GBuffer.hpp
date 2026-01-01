@@ -38,6 +38,7 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getNormalSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getPositionSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getObjectIDSRV() const;
+	ComPtr<ID3D11RenderTargetView> getObjectIDRTV() const;
 
 private:
 

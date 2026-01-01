@@ -435,3 +435,8 @@ ComPtr<ID3D11ShaderResourceView> GBuffer::getObjectIDSRV() const
 {
 	return srv_objectID;
 }
+
+ComPtr<ID3D11RenderTargetView> GBuffer::getObjectIDRTV() const
+{
+	return rtv_objectID;
+}
