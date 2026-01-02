@@ -337,7 +337,6 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 		drawBackground(DTid.xy);
 	}
 	applyIBL(finalColor.rgb, gbuffer);
-	finalColor.rgb += outline(DTid, gbuffer.objectID);
 	if (gbuffer.albedo.a > 0.1)
 	{
 		applyLighting(finalColor.rgb, gbuffer);
@@ -348,6 +347,7 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	applyDitheredNoise(DTid.xy, finalColor);
 
 	outColor[DTid.xy] = lerp(outColor[DTid.xy], finalColor, gbuffer.albedo.a);
+	outColor[DTid.xy] += float4(outline(DTid, gbuffer.objectID), 0.0);
 	drawWorldSpaceUI(DTid.xy);
 
 }
