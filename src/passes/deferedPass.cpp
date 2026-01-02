@@ -241,12 +241,13 @@ void DeferredPass::updateLights(Scene* scene)
 	{
 		auto* lightData = static_cast<LightData*>(mappedResource.pData);
 		const auto& lights = scene->getLights();
-	    int32_t i = 0;
-	    for (auto& [handle, light] : lights)
-	    {
+		int32_t i = 0;
+		for (auto& [handle, light] : lights)
+		{
 			lightData[i] = light->getLightData();
-	        ++i;
-	    }
+			lightData[i].objectID = static_cast<uint32_t>(static_cast<int32_t>(handle));
+			++i;
+		}
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
 	}
 }

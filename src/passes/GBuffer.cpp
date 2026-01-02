@@ -36,7 +36,7 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 	m_device = device;
 	m_context = context;
 	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.DepthBias = 0;
 	rasterizerDesc.DepthBiasClamp = 0;
