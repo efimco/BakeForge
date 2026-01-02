@@ -208,7 +208,7 @@ float3 applyPointLight(Light light, float3 V, float3 F0, GBuffer gbuffer)
 
 float3 outline(uint3 DTid, uint objectID)
 {
-	if (objectID - 1 != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0 
+	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0 
 		return float3(0.0, 0.0, 0.0);
 	float3 outlineColor = float3(0.95, 0.05, 0.0);
 	float thickness = 1.5;

@@ -1,6 +1,7 @@
 
 Texture2D lightIcon : register(t0);
 SamplerState samplerState : register(s0);
+#define MAX_LIGHTS 100
 
 cbuffer ConstantBuffer : register(b0)
 {
@@ -9,8 +10,7 @@ cbuffer ConstantBuffer : register(b0)
 	float3 cameraPosition;
 	float sizeInPixels;
 	float2 screenSize;
-	uint primitiveCount;
-	float padding; 
+	float2 padding;
 };
 
 struct Light
@@ -25,6 +25,8 @@ struct Light
 	float2 padding2;
 	float3 attenuations;
 	float radius; // radius for point lights
+	uint objectID;
+	float3 padding3;
 };
 
 
@@ -70,7 +72,7 @@ PS_OUT PS(VS_OUT input)
 {
 	PS_OUT output;
 	float4 iconColor = lightIcon.Sample(samplerState, input.uv);
-	output.objectID = primitiveCount + input.iid + 1; // Light IDs start after primitive IDs
+	output.objectID = lights[input.iid].objectID;
 	if (iconColor.a < 0.1f)
 	{
 		discard;

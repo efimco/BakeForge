@@ -112,21 +112,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 		}
 		else
 		{
-			size_t primitiveCount = scene->getPrimitiveCount();
-			if (readBackID <= primitiveCount)
-			{
-				// It's a primitive (IDs 1 to primitiveCount)
-				scene->setActiveNode(scene->getPrimitiveByID(readBackID - 1), isShiftPressed);
-			}
-			else
-			{
-				// It's a light (IDs > primitiveCount)
-				Light* light = scene->getLightByID(readBackID);
-				if (light)
-				{
-					scene->setActiveNode(light, isShiftPressed);
-				}
-			}
+			scene->setActiveNode(scene->getNodeByHandle(SceneNodeHandle(readBackID)), isShiftPressed);
 		}
 	}
 }

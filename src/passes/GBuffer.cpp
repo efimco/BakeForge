@@ -186,7 +186,7 @@ void GBuffer::update(const glm::mat4& view,
 		// Use inverse-transpose of the model matrix (upper-left 3x3) for correct normal transformation
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 		cbData->model = glm::transpose(model);
-		cbData->objectID = objectID + 1;
+		cbData->objectID = objectID;
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}

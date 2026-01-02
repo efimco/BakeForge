@@ -22,8 +22,7 @@ struct alignas(16) ConstantBufferData
 	glm::vec3 cameraPosition;
 	float sizeInPixels;
 	glm::vec2 screenSize;
-	uint32_t primitiveCount;
-	float padding; // align to 16 bytes
+	glm::vec2 padding;
 };
 
 
@@ -160,8 +159,6 @@ void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::ma
 	dataPtr->sizeInPixels = 32.0f; // Example value, adjust as needed
 	glm::ivec2 screenSize = glm::ivec2(AppConfig::getViewportWidth(), AppConfig::getViewportHeight());
 	dataPtr->screenSize = screenSize;
-	dataPtr->primitiveCount = static_cast<uint32_t>(scene->getPrimitiveCount());
-	dataPtr->padding = 0.0f;
 
 	m_context->Unmap(m_constantBuffer.Get(), 0);
 }
@@ -207,6 +204,7 @@ void WorldSpaceUIPass::updateLights(Scene* scene)
 		for (auto& [handle, light] : lights)
 		{
 			lightData[i] = light->getLightData();
+			lightData[i].objectID = static_cast<uint32_t>(static_cast<int32_t>(handle));
 			++i;
 		}
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
