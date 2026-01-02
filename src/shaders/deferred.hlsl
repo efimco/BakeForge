@@ -20,6 +20,8 @@ struct Light
 	float2 padding2; // Additional padding to align to 16 bytes
 	float3 attenuations;
 	float radius; // radius for point lights
+	uint objectID;
+	float3 padding3;
 };
 
 struct GBuffer
