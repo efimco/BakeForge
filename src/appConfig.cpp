@@ -17,6 +17,7 @@ static int bvhMaxDepth = -1;
 static bool isBackgroundBlurred = false;
 static float blurAmount = 0.5f;
 static float backgroundIntensity = 1.0f;
+static bool drawWSUI = true;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -135,4 +136,9 @@ void AppConfig::setClearColor(float r, float g, float b, float a)
 	clearColor[1] = g;
 	clearColor[2] = b;
 	clearColor[3] = a;
+}
+
+bool& AppConfig::getDrawWSUI()
+{
+	return drawWSUI;
 }

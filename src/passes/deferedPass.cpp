@@ -19,7 +19,7 @@ struct alignas(16) DeferredConstantBuffer
 	int32_t selectedID;
 	float backgroundIntensity; // Align to 16 bytes
 	float cameraPosition[3];
-	uint32_t primitiveCount;
+	int drawWSUI;
 };
 
 DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
@@ -175,7 +175,7 @@ void DeferredPass::draw(const glm::mat4& view,
 		cbData->cameraPosition[0] = cameraPosition.x;
 		cbData->cameraPosition[1] = cameraPosition.y;
 		cbData->cameraPosition[2] = cameraPosition.z;
-		cbData->primitiveCount = static_cast<uint32_t>(scene->getPrimitiveCount());
+		cbData->drawWSUI = AppConfig::getDrawWSUI() ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -20,6 +21,7 @@ struct Material;
 class Light;
 class CommandManager;
 
+
 #define ICON_FA_CUBE       "\xef\x86\xb2"     // Mesh/Primitive
 #define ICON_FA_LIGHTBULB  "\xef\x83\xab"     // Light
 #define ICON_FA_FOLDER     "\xef\x81\xbb"     // Folder/Group
@@ -27,6 +29,13 @@ class CommandManager;
 #define ICON_FA_IMAGE      "\xef\x80\xbe"     // Material/Texture
 
 using namespace Microsoft::WRL;
+
+enum class FileType
+{
+	IMAGE,
+	MODEL,
+	UNKNOWN
+};
 
 class UIManager
 {
@@ -58,6 +67,8 @@ private:
 	void showSceneSettings();
 	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
+	void showChWSnappingOptions(); //ChW stands for "Child Window"
+	void showChWViewportOptions();
 	void showInvisibleDockWindow();
 	void showMaterialBrowser();
 
@@ -78,6 +89,8 @@ private:
 	void showMaterialProperties(std::shared_ptr<Material> material);
 	void showLightProperties(Light* light);
 	void showCameraProperties(Camera* camera);
+
+	std::string openFileDialog(FileType outFileType);
 
 	glm::mat4 m_view;
 	glm::mat4 m_projection;

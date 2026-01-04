@@ -8,7 +8,6 @@
 
 #include "appConfig.hpp"
 #include "dxDevice.hpp"
-#include "gltfImporter.hpp"
 #include "shaderManager.hpp"
 #include "uiManager.hpp"
 
@@ -40,7 +39,7 @@ Renderer::Renderer(const HWND& hwnd)
 
 	m_prevTime = std::chrono::system_clock::now();
 	m_scene = std::make_unique<Scene>("Main Scene");
-	GLTFModel gltfModel(std::string("..\\..\\res\\Knight.glb"), m_device->getDevice(), m_scene.get());
+	m_scene->importModel("..\\..\\res\\Knight.glb", m_device->getDevice());
 	std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, glm::vec3(0.0f, 1.0f, 1.0f));
 	m_scene->addLight(pointLight.get());
 	m_scene->addChild(std::move(pointLight));

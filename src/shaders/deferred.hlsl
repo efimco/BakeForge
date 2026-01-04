@@ -41,7 +41,7 @@ cbuffer CB : register(b0)
 	int selectedID;
 	float backgroundIntensity;
 	float3 cameraPosition;
-	uint primitiveCount;
+	int drawWSUI;
 };
 
 StructuredBuffer<Light> lights : register(t6);
@@ -348,6 +348,9 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 
 	outColor[DTid.xy] = lerp(outColor[DTid.xy], finalColor, gbuffer.albedo.a);
 	outColor[DTid.xy] += float4(outline(DTid, gbuffer.objectID), 0.0);
-	drawWorldSpaceUI(DTid.xy);
-
+	[branch]
+	if (drawWSUI == 1)
+	{
+		drawWorldSpaceUI(DTid.xy);
+	}
 }

@@ -2,6 +2,9 @@
 
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
+#include <windows.h>
+#include <commdlg.h>
+#include <filesystem>
 
 #define IM_VEC2_CLASS_EXTRA
 #include "imgui_impl_win32.h"
@@ -23,6 +26,7 @@
 #include "commands/nodeSnapshot.hpp"
 #include "commands/scopedTransaction.hpp"
 #include "commands/commandManager.hpp"
+
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
@@ -153,7 +157,7 @@ void UIManager::showMainMenuBar()
 			if (ImGui::MenuItem("Save", "Ctrl+S")) { /* TODO: Save scene */ }
 			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) { /* TODO: Save as dialog */ }
 			ImGui::Separator();
-			if (ImGui::MenuItem("Import Model...", "Ctrl+I")) { /* TODO: Import model */ }
+			if (ImGui::MenuItem("Import Model...", "Ctrl+I")) { m_scene->importModel(openFileDialog(FileType::MODEL), m_device); }
 			if (ImGui::MenuItem("Export...", "Ctrl+E")) { /* TODO: Export */ }
 			ImGui::Separator();
 			if (ImGui::MenuItem("Exit", "Alt+F4")) { PostQuitMessage(0); }
@@ -327,10 +331,22 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	ImGuizmo::SetRect(windowPos.x, windowPos.y, size.x, size.y);
 
 	ImGui::Image(tex, size, uv0, uv1);
+
+	showChWSnappingOptions();
+	showChWViewportOptions();
+
+	processGizmo();
+
+	ImGui::End();
+	ImGui::PopStyleVar(3);
+}
+
+void UIManager::showChWSnappingOptions()
+{
 	// Snap toggle button in top right corner of viewport
 	// Gizmo controls overlay
 	ImGui::SetCursorPos(ImVec2(5.0f, 5.0f));
-	ImGui::BeginChild("GizmoControls", ImVec2(200.0f, 150.0f), true, ImGuiWindowFlags_NoScrollbar);
+	ImGui::BeginChild("Snapping Options", ImVec2(200.0f, 150.0f), true, ImGuiWindowFlags_NoScrollbar);
 	{
 		if (ImGui::Button(gUseSnap ? "Snap: On" : "Snap: Off", ImVec2(-1.0f, 20.0f)))
 		{
@@ -356,11 +372,20 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 		ImGui::PopItemWidth();
 	}
 	ImGui::EndChild();
+}
 
-	processGizmo();
-
-	ImGui::End();
-	ImGui::PopStyleVar(3);
+void UIManager::showChWViewportOptions()
+{
+	// Viewport options child window
+	ImGui::SetCursorPos(ImVec2(AppConfig::getViewportWidth() - 205.0f, 5.0f));
+	ImGui::BeginChild("ViewportOptions", ImVec2(200.0f, 150.0f), false, ImGuiWindowFlags_NoScrollbar);
+	{
+		if (ImGui::RadioButton("Show UI Overlay", AppConfig::getDrawWSUI()))
+		{
+			AppConfig::getDrawWSUI() = !AppConfig::getDrawWSUI();
+		}
+	}
+	ImGui::EndChild();
 }
 
 void UIManager::processInputEvents()
@@ -783,6 +808,41 @@ void UIManager::showCameraProperties(Camera* camera)
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
+}
+
+std::string UIManager::openFileDialog(FileType outFileType)
+{
+	OPENFILENAME ofn;
+	char fileName[260] = { 0 };
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = nullptr;
+	ofn.lpstrFile = fileName;
+	ofn.nMaxFile = sizeof(fileName);
+
+	if (outFileType == FileType::IMAGE)
+	{
+		ofn.lpstrFilter = "Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.hdr;*.exr\0All Files\0*.*\0";
+	}
+	else if (outFileType == FileType::MODEL)
+	{
+		ofn.lpstrFilter = "Model Files\0*.gltf;*.glb;*.obj\0All Files\0*.*\0";
+	}
+	else
+	{
+		ofn.lpstrFilter = "All Files\0*.*\0";
+	}
+	ofn.nFilterIndex = 1;
+	ofn.lpstrTitle = "Select a Texture";
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+	// Open the dialog box
+	if (GetOpenFileNameA(&ofn) == TRUE)
+	{
+		return std::string(ofn.lpstrFile);
+	}
+
+	return std::string();
 }
 
 void UIManager::showSceneSettings()

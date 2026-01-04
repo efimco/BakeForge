@@ -8,6 +8,7 @@
 #include "texture.hpp"
 #include "material.hpp"
 #include "camera.hpp"
+#include "gltfImporter.hpp"
 
 Scene::Scene(std::string_view name)
 {
@@ -408,4 +409,9 @@ void Scene::validateName(SceneNode* node)
 const Bvh* Scene::getSceneBVH() const
 {
 	return m_sceneBVH.get();
+}
+
+void Scene::importModel(std::string filepath, ComPtr<ID3D11Device> device)
+{
+	GLTFModel gltfModel(filepath, device, this);
 }

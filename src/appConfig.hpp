@@ -29,5 +29,6 @@ namespace AppConfig
 	bool& getIsBlurred();
 	float& getBlurAmount();
 	void setClearColor(float r, float g, float b, float a);
+	bool& getDrawWSUI();
 
 }

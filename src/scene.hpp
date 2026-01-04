@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <d3d11.h>
+#include <wrl.h>
 
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/thread_pool.h>
@@ -23,6 +25,7 @@ using Vec3 = bvh::v2::Vec<Scalar, 3>;
 using BBox = bvh::v2::BBox<Scalar, 3>;
 using Node = bvh::v2::Node<Scalar, 3>;
 using Bvh = bvh::v2::Bvh<Node>;
+using namespace Microsoft::WRL;
 
 class Scene : public SceneNode
 {
@@ -78,6 +81,8 @@ public:
 	void rebuildSceneBVHIfDirty();
 	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;
+
+	void importModel(std::string filepath, ComPtr<ID3D11Device> device);
 
 private:
 	SceneNode m_rootNode;
