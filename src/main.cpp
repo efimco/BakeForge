@@ -3,28 +3,10 @@
 #endif
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include <cassert>
-#include <chrono>
-#include <ctime>
 #include <iostream>
-#include <vector>
-#include <filesystem>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <stb_image.h>
-
-#include <wrl.h>
-#include <d3d11.h>
-#include <d3dcompiler.h>
 #include <windows.h>
-#include <ShellScalingAPI.h>
-
 #include "window.hpp"
-#include "camera.hpp"
-#include "dxDevice.hpp"
-#include "gltfImporter.hpp"
-#include "uiManager.hpp"
 #include "renderer.hpp"
 
 // No manifest approach: set process DPI awareness at runtime
