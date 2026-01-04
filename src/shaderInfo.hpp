@@ -3,7 +3,7 @@
 #include <string>
 #include <filesystem>
 
-#include <d3d11.h>
+#include <d3d11_4.h>
 #include <wrl.h>
 
 using namespace Microsoft::WRL;

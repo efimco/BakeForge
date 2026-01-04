@@ -1,6 +1,6 @@
 #pragma once
 
-#include <d3d11.h>
+#include <d3d11_4.h>
 #include <bvh/v2/vec.h>
 
 using Vec3 = bvh::v2::Vec<float, 3>;

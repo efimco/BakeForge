@@ -289,7 +289,7 @@ void Scene::deleteNode(SceneNode* node)
 	}
 	if (auto camera = dynamic_cast<Camera*>(node))
 	{
-		if (m_cameras.size() < 1)
+		if (m_cameras.size() <= 1)
 		{
 			return;
 		}
@@ -413,6 +413,11 @@ const Bvh* Scene::getSceneBVH() const
 
 void Scene::importModel(std::string filepath, ComPtr<ID3D11Device> device)
 {
+	if (filepath.empty())
+	{
+		std::cout << "No file path provided for model import." << std::endl;
+		return;
+	}
 	if (m_isImporting)
 	{
 		std::cout << "Already importing a model, please wait." << std::endl;

@@ -4,7 +4,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <windows.h>
 #include <commdlg.h>
-#include <filesystem>
 
 #define IM_VEC2_CLASS_EXTRA
 #include "imgui_impl_win32.h"
@@ -159,7 +158,10 @@ void UIManager::showMainMenuBar()
 			ImGui::Separator();
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
 			{
-				m_scene->importModel(openFileDialog(FileType::MODEL), m_device);
+				std::string filepath = openFileDialog(FileType::MODEL);
+				if (filepath.empty())
+					return;
+				m_scene->importModel(filepath, m_device);
 				std::cout << "Import model triggered from menu\n";
 				m_importProgress = m_scene->getImportProgress();
 			}

@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <d3d11.h>
+#include <d3d11_4.h>
 #include <wrl.h>
 #include <future>
 
