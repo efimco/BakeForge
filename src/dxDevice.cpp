@@ -2,9 +2,9 @@
 
 #include <assert.h>
 
-DXDevice::DXDevice(const HWND &hWindow)
+DXDevice::DXDevice(const HWND& hWindow)
 {
-	D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_1};
+	D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1 };
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 	UINT deviceCreationFlags = 0;
 #if defined(_DEBUG)
@@ -24,6 +24,11 @@ DXDevice::DXDevice(const HWND &hWindow)
 			&m_d3dDevice,			  //_COM_Outptr_opt_ ID3D11Device** ppDevice
 			nullptr,				  // D3D_FEATURE_LEVEL* pFeatureLevel
 			&m_d3dDeviceContext);	  // ID3D11DeviceContext** ppImmediateContext
+		assert(SUCCEEDED(hr));
+	}
+
+	{
+		HRESULT hr = m_d3dDevice->CreateDeferredContext(0, &m_d3dDeviceDefferedContext);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -66,6 +71,11 @@ DXDevice::DXDevice(const HWND &hWindow)
 ComPtr<ID3D11DeviceContext> DXDevice::getContext()
 {
 	return m_d3dDeviceContext;
+}
+
+ComPtr<ID3D11DeviceContext> DXDevice::getDeferredContext()
+{
+	return m_d3dDeviceDefferedContext;
 }
 
 ComPtr<IDXGISwapChain> DXDevice::getSwapChain()

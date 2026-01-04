@@ -13,18 +13,116 @@
 static bool g_buildBVHOnImport = false;
 
 GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device> device, Scene* scene)
+	: m_device(device)
+	, m_scene(scene)
+	, m_deferredContext(nullptr)
+	, m_progress(nullptr)
 {
-	m_device = device;
-	m_scene = scene;
 	const tinygltf::Model model = readGlb(path);
 	processGlb(model);
-
 }
+
+GLTFModel::GLTFModel(std::string path,
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> deferredContext,
+	std::shared_ptr<ImportProgress> progress)
+	: m_device(device)
+	, m_deferredContext(deferredContext)
+	, m_scene(nullptr)
+	, m_progress(progress)
+{
+	const tinygltf::Model model = readGlb(path);
+	processGlb(model);
+}
+
+
 
 GLTFModel::~GLTFModel()
 {
 	std::cout << "GLTFModel Destructor Called" << std::endl;
 }
+
+std::future<AsyncImportResult> GLTFModel::importModelAsync(
+	std::string path
+	, ComPtr<ID3D11Device> device
+	, std::shared_ptr<ImportProgress> progress)
+{
+	return std::async(std::launch::async, [path, device, progress]() -> AsyncImportResult
+		{
+			AsyncImportResult result;
+			result.progress = progress;
+			try
+			{
+				progress->setStage("Creating deferred context...");
+
+				ComPtr<ID3D11DeviceContext> deferredCtx;
+				HRESULT hr = device->CreateDeferredContext(0, &deferredCtx);
+				if (FAILED(hr))
+				{
+					progress->hasFailed = true;
+					progress->message = "Failed to create deferred context";
+					return result;
+				}
+
+				GLTFModel importer(path, device, deferredCtx, progress);
+
+				result.primitives = std::move(importer.m_pendingPrimitives);
+				result.textures = std::move(importer.m_pendingTextures);
+				result.materials = std::move(importer.m_pendingMaterials);
+
+				progress->setStage("Finishing command list...");
+				hr = deferredCtx->FinishCommandList(FALSE, &result.commandList);
+				if (FAILED(hr))
+				{
+					progress->hasFailed = true;
+					progress->message = "Failed to finish command list";
+					return result;
+				}
+
+				progress->progress = 1.0f;
+				progress->isCompleted = true;
+				progress->setStage("Ready");
+
+			}
+			catch (const std::exception& e)
+			{
+				progress->hasFailed = true;
+				progress->message = e.what();
+			}
+
+			return result;
+		});
+}
+
+void GLTFModel::finalizeAsyncImport(
+	AsyncImportResult&& importResult
+	, ComPtr<ID3D11DeviceContext> immediateContext
+	, Scene* scene)
+{
+	if (importResult.commandList)
+	{
+		immediateContext->ExecuteCommandList(importResult.commandList.Get(), TRUE);
+	}
+
+	for (auto& prim : importResult.primitives)
+	{
+		scene->addPrimitive(prim.get());
+		scene->addChild(std::move(prim));
+	}
+
+	for (auto& tex : importResult.textures)
+	{
+		scene->addTexture(std::move(tex));
+	}
+
+	for (auto& mat : importResult.materials)
+	{
+		scene->addMaterial(std::move(mat));
+	}
+
+	scene->markSceneBVHDirty();
+}
+
 
 tinygltf::Model GLTFModel::readGlb(const std::string& path)
 {
@@ -56,9 +154,28 @@ tinygltf::Model GLTFModel::readGlb(const std::string& path)
 void GLTFModel::processGlb(const tinygltf::Model& model)
 {
 	std::cout << "Processing GLTF model with " << model.meshes.size() << " meshes" << std::endl;
+
+	if (m_progress) m_progress->setStage("Processing Textures...");
+	if (m_progress) m_progress->progress = 0.1f;
 	processTextures(model);
+
+	if (m_progress) m_progress->setStage("Processing Images...");
+	if (m_progress) m_progress->progress = 0.2f;
 	processImages(model);
+
+	if (m_progress) m_progress->setStage("Processing Materials...");
+	if (m_progress) m_progress->progress = 0.3f;
 	processMaterials(model);
+
+	if (m_progress) m_progress->setStage("Processing Meshes...");
+	if (m_progress) m_progress->progress = 0.4f;
+	size_t totalPrimitives = 0;
+	for (const auto& mesh : model.meshes)
+	{
+		totalPrimitives += mesh.primitives.size();
+	}
+	size_t processedPrimitives = 0;
+
 	for (const auto& mesh : model.meshes)
 	{
 		for (const auto& gltfPrimitive : mesh.primitives)
@@ -78,8 +195,8 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			{
 				InterleavedData interData;
 				interData.position = posBuffer[i];
-				interData.texCoords = texCoordsBuffer[i];
-				interData.normals = normalBuffer[i];
+				interData.texCoords = i < texCoordsBuffer.size() ? texCoordsBuffer[i] : TexCoords(0, 0);
+				interData.normals = i < normalBuffer.size() ? normalBuffer[i] : Normals(0, 1, 0);
 				vertexData.push_back(interData);
 			}
 			size_t meshIndex = &mesh - &model.meshes[0];
@@ -92,10 +209,29 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->name = model.nodes[meshIndex].name;
 			if (g_buildBVHOnImport)
 				primitive->buildBVH();
-			m_scene->addPrimitive(primitive.get());
-			m_scene->addChild(std::move(primitive));
+			if (m_scene)
+			{
+				m_scene->addPrimitive(primitive.get());
+				m_scene->addChild(std::move(primitive));
+			}
+			else
+			{
+				m_pendingPrimitives.push_back(std::move(primitive));
+			}
+			processedPrimitives++;
+			if (m_progress)
+			{
+				m_progress->progress = 0.4f + 0.6f * (float(processedPrimitives) / totalPrimitives);
+			}
 
-			std::cout << "Added primitive. Total primitives now: " << m_scene->getPrimitiveCount() << std::endl;
+			if (m_scene)
+			{
+				std::cout << "Added primitive. Total primitives now: " << m_scene->getPrimitiveCount() << std::endl;
+			}
+			else
+			{
+				std::cout << "Added primitive to pending list. Count: " << m_pendingPrimitives.size() << std::endl;
+			}
 		}
 	}
 }
@@ -117,15 +253,28 @@ void GLTFModel::processImages(const tinygltf::Model& model)
 		{
 			name = model.images[i].uri;
 		}
-		if (m_scene->getTexture(name) == nullptr)
+
+		std::shared_ptr<Texture> texture;
+		if (m_scene && m_scene->getTexture(name) != nullptr)
 		{
-			std::shared_ptr<Texture> texture = std::make_shared<Texture>(model.images[i], m_device);
-			m_scene->addTexture(std::move(texture));
+			texture = m_scene->getTexture(name);
 		}
-		m_imageIndex[i] = m_scene->getTexture(name);
+		else
+		{
+			// Pass deferred context for async path, nullptr (immediate) for sync path
+			texture = std::make_shared<Texture>(model.images[i], m_device, m_deferredContext);
+			if (m_scene)
+			{
+				m_scene->addTexture(std::shared_ptr<Texture>(texture));
+			}
+			else
+			{
+				m_pendingTextures.push_back(texture);
+			}
+		}
+		m_imageIndex[i] = texture;
 	}
 }
-
 void GLTFModel::processMaterials(const tinygltf::Model& model)
 {
 	for (int i = 0; i < model.materials.size(); i++)
@@ -160,12 +309,21 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 		mat->metallicValue = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
 
 		auto name = material.name;
-		if (m_scene->getMaterial(name) == nullptr)
+		if (m_scene)
 		{
-			m_scene->addMaterial(std::move(mat));
+			if (m_scene->getMaterial(name) == nullptr)
+			{
+				m_scene->addMaterial(std::shared_ptr<Material>(mat));
+			}
+			m_materialIndex[i] = m_scene->getMaterial(name);
 		}
-		m_materialIndex[i] = m_scene->getMaterial(name);
+		else
+		{
+			m_pendingMaterials.push_back(mat);
+			m_materialIndex[i] = mat;
+		}
 	}
+
 	if (model.materials.empty())
 	{
 		std::cerr << "No materials found in the model." << std::endl;

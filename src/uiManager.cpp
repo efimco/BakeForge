@@ -157,7 +157,12 @@ void UIManager::showMainMenuBar()
 			if (ImGui::MenuItem("Save", "Ctrl+S")) { /* TODO: Save scene */ }
 			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) { /* TODO: Save as dialog */ }
 			ImGui::Separator();
-			if (ImGui::MenuItem("Import Model...", "Ctrl+I")) { m_scene->importModel(openFileDialog(FileType::MODEL), m_device); }
+			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
+			{
+				m_scene->importModel(openFileDialog(FileType::MODEL), m_device);
+				std::cout << "Import model triggered from menu\n";
+				m_importProgress = m_scene->getImportProgress();
+			}
 			if (ImGui::MenuItem("Export...", "Ctrl+E")) { /* TODO: Export */ }
 			ImGui::Separator();
 			if (ImGui::MenuItem("Exit", "Alt+F4")) { PostQuitMessage(0); }
@@ -334,6 +339,16 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 
 	showChWSnappingOptions();
 	showChWViewportOptions();
+	if (m_importProgress)
+	{
+		showChWImportProgress(m_importProgress);
+		if (m_importProgress->isCompleted.load())
+		{
+			m_importProgress = nullptr;
+		}
+	}
+
+
 
 	processGizmo();
 
@@ -384,6 +399,19 @@ void UIManager::showChWViewportOptions()
 		{
 			AppConfig::getDrawWSUI() = !AppConfig::getDrawWSUI();
 		}
+	}
+	ImGui::EndChild();
+}
+
+void UIManager::showChWImportProgress(std::shared_ptr<ImportProgress> progress)
+{
+	// Viewport options child window
+	ImGui::SetCursorPos(ImVec2(AppConfig::getViewportWidth() - 300.0f, AppConfig::getViewportHeight() - 100.0f));
+	ImGui::BeginChild("ImportProgress", ImVec2(250.0f, 150.0f), false, ImGuiWindowFlags_NoScrollbar);
+	{
+		ImGui::Text("Import Progress:");
+		ImGui::ProgressBar(progress->progress.load(), ImVec2(-1.0f, 0.0f));
+		ImGui::Text("%s", progress->getStage().c_str());
 	}
 	ImGui::EndChild();
 }
@@ -809,6 +837,7 @@ void UIManager::showCameraProperties(Camera* camera)
 	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
 }
+
 
 std::string UIManager::openFileDialog(FileType outFileType)
 {

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <d3d11.h>
 #include <wrl.h>
+#include <future>
 
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/thread_pool.h>
@@ -13,6 +14,7 @@
 #include "sceneNode.hpp"
 #include "sceneNodeHandle.hpp"
 #include "utility/stringUnorderedMap.hpp"
+#include "gltfImporter.hpp"
 
 class Primitive;
 struct Texture;
@@ -51,10 +53,10 @@ public:
 	void addCamera(Camera* camera);
 
 	std::shared_ptr<Texture> getTexture(std::string_view name);
-	void addTexture(std::shared_ptr<Texture>&& texture);
+	void addTexture(std::shared_ptr<Texture> texture);
 
 	std::shared_ptr<Material> getMaterial(std::string_view name);
-	void addMaterial(std::shared_ptr<Material>&& material);
+	void addMaterial(std::shared_ptr<Material> material);
 	std::vector<std::string> getMaterialNames() const;
 
 	SceneNode* getActiveNode();
@@ -83,6 +85,9 @@ public:
 	const Bvh* getSceneBVH() const;
 
 	void importModel(std::string filepath, ComPtr<ID3D11Device> device);
+	void updateAsyncImport(); // called each frame
+	bool isImporting() const { return m_isImporting; }
+	std::shared_ptr<ImportProgress> getImportProgress() const { return m_importProgress; }
 
 private:
 	SceneNode m_rootNode;
@@ -96,6 +101,11 @@ private:
 	std::unique_ptr<Bvh> m_sceneBVH;
 	std::vector<BBox> m_primBboxes; // World-space bboxes for each primitive
 	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
+
+	bool m_isImporting = false;
+	std::future<AsyncImportResult> m_importFuture;
+	std::shared_ptr<ImportProgress> m_importProgress;
+	ComPtr<ID3D11Device> m_importDevice;
 
 	std::unique_ptr<bvh::v2::ThreadPool> m_threadPool;
 

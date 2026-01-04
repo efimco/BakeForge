@@ -30,6 +30,8 @@ class CommandManager;
 
 using namespace Microsoft::WRL;
 
+struct ImportProgress;
+
 enum class FileType
 {
 	IMAGE,
@@ -69,6 +71,7 @@ private:
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
 	void showChWSnappingOptions(); //ChW stands for "Child Window"
 	void showChWViewportOptions();
+	void showChWImportProgress(std::shared_ptr<ImportProgress> progress);
 	void showInvisibleDockWindow();
 	void showMaterialBrowser();
 
@@ -89,6 +92,8 @@ private:
 	void showMaterialProperties(std::shared_ptr<Material> material);
 	void showLightProperties(Light* light);
 	void showCameraProperties(Camera* camera);
+
+	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
 
 	std::string openFileDialog(FileType outFileType);
 

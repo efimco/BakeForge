@@ -74,6 +74,7 @@ void Renderer::draw()
 		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
+	m_scene->updateAsyncImport();
 	m_scene->rebuildSceneBVHIfDirty();
 	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();

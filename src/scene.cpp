@@ -8,7 +8,6 @@
 #include "texture.hpp"
 #include "material.hpp"
 #include "camera.hpp"
-#include "gltfImporter.hpp"
 
 Scene::Scene(std::string_view name)
 {
@@ -160,7 +159,7 @@ std::shared_ptr<Texture> Scene::getTexture(std::string_view name)
 	return nullptr;
 }
 
-void Scene::addTexture(std::shared_ptr<Texture>&& texture)
+void Scene::addTexture(std::shared_ptr<Texture> texture)
 {
 	m_textures[texture->name] = std::move(texture);
 }
@@ -245,7 +244,7 @@ bool Scene::isNodeSelected(SceneNode* node)
 	return m_selectedNodes.contains(node);
 }
 
-void Scene::addMaterial(std::shared_ptr<Material>&& material)
+void Scene::addMaterial(std::shared_ptr<Material> material)
 {
 	m_materials.emplace(material->name, material);
 }
@@ -413,5 +412,49 @@ const Bvh* Scene::getSceneBVH() const
 
 void Scene::importModel(std::string filepath, ComPtr<ID3D11Device> device)
 {
-	GLTFModel gltfModel(filepath, device, this);
+	if (m_isImporting)
+	{
+		std::cout << "Already importing a model, please wait." << std::endl;
+		return;
+	}
+
+	m_isImporting = true;
+	m_importDevice = device;
+	m_importProgress = std::make_shared<ImportProgress>();
+	m_importFuture = GLTFModel::importModelAsync(filepath, device, m_importProgress);
+
+	std::cout << "Started async import: " << filepath << std::endl;
+}
+
+void Scene::updateAsyncImport()
+{
+	if (m_isImporting)
+	{
+		if (m_importProgress)
+		{
+			std::string stage = m_importProgress->getStage();
+			if (!stage.empty())
+			{
+				std::cout << "Import progress: " << stage << std::endl;
+			}
+		}
+		if (m_importProgress && (m_importProgress->isCompleted || m_importProgress->hasFailed))
+		{
+			try
+			{
+				auto importResult = m_importFuture.get();
+				ComPtr<ID3D11DeviceContext> context;
+				m_importDevice->GetImmediateContext(&context);
+				GLTFModel::finalizeAsyncImport(std::move(importResult), context, this);
+				std::cout << "Model import completed." << std::endl;
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << "Model import failed: " << e.what() << std::endl;
+			}
+			m_isImporting = false;
+			m_importProgress = nullptr;
+			m_importDevice = nullptr;
+		}
+	}
 }

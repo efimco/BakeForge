@@ -16,7 +16,7 @@ Texture::Texture(Texture&& other, ComPtr<ID3D11Device> _device)
 }
 
 
-Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
+Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context)
 {
 	device = _device;
 	name = image.name;
@@ -53,8 +53,11 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device)
 	textureResource->GetDesc(&texDesc);
 
 	// Upload base mip level data
-	ComPtr<ID3D11DeviceContext> context;
-	device->GetImmediateContext(&context);
+	ComPtr<ID3D11DeviceContext> context = _context;
+	if (!context)
+	{
+		device->GetImmediateContext(&context);
+	}
 	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(), 
 		image.width * image.component, 0);
 
