@@ -346,6 +346,7 @@ void Scene::buildSceneBVH()
 	{
 		m_sceneBVH = nullptr;
 		std::cout << "No primitives in the scene to build BVH." << std::endl;
+		m_sceneBVHDirty = false;
 		return;
 	}
 	auto startTime = std::chrono::high_resolution_clock::now();
