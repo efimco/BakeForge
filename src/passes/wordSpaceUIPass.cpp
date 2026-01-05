@@ -33,11 +33,8 @@ static const D3D11_INPUT_ELEMENT_DESC s_WSUIInputLayoutDesc[] =
 };
 
 
-WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
-	m_device = device;
-	m_context = context;
-	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_lightIconTexture = std::make_shared<Texture>("../../res/icons/PointLight.png", m_device);
 	m_shaderManager->LoadPixelShader("wordSpaceUIPS", L"../../src/shaders/wordSpaceUI.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("wordSpaceUIVS", L"../../src/shaders/wordSpaceUI.hlsl", "VS");
@@ -45,9 +42,9 @@ WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	createQuad();
 	createLightsBuffer();
 	createInputLayout();
-	createRasterizerState();
-	createDepthStencilState();
-	createSamplerState();
+	createRSState(RasterizerPreset::NoCullNoClip);
+	createDSState(DepthStencilPreset::ReadOnlyLessEqual);
+	createSamplerState(SamplerPreset::LinearClamp);
 	createConstantBuffer();
 }
 
@@ -109,25 +106,6 @@ void WorldSpaceUIPass::createInputLayout()
 
 }
 
-void WorldSpaceUIPass::createSamplerState()
-{
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.MinLOD = -FLT_MAX;
-	samplerDesc.MaxLOD = FLT_MAX;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-
-	{
-		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-		if (FAILED(hr))
-			std::cerr << "Failed to create Sampler: HRESULT = " << hr << std::endl;
-	}
-}
 
 void WorldSpaceUIPass::createConstantBuffer()
 {
@@ -208,41 +186,6 @@ void WorldSpaceUIPass::updateLights(Scene* scene)
 			++i;
 		}
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
-	}
-}
-
-void WorldSpaceUIPass::createRasterizerState()
-{
-	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_NONE;
-	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.DepthBias = 0;
-	rasterizerDesc.DepthBiasClamp = 0;
-	rasterizerDesc.SlopeScaledDepthBias = 0;
-	rasterizerDesc.AntialiasedLineEnable = false;
-	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.MultisampleEnable = false;
-	rasterizerDesc.DepthClipEnable = false;
-	rasterizerDesc.ScissorEnable = false;
-
-	{
-		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Rasterizer State: " << hr << std::endl;
-	}
-}
-
-void WorldSpaceUIPass::createDepthStencilState()
-{
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	depthStencilDesc.DepthEnable = TRUE;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
-
-	{
-		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Depths Stencil State: " << hr << std::endl;
 	}
 }
 

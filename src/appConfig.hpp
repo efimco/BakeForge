@@ -30,5 +30,8 @@ namespace AppConfig
 	float& getBlurAmount();
 	void setClearColor(float r, float g, float b, float a);
 	bool& getDrawWSUI();
+	void setCaptureNextFrame(bool capture);
+	bool getCaptureNextFrame();
+
 
 }

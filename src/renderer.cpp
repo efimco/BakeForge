@@ -10,6 +10,7 @@
 #include "dxDevice.hpp"
 #include "shaderManager.hpp"
 #include "uiManager.hpp"
+#include "inputEventsHandler.hpp"
 
 #include "passes/DebugBVHPass.hpp"
 #include "passes/FSQuad.hpp"
@@ -20,12 +21,24 @@
 #include "passes/pbrCubeMapPass.hpp"
 #include "passes/wordSpaceUIPass.hpp"
 
+
 #include "camera.hpp"
 #include "scene.hpp"
 #include "light.hpp"
 
 Renderer::Renderer(const HWND& hwnd)
 {
+
+	HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
+	if (rdocModule)
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI =
+			(pRENDERDOC_GetAPI)GetProcAddress(rdocModule, "RENDERDOC_GetAPI");
+		if (RENDERDOC_GetAPI)
+		{
+			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&m_rdocAPI);
+		}
+	}
 	m_device = std::make_unique<DXDevice>(hwnd);
 	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
@@ -62,6 +75,14 @@ Renderer::~Renderer() = default;
 
 void Renderer::draw()
 {
+	if (InputEvents::isKeyDown(KeyButtons::KEY_F11))
+	{
+		AppConfig::setCaptureNextFrame(true);
+	}
+	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
+	{
+		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), NULL);
+	}
 	if (AppConfig::getNeedsResize())
 	{
 		resize();
@@ -73,9 +94,10 @@ void Renderer::draw()
 		m_cubeMapPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
+
+	// --- CPU Updates ---
 	m_scene->updateAsyncImport();
 	m_scene->rebuildSceneBVHIfDirty();
-	// --- CPU Updates ---
 	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
@@ -97,7 +119,7 @@ void Renderer::draw()
 		m_scene->getActiveCamera()->transform.position,
 		m_scene.get(),
 		m_zPrePass->getDSV());
-	m_cubeMapPass->draw(m_view);
+	m_cubeMapPass->draw(m_view, m_projection);
 	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get(), m_gBuffer->getObjectIDRTV());
 	m_deferredPass->draw(m_view, m_projection,
 		m_scene->getActiveCamera()->transform.position,
@@ -129,7 +151,23 @@ void Renderer::draw()
 	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
+	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
+	{
+		m_rdocAPI->EndFrameCapture(NULL, NULL);
 
+		if (m_rdocAPI->GetNumCaptures() > 0)
+		{
+			uint32_t idx = m_rdocAPI->GetNumCaptures() - 1;
+			char path[512];
+			uint32_t pathLen = sizeof(path);
+			uint64_t timestamp;
+			if (m_rdocAPI->GetCapture(idx, path, &pathLen, &timestamp))
+			{
+				m_rdocAPI->LaunchReplayUI(1, path); // 1 = connect to this instance
+				AppConfig::setCaptureNextFrame(false);
+			}
+		}
+	}
 }
 
 

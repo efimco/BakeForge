@@ -22,11 +22,8 @@ struct alignas(16) DeferredConstantBuffer
 	int drawWSUI;
 };
 
-DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
-	m_device = device;
-	m_context = context;
-	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	createOrResize();
 	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");
 	D3D11_BUFFER_DESC lightsBufferDesc = {};
@@ -55,20 +52,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 			std::cerr << "Error Creating Lights SRV: " << hr << std::endl;
 	}
 
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	{
-		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Sampler State: " << hr << std::endl;
-	}
+	createSamplerState(SamplerPreset::LinearClamp);
 
 	D3D11_BUFFER_DESC constantBufferDesc = {};
 	constantBufferDesc.ByteWidth = sizeof(DeferredConstantBuffer);

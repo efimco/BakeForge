@@ -7,10 +7,8 @@
 #include "appConfig.hpp"
 
 FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context)
+	: BasePass(_device, _context)
 {
-	m_device = _device;
-	m_context = _context;
-	m_shaderManager = std::make_unique<ShaderManager>(m_device);
 	m_shaderManager->LoadPixelShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
 
@@ -58,21 +56,9 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	hr = m_device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
 	assert(SUCCEEDED(hr));
 
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = samplerDesc.AddressV = samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.MinLOD = 0.0f;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	{
-		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-		if (FAILED(hr))
-			std::cerr << "Failed to create Sampler: HRESULT = " << hr << std::endl;
-	}
-
+	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
+	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
+	m_depthStencilState = createDSState(DepthStencilPreset::Disabled);
 	createOrResize();
 
 }
@@ -82,18 +68,18 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 	static const UINT stride = 5 * sizeof(float);
 	static const UINT offset = 0;
 
-
-	DEBUG_PASS_START(L"FSQuad Draw");
-	m_context->RSSetState(m_rasterizerState.Get());
-	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
-	m_context->PSSetShader(m_shaderManager->getPixelShader("toFSQuad"), nullptr, 0);
+	beginDebugEvent(L"FSQuad Pass");
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
 	m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	m_context->VSSetShader(m_shaderManager->getVertexShader("toFSQuad"), nullptr, 0);
+	m_context->PSSetShader(m_shaderManager->getPixelShader("toFSQuad"), nullptr, 0);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->PSSetShaderResources(0, 1, srv.GetAddressOf());
+	m_context->RSSetState(m_rasterizerState.Get());
 	m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
 
 	m_context->DrawIndexed(6, 0, 0);
@@ -102,10 +88,11 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 	}
 	ID3D11ShaderResourceView* nullSRV = nullptr;
 	ID3D11RenderTargetView* nullRTV = nullptr;
-	m_context->PSSetShaderResources(0, 1, &nullSRV);
-	m_context->OMSetRenderTargets(1, &nullRTV, nullptr);
+	unbindRenderTargets(1);
+	unbindShaderResources(0, 1);
+	unbindComputeUAVs(0, 0);
 
-	DEBUG_PASS_END();
+	endDebugEvent();
 }
 
 

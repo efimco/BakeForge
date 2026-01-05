@@ -7,6 +7,10 @@
 #include "debugPassMacros.hpp"
 #include "appConfig.hpp"
 
+static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
+	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+};
+
 float* cubeData = new float[]
 	{
 		// +X face
@@ -55,9 +59,9 @@ float* cubeData = new float[]
 
 struct alignas(16) CubeMapConstantBufferData
 {
-	glm::mat4 view;
+	glm::mat4 viewProj;
 	float mapRotationY;
-	bool isBlurred;
+	uint32_t isBlurred;
 	float blurAmount;
 	float padding;
 };
@@ -79,12 +83,10 @@ struct alignas(16) PrefilteredMapConstantBufferData
 CubeMapPass::CubeMapPass(
 	ComPtr<ID3D11Device> device,
 	ComPtr<ID3D11DeviceContext> context,
-	std::string hdrImagePath) : m_hdrImagePath(hdrImagePath)
+	std::string hdrImagePath) : BasePass(device, context), m_hdrImagePath(hdrImagePath)
 {
-	m_device = device;
-	m_context = context;
 	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device, true);
-	m_shaderManager = std::make_unique<ShaderManager>(device);
+
 	m_shaderManager->LoadVertexShader("cubemapVS", L"../../src/shaders/cubemap.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("cubemapPS", L"../../src/shaders/cubemap.hlsl", "PS");
 	m_shaderManager->LoadComputeShader("equirectToCubempCS", L"../../src/shaders/equirectToCubemp.hlsl", "CS");
@@ -92,20 +94,8 @@ CubeMapPass::CubeMapPass(
 	m_shaderManager->LoadComputeShader("prefilteredMapCS", L"../../src/shaders/prefilteredMap.hlsl", "CS");
 	m_shaderManager->LoadComputeShader("brdfLUTCS", L"../../src/shaders/LUT4BRDF.hlsl", "CS");
 
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = samplerDesc.AddressU;
-	samplerDesc.AddressW = samplerDesc.AddressU;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 
-	HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("Failed to create sampler state.");
-	}
 	D3D11_BUFFER_DESC constantBufferDesc;
 	constantBufferDesc.ByteWidth = sizeof(CubeMapConstantBufferData);
 	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -136,35 +126,19 @@ CubeMapPass::CubeMapPass(
 		}
 	}
 
-	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
-	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.DepthBias = 0;
-	rasterizerDesc.DepthBiasClamp = 0;
-	rasterizerDesc.SlopeScaledDepthBias = 0;
-	rasterizerDesc.AntialiasedLineEnable = false;
-	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.MultisampleEnable = false;
-	rasterizerDesc.DepthClipEnable = false;
-	rasterizerDesc.ScissorEnable = false;
-
 	{
-		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Rasterizer State: " << hr << std::endl;
+		HRESULT hr = m_device->CreateInputLayout(
+			inputLayoutDesc,
+			1,
+			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferPointer(),
+			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferSize(),
+			&m_inputLayout
+		);
+		assert(SUCCEEDED(hr));
 	}
 
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	depthStencilDesc.DepthEnable = TRUE;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
-
-	{
-		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Depths Stencil State: " << hr << std::endl;
-	}
-
+	m_rasterizerState = createRSState(RasterizerPreset::BackCull);
+	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
 
 	createCubeMapResources();
 	createIrradianceMap();
@@ -176,7 +150,7 @@ void CubeMapPass::createOrResize()
 {
 	createBackgroundResources();
 }
-void CubeMapPass::draw(glm::mat4& view)
+void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
 	DEBUG_PASS_START(L"CubeMapPass::draw");
 
@@ -187,7 +161,7 @@ void CubeMapPass::draw(glm::mat4& view)
 		AppConfig::getRegeneratePrefilteredMap() = false;
 	}
 
-	update(view);
+	update(view, projection);
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -200,7 +174,11 @@ void CubeMapPass::draw(glm::mat4& view)
 	UINT stride = sizeof(float) * 3;
 	UINT offset = 0;
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+	m_context->VSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
 	m_context->PSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
+	m_context->IASetInputLayout(m_inputLayout.Get());
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	m_context->VSSetShader(m_shaderManager->getVertexShader("cubemapVS"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("cubemapPS"), nullptr, 0);
@@ -210,9 +188,8 @@ void CubeMapPass::draw(glm::mat4& view)
 
 	// Draw the cube
 	m_context->Draw(36, 0); // 36 vertices for a cube
-	ID3D11RenderTargetView* nullRTV = nullptr;
-	ID3D11DepthStencilView* nullDSV = nullptr;
-	m_context->OMSetRenderTargets(1, &nullRTV, nullDSV);
+	unbindRenderTargets(1);
+	unbindShaderResources(0, 2);
 	DEBUG_PASS_END();
 
 }
@@ -242,7 +219,7 @@ std::string& CubeMapPass::getHDRIPath()
 	return m_hdrImagePath;
 }
 
-void CubeMapPass::update(glm::mat4& view)
+void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_backgroundConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -251,9 +228,12 @@ void CubeMapPass::update(glm::mat4& view)
 		throw std::runtime_error("Failed to map constant buffer.");
 	}
 	CubeMapConstantBufferData* data = reinterpret_cast<CubeMapConstantBufferData*>(mappedResource.pData);
-	data->view = view;
+	// Remove translation from view matrix so skybox stays centered on camera
+	glm::mat4 viewNoTranslation = view;
+	viewNoTranslation[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	data->viewProj = glm::transpose(projection * viewNoTranslation);
 	data->mapRotationY = AppConfig::getIBLRotation();
-	data->isBlurred = AppConfig::getIsBlurred();
+	data->isBlurred = AppConfig::getIsBlurred() ? 1 : 0;
 	data->blurAmount = AppConfig::getIsBlurred() ? AppConfig::getBlurAmount() : 0.0f;
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }

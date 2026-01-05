@@ -15,7 +15,9 @@ enum class KeyButtons
 	KEY_Q,
 	KEY_E,
 	KEY_LSHIFT,
-	KEY_UNKNOWN
+	KEY_UNKNOWN,
+	KEY_F12,
+	KEY_F11
 };
 
 namespace InputEvents

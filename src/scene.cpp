@@ -266,16 +266,6 @@ void Scene::setActiveCamera(Camera* camera)
 
 void Scene::deleteNode(SceneNode* node)
 {
-	std::unique_ptr<SceneNode> ptr;
-	if (node->parent)
-	{
-		ptr = node->parent->removeChild(node);
-	}
-	if (m_activeNode == node)
-	{
-		m_activeNode = nullptr;
-	}
-	m_selectedNodes.erase(node);
 	SceneNodeHandle nodeHandle = findHandleOfNode(node);
 	if (dynamic_cast<Primitive*>(node))
 	{
@@ -299,6 +289,16 @@ void Scene::deleteNode(SceneNode* node)
 			m_activeCamera = nullptr;
 		}
 	}
+	std::unique_ptr<SceneNode> ptr;
+	if (node->parent)
+	{
+		ptr = node->parent->removeChild(node);
+	}
+	if (m_activeNode == node)
+	{
+		m_activeNode = nullptr;
+	}
+	m_selectedNodes.erase(node);
 }
 
 SceneNode* Scene::adoptClonedNode(

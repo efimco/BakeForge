@@ -7,20 +7,21 @@
 #include <wrl.h>
 #include <glm/glm.hpp>
 
+#include "basePass.hpp"
 #include "texture.hpp"
 #include "shaderManager.hpp"
 
 using namespace Microsoft::WRL;
 
 
-class CubeMapPass
+class CubeMapPass : public BasePass
 {
 public:
 	CubeMapPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, std::string hdrImagePath);
 	~CubeMapPass() = default;
 
 	void createOrResize();
-	void draw(glm::mat4& view);
+	void draw(glm::mat4& view, glm::mat4& projection);
 	ComPtr<ID3D11ShaderResourceView> getBackgroundSRV();
 	ComPtr<ID3D11ShaderResourceView> getIrradianceSRV();
 	ComPtr<ID3D11ShaderResourceView> getPrefilteredSRV();
@@ -28,7 +29,7 @@ public:
 	std::string& getHDRIPath();
 
 private:
-	void update(glm::mat4& view);
+	void update(glm::mat4& view, glm::mat4& projection);
 	void createCubeMapResources();
 	void createBackgroundResources();
 	void createIrradianceMap();
@@ -36,13 +37,8 @@ private:
 	void createBRDFLut();
 
 	std::string m_hdrImagePath;
-	std::unique_ptr<ShaderManager> m_shaderManager;
 	std::unique_ptr<Texture> m_hdriTexture;
 
-	ComPtr<ID3D11Device> m_device;
-	ComPtr<ID3D11DeviceContext> m_context;
-
-	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11Buffer> m_backgroundConstantBuffer;
 	ComPtr<ID3D11Buffer> m_equirectToCubemapConstantBuffer;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
@@ -68,7 +64,5 @@ private:
 	ComPtr<ID3D11UnorderedAccessView> m_brdfLutUAV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfLutSRV;
 
-	ComPtr<ID3D11RasterizerState> m_rasterizerState;
-	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
-
+	ComPtr<ID3D11InputLayout> m_inputLayout;
 };

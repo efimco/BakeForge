@@ -22,6 +22,8 @@ static bool isKeyDPressed = false;
 static bool isKeyQPressed = false;
 static bool isKeyEPressed = false;
 static bool isKeyLShiftPressed = false;
+static bool isKeyF11Pressed = false;
+static bool isKeyF12Pressed = false;
 
 bool InputEvents::getMouseInViewport()
 {
@@ -143,6 +145,12 @@ bool InputEvents::isKeyDown(KeyButtons key)
 	case KeyButtons::KEY_LSHIFT:
 		return isKeyLShiftPressed;
 		break;
+	case KeyButtons::KEY_F11:
+		return isKeyF11Pressed;
+		break;
+	case KeyButtons::KEY_F12:
+		return isKeyF12Pressed;
+		break;
 	default:
 		return false;
 		break;
@@ -151,6 +159,10 @@ bool InputEvents::isKeyDown(KeyButtons key)
 
 void InputEvents::setKeyDown(KeyButtons key, bool state)
 {
+	if (state)
+	{
+		std::cout << "Key pressed: " << static_cast<int>(key) << std::endl;
+	}
 	switch (key)
 	{
 	case KeyButtons::KEY_W:
@@ -173,6 +185,9 @@ void InputEvents::setKeyDown(KeyButtons key, bool state)
 		break;
 	case KeyButtons::KEY_LSHIFT:
 		isKeyLShiftPressed = state;
+		break;
+	case KeyButtons::KEY_F11:
+		isKeyF11Pressed = state;
 		break;
 	default:
 		break;

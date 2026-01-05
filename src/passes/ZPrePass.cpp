@@ -23,43 +23,14 @@ static const D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] =
 };
 
 
-ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
-	m_device = device;
-	m_context = context;
 
-	D3D11_RASTERIZER_DESC rasterizerDesc = {};
-	rasterizerDesc.CullMode = D3D11_CULL_NONE;
-	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.DepthBias = 0;
-	rasterizerDesc.DepthBiasClamp = 0;
-	rasterizerDesc.SlopeScaledDepthBias = 0;
-	rasterizerDesc.AntialiasedLineEnable = false;
-	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.MultisampleEnable = false;
-	rasterizerDesc.DepthClipEnable = true;
-	rasterizerDesc.ScissorEnable = false;
-
-	{
-		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Rasterizer State: " << hr << std::endl;
-	}
-
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	depthStencilDesc.DepthEnable = TRUE;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
-	{
-		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthStencil State: " << hr << std::endl;
-	}
+	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
+	m_depthStencilState = createDSState(DepthStencilPreset::WriteDepth);
 
 	createOrResize();
 
-	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadVertexShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "PS");
 
@@ -85,22 +56,7 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 		assert(SUCCEEDED(hr));
 	}
 
-	// Create sampler state for texture sampling in pixel shader
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	{
-		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-		assert(SUCCEEDED(hr));
-	}
-
+	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 }
 
 void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene)
@@ -138,13 +94,8 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
-
-	// Unbind resources
-	ID3D11ShaderResourceView* nullSRV = nullptr;
-	m_context->PSSetShaderResources(0, 1, &nullSRV);
-
-	m_context->VSSetShader(nullptr, nullptr, 0);
-	m_context->PSSetShader(nullptr, nullptr, 0);
+	unbindRenderTargets(1);
+	unbindShaderResources(0, 1);
 	DEBUG_PASS_END();
 }
 

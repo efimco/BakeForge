@@ -37,6 +37,7 @@ using namespace Microsoft::WRL;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
+
 	// Ensure high-DPI awareness without a manifest, before any window is created
 	SetHighDpiAwarenessAtRuntime();
 

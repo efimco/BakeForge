@@ -6,6 +6,7 @@
 #include <wrl.h>
 #include <glm/glm.hpp>
 
+#include "basePass.hpp"
 #include "GBufferTextures.hpp"
 
 class Scene;
@@ -14,7 +15,7 @@ class ShaderManager;
 class Camera;
 
 using namespace Microsoft::WRL;
-class GBuffer
+class GBuffer : public BasePass
 {
 public:
 	GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
@@ -64,12 +65,7 @@ private:
 	ComPtr<ID3D11ShaderResourceView> srv_objectID;
 
 	ComPtr<ID3D11Buffer> m_constantbuffer;
-	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 
-	ComPtr<ID3D11RasterizerState> m_rasterizerState;
-	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
-
 	ID3D11RenderTargetView* m_rtvs[5];
-	std::unique_ptr<ShaderManager> m_shaderManager;
 };

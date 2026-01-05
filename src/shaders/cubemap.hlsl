@@ -13,11 +13,11 @@ struct VertexOutput
 
 cbuffer CubeMapCB : register(b0)
 {
-	float4x4 view;
+	float4x4 viewProj;
 	float mapRotationY;
-	bool isBlurred;
+	uint isBlurred;
 	float blurAmount;
-	float2 padding; // align to 16 bytes
+	float padding; // align to 16 bytes
 };
 
 static const float YAW = PI / 180.0;
@@ -31,16 +31,8 @@ VertexOutput VS(CubeMapVertex input)
 {
 	VertexOutput output;
 	output.localPos = input.position;
-
-	float4x4 viewNoTranslation = view;
-	viewNoTranslation[3][0] = 0.0;
-	viewNoTranslation[3][1] = 0.0;
-	viewNoTranslation[3][2] = 0.0;
-	viewNoTranslation[3][3] = 1.0;
-
-	float scale = 10.0; // Adjust this value to make the cube bigger
-	float4 pos = mul(float4(input.position * scale, 1.0f), viewNoTranslation);
-	output.position = pos.xyww; // Set w = z to ensure depth is 1.0
+	float4 pos = mul(float4(input.position, 1.0f), viewProj);
+	output.position = pos.xyww; // Set z = w to ensure depth is 1.0 (far plane)
 
 	return output;
 }

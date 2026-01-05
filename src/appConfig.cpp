@@ -1,4 +1,5 @@
 #include "appConfig.hpp"
+#include "renderdoc/renderdoc_app.h"
 
 static int windowWidth = 2;
 static int windowHeight = 2;
@@ -18,6 +19,7 @@ static bool isBackgroundBlurred = false;
 static float blurAmount = 0.5f;
 static float backgroundIntensity = 1.0f;
 static bool drawWSUI = true;
+static bool captureNextFrame = false;
 
 bool& AppConfig::getNeedsResize()
 {
@@ -141,4 +143,14 @@ void AppConfig::setClearColor(float r, float g, float b, float a)
 bool& AppConfig::getDrawWSUI()
 {
 	return drawWSUI;
+}
+
+void AppConfig::setCaptureNextFrame(bool capture)
+{
+	captureNextFrame = capture;
+}
+
+bool AppConfig::getCaptureNextFrame()
+{
+	return captureNextFrame;
 }

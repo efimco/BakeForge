@@ -440,7 +440,8 @@ void UIManager::processInputEvents()
 	InputEvents::setKeyDown(KeyButtons::KEY_Q, ImGui::IsKeyDown(ImGuiKey_Q));
 	InputEvents::setKeyDown(KeyButtons::KEY_E, ImGui::IsKeyDown(ImGuiKey_E));
 	InputEvents::setKeyDown(KeyButtons::KEY_LSHIFT, ImGui::IsKeyDown(ImGuiKey_LeftShift));
-
+	InputEvents::setKeyDown(KeyButtons::KEY_F12, ImGui::IsKeyDown(ImGuiKey_F12));
+	InputEvents::setKeyDown(KeyButtons::KEY_F11, ImGui::IsKeyPressed(ImGuiKey_F11, false));
 }
 
 void UIManager::processGizmo()
@@ -865,7 +866,7 @@ std::string UIManager::openFileDialog(FileType outFileType)
 	}
 	ofn.nFilterIndex = 1;
 	ofn.lpstrTitle = "Select a Texture";
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 	// Open the dialog box
 	if (GetOpenFileNameA(&ofn) == TRUE)

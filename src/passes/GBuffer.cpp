@@ -32,44 +32,19 @@ struct alignas(16) ConstantBufferData
 };
 
 GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+	: BasePass(device, context)
 {
 	m_device = device;
 	m_context = context;
-	D3D11_RASTERIZER_DESC rasterizerDesc;
-	rasterizerDesc.CullMode = D3D11_CULL_NONE;
-	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.DepthBias = 0;
-	rasterizerDesc.DepthBiasClamp = 0;
-	rasterizerDesc.SlopeScaledDepthBias = 0;
-	rasterizerDesc.AntialiasedLineEnable = false;
-	rasterizerDesc.FrontCounterClockwise = false;
-	rasterizerDesc.MultisampleEnable = false;
-	rasterizerDesc.DepthClipEnable = false;
-	rasterizerDesc.ScissorEnable = false;
+	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
+	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyEqual);
+	m_samplerState = createSamplerState(SamplerPreset::AnisotropicWrap);
 
-	{
-		HRESULT hr = m_device->CreateRasterizerState(&rasterizerDesc, &m_rasterizerState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Rasterizer State: " << hr << std::endl;
-	}
-
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	depthStencilDesc.DepthEnable = TRUE;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
-
-	{
-		HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Depths Stencil State: " << hr << std::endl;
-	}
-
-	createOrResize();
-
-	m_shaderManager = std::make_unique<ShaderManager>(device);
-
+	// Load shaders via inherited m_shaderManager
 	m_shaderManager->LoadPixelShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "VS");
+
+	createOrResize();
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(
@@ -80,25 +55,6 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 			&m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
-
-
-	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.MinLOD = -FLT_MAX;
-	samplerDesc.MaxLOD = FLT_MAX;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-
-	{
-		HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &m_samplerState);
-		if (FAILED(hr))
-			std::cerr << "Failed to create Sampler: HRESULT = " << hr << std::endl;
-	}
-
 
 	D3D11_BUFFER_DESC constantBufferDesc;
 	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
@@ -120,7 +76,7 @@ void GBuffer::draw(const glm::mat4& view,
 	ComPtr<ID3D11DepthStencilView> dsv)
 {
 
-	DEBUG_PASS_START(L"GBuffer Draw");
+	beginDebugEvent(L"GBuffer Pass");
 	if (AppConfig::getNeedsResize())
 	{
 		createOrResize();
@@ -162,9 +118,9 @@ void GBuffer::draw(const glm::mat4& view,
 		m_context->PSSetShaderResources(0, 3, SRVs);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 	}
-	ID3D11RenderTargetView* nullRTVs[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
-	m_context->OMSetRenderTargets(5, nullRTVs, nullptr);
-	DEBUG_PASS_END();
+	unbindRenderTargets(5);
+	unbindShaderResources(0, 4);
+	endDebugEvent();
 
 }
 

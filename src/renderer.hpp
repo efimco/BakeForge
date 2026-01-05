@@ -7,6 +7,7 @@
 #include <wrl.h>
 
 #include <glm/glm.hpp>
+#include "renderdoc/renderdoc_app.h"
 
 class Scene;
 class Camera;
@@ -65,4 +66,5 @@ private:
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
 	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
 	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
+	RENDERDOC_API_1_1_2* m_rdocAPI = NULL;
 };
