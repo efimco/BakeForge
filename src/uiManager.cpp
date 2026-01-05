@@ -3,6 +3,7 @@
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 #include <windows.h>
+#include <memory>
 #include <commdlg.h>
 
 #define IM_VEC2_CLASS_EXTRA
@@ -210,9 +211,31 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::BeginMenu("Light"))
 			{
-				if (ImGui::MenuItem("Point Light")) { /* TODO: Add point light */ }
-				if (ImGui::MenuItem("Directional Light")) { /* TODO: Add directional light */ }
-				if (ImGui::MenuItem("Spot Light")) { /* TODO: Add spot light */ }
+				glm::vec3 lightPos = glm::vec3(0.0f, 1.0f, 0.0f);
+				if (m_scene->getLights().size() > 0)
+				{
+					auto lastAddedLight = std::prev(m_scene->getLights().end());
+					lightPos = lastAddedLight->second->transform.position + glm::vec3(1.0f, 0.0f, 0.0f);
+				}
+
+				if (ImGui::MenuItem("Point Light"))
+				{
+					std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, lightPos, "Point Light");
+					m_scene->addLight(pointLight.get());
+					m_scene->addChild(std::move(pointLight));
+				}
+				if (ImGui::MenuItem("Directional Light"))
+				{
+					std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, lightPos, "Directional Light");
+					m_scene->addLight(dirLight.get());
+					m_scene->addChild(std::move(dirLight));
+				}
+				if (ImGui::MenuItem("Spot Light"))
+				{
+					std::unique_ptr<Light> spotLight = std::make_unique<Light>(SPOT_LIGHT, lightPos, "Spot Light");
+					m_scene->addLight(spotLight.get());
+					m_scene->addChild(std::move(spotLight));
+				}
 				ImGui::EndMenu();
 			}
 			if (ImGui::MenuItem("Empty Node")) { /* TODO: Add empty node */ }
