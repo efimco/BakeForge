@@ -164,7 +164,7 @@ void Camera::focusOn(Primitive* primitive)
 	orbitPivot = center;
 
 	// Position camera to see the entire bounding box (Blender-style framing)
-	const float distance = radius * 2.5f; // More breathing room like Blender
+	const float distance = radius; // More breathing room like Blender
 	distanceToOrbitPivot = distance;
 
 	updateCameraVectors();
