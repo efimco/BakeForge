@@ -6,18 +6,17 @@
 #include <iostream>
 
 #include <windows.h>
-#include "window.hpp"
 #include "renderer.hpp"
+#include "window.hpp"
 
 // No manifest approach: set process DPI awareness at runtime
 // Tries Per-Monitor v2 first, then Per-Monitor, then System-aware as last resort.
 static void SetHighDpiAwarenessAtRuntime()
 {
-	HMODULE user32 = GetModuleHandleW(L"user32.dll");
-	if (user32)
+	if (const HMODULE user32 = GetModuleHandleW(L"user32.dll"))
 	{
-		typedef BOOL(WINAPI* SetProcessDpiAwarenessContext_t)(HANDLE);
-		auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContext_t>(
+		typedef BOOL (WINAPI*SetProcessDpiAwarenessContext_t)(HANDLE);
+		const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContext_t>(
 			GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
 
 		// Define constant if headers are older
@@ -35,13 +34,13 @@ static void SetHighDpiAwarenessAtRuntime()
 
 using namespace Microsoft::WRL;
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
+int WINAPI wWinMain(const HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
 
 	// Ensure high-DPI awareness without a manifest, before any window is created
 	SetHighDpiAwarenessAtRuntime();
 
-	Window window(hInstance);
+	const Window window(hInstance);
 	Renderer renderer(window.getHandle());
 	MSG message = {};
 	bool running = true;

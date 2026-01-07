@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <atomic>
+#include <cstdint>
 #include <unordered_map>
 
 class SceneNodeHandle
@@ -15,16 +15,40 @@ public:
 
 	SceneNodeHandle() = default;
 
-	explicit SceneNodeHandle(int32_t inHandle) : handle(inHandle) {}
-	explicit operator int32_t() const { return handle; }
+	explicit SceneNodeHandle(int32_t inHandle)
+		: handle(inHandle)
+	{
+	}
 
-	bool operator==(const SceneNodeHandle& other) const { return handle == other.handle; }
-	bool operator!=(const SceneNodeHandle& other) const { return !(*this == other); }
+	explicit operator int32_t() const
+	{
+		return handle;
+	}
 
-	static SceneNodeHandle generateHandle() { return SceneNodeHandle{ ++s_handleGenerator }; }
-	static SceneNodeHandle invalidHandle() { return SceneNodeHandle{ c_valueInvalid }; }
+	bool operator==(const SceneNodeHandle& other) const
+	{
+		return handle == other.handle;
+	}
 
-	bool isValid() const { return handle != c_valueInvalid; }
+	bool operator!=(const SceneNodeHandle& other) const
+	{
+		return !(*this == other);
+	}
+
+	static SceneNodeHandle generateHandle()
+	{
+		return SceneNodeHandle{++s_handleGenerator};
+	}
+
+	static SceneNodeHandle invalidHandle()
+	{
+		return SceneNodeHandle{c_valueInvalid};
+	}
+
+	bool isValid() const
+	{
+		return handle != c_valueInvalid;
+	}
 };
 
 template <>

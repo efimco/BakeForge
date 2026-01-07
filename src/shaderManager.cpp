@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include <d3dcompiler.h>
+#include <ranges>
 
 static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
 static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
@@ -15,9 +16,11 @@ ShaderManager::ShaderManager(ComPtr<ID3D11Device> device)
 	m_device = device;
 }
 
-bool ShaderManager::LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
+bool ShaderManager::LoadVertexShader(const std::string& name
+                                     , const std::wstring& filename
+                                     , const std::string& entryPoint)
 {
-	if (m_vertexShaders.find(name) != m_vertexShaders.end())
+	if (m_vertexShaders.contains(name))
 	{
 		std::wcout << L"Vertex shader already exists: " << name.c_str() << std::endl;
 		return true;
@@ -40,9 +43,11 @@ bool ShaderManager::LoadVertexShader(const std::string& name, const std::wstring
 	return false;
 }
 
-bool ShaderManager::LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
+bool ShaderManager::LoadPixelShader(const std::string& name
+                                    , const std::wstring& filename
+                                    , const std::string& entryPoint)
 {
-	if (m_pixelShaders.find(name) != m_pixelShaders.end())
+	if (m_pixelShaders.contains(name))
 	{
 		std::wcout << L"Pixel shader already exists: " << name.c_str() << std::endl;
 		return true;
@@ -66,9 +71,11 @@ bool ShaderManager::LoadPixelShader(const std::string& name, const std::wstring&
 	return false;
 }
 
-bool ShaderManager::LoadComputeShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
+bool ShaderManager::LoadComputeShader(const std::string& name
+                                      , const std::wstring& filename
+                                      , const std::string& entryPoint)
 {
-	if (m_computeShaders.find(name) != m_computeShaders.end())
+	if (m_computeShaders.contains(name))
 	{
 		std::wcout << L"Compute shader already exists: " << name.c_str() << std::endl;
 		return true;
@@ -118,7 +125,7 @@ ID3DBlob* ShaderManager::getVertexShaderBlob(const std::string& name)
 void ShaderManager::checkForChanges()
 {
 	// Check vertex shaders
-	for (auto& [name, info] : m_vertexShaders)
+	for (auto& info : m_vertexShaders | std::views::values)
 	{
 		auto currentTime = getFileModifiedTime(info.filename);
 		if (currentTime > info.lastModifiedTime)
@@ -137,7 +144,7 @@ void ShaderManager::checkForChanges()
 	}
 
 	// Check pixel shaders
-	for (auto& [name, info] : m_pixelShaders)
+	for (auto& info : m_pixelShaders | std::views::values)
 	{
 		auto currentTime = getFileModifiedTime(info.filename);
 		if (currentTime > info.lastModifiedTime)
@@ -156,7 +163,7 @@ void ShaderManager::checkForChanges()
 	}
 
 	// Check compute shaders
-	for (auto& [name, info] : m_computeShaders)
+	for (auto& info : m_computeShaders | std::views::values)
 	{
 		auto currentTime = getFileModifiedTime(info.filename);
 		if (currentTime > info.lastModifiedTime)
@@ -179,19 +186,19 @@ void ShaderManager::recompileAll()
 {
 	std::cout << "Recompiling all shaders..." << std::endl;
 
-	for (auto& [name, info] : m_vertexShaders)
+	for (auto& info : m_vertexShaders | std::views::values)
 	{
 		compileShader(info, VERTEX);
 		info.lastModifiedTime = getFileModifiedTime(info.filename);
 	}
 
-	for (auto& [name, info] : m_pixelShaders)
+	for (auto& info : m_pixelShaders | std::views::values)
 	{
 		compileShader(info, PIXEL);
 		info.lastModifiedTime = getFileModifiedTime(info.filename);
 	}
 
-	for (auto& [name, info] : m_computeShaders)
+	for (auto& info : m_computeShaders | std::views::values)
 	{
 		compileShader(info, COMPUTE);
 		info.lastModifiedTime = getFileModifiedTime(info.filename);
@@ -199,7 +206,7 @@ void ShaderManager::recompileAll()
 }
 
 
-bool ShaderManager::compileShader(ShaderInfo& info, ShaderType shaderType)
+bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType) const
 {
 	ComPtr<ID3DBlob> shaderBlob;
 	ComPtr<ID3DBlob> errorBlob;
@@ -219,14 +226,14 @@ bool ShaderManager::compileShader(ShaderInfo& info, ShaderType shaderType)
 		0,
 		&shaderBlob,
 		&errorBlob
-	);
+		);
 
 	if (FAILED(hr))
 	{
 		if (errorBlob)
 		{
 			std::cout << "Shader compilation error:\n"
-				<< (char*)errorBlob->GetBufferPointer() << std::endl;
+				<< static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
 		}
 		return false;
 	}
@@ -238,7 +245,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, ShaderType shaderType)
 			shaderBlob->GetBufferSize(),
 			nullptr,
 			&info.vertexShader
-		);
+			);
 	}
 	else if (shaderType == PIXEL)
 	{
@@ -247,7 +254,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, ShaderType shaderType)
 			shaderBlob->GetBufferSize(),
 			nullptr,
 			&info.pixelShader
-		);
+			);
 	}
 	else if (shaderType == COMPUTE)
 	{
@@ -256,7 +263,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, ShaderType shaderType)
 			shaderBlob->GetBufferSize(),
 			nullptr,
 			&info.computeShader
-		);
+			);
 	}
 
 	if (SUCCEEDED(hr))

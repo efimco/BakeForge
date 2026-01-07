@@ -1,20 +1,20 @@
 #pragma once
 
+#include <d3d11_4.h>
+#include <future>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <d3d11_4.h>
 #include <wrl.h>
-#include <future>
 
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/thread_pool.h>
 
+#include "gltfImporter.hpp"
 #include "sceneNode.hpp"
 #include "sceneNodeHandle.hpp"
 #include "utility/stringUnorderedMap.hpp"
-#include "gltfImporter.hpp"
 
 class Primitive;
 struct Texture;
@@ -37,7 +37,6 @@ public:
 
 	SceneNodeHandle findHandleOfNode(SceneNode* node) const;
 	SceneNode* getNodeByHandle(SceneNodeHandle handle);
-	SceneNode* getRootNode() const;
 	bool isNameUsed(std::string_view name) const;
 	uint32_t& getNameCounter(std::string_view name);
 
@@ -61,7 +60,6 @@ public:
 
 	SceneNode* getActiveNode();
 	int32_t getActiveNodeID();
-	int32_t getActivePrimitiveID();
 	void setActiveNode(SceneNode* node, bool addToSelection = false);
 	void deselectNode(SceneNode* node);
 	void clearSelectedNodes();
@@ -69,37 +67,38 @@ public:
 
 	bool areLightsDirty();
 	void setLightsDirty(bool dirty = true);
+
 	void setActiveCamera(Camera* camera);
+	Camera* getActiveCamera();
 
 	void deleteNode(SceneNode* node);
-	SceneNode* adoptClonedNode(
-		std::unique_ptr<SceneNode>&& clonedNode,
-		SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
-	Camera* getActiveCamera();
+	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode
+	                           , SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
+
 
 	void buildSceneBVH();
 	void markSceneBVHDirty();
 	bool isSceneBVHDirty() const;
-	void rebuildSceneBVHIfDirty();
 	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;
 
 	void importModel(std::string filepath, ComPtr<ID3D11Device> device);
 	void updateAsyncImport(); // called each frame
-	bool isImporting() const { return m_isImporting; }
-	std::shared_ptr<ImportProgress> getImportProgress() const { return m_importProgress; }
+	std::shared_ptr<ImportProgress> getImportProgress() const;
+
+	void saveScene(std::string_view filepath);
+	void loadScene(std::string_view filepath);
 
 private:
-	SceneNode m_rootNode;
 	SceneUnorderedMap<Primitive*> m_primitives;
 	SceneUnorderedMap<Light*> m_lights;
 	SceneUnorderedMap<Camera*> m_cameras;
-	StringUnorderedMap<std::shared_ptr<Texture>> m_textures; // path + actual texture
+	StringUnorderedMap<std::shared_ptr<Texture>> m_textures;   // path + actual texture
 	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	StringUnorderedMap<uint32_t> m_nodeNames;
 
 	std::unique_ptr<Bvh> m_sceneBVH;
-	std::vector<BBox> m_primBboxes; // World-space bboxes for each primitive
+	std::vector<BBox> m_primBboxes;  // World-space bboxes for each primitive
 	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
 
 	bool m_isImporting = false;

@@ -41,7 +41,7 @@ bool SceneNode::differsFrom(const SceneNode& node) const
 
 std::unique_ptr<SceneNode> SceneNode::clone() const
 {
-	std::unique_ptr<SceneNode> newNode = std::make_unique<SceneNode>(this->name);
+	auto newNode = std::make_unique<SceneNode>(this->name);
 	newNode->copyFrom(*this);
 	return newNode;
 }
@@ -102,11 +102,11 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 	glm::mat4 childWorldMatrix = child->getWorldMatrix();
 
 	child->parent = nullptr;
-	auto it = std::ranges::find_if(children,
-	   [child](const std::unique_ptr<SceneNode>& ptr)
-	   {
-		   return ptr.get() == child;
-	   });
+	const auto it = std::ranges::find_if(children,
+	                                     [child](const std::unique_ptr<SceneNode>& ptr)
+	                                     {
+		                                     return ptr.get() == child;
+	                                     });
 	if (it == children.end())
 	{
 		std::cerr << "Error: Child not found in parent's children list." << std::endl;

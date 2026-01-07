@@ -6,7 +6,7 @@ static int windowHeight = 2;
 static int viewportWidth = 2;
 static int viewportHeight = 2;
 static bool needsResize = true;
-static float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+static float clearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 static bool isMinimized = false;
 static double deltaTime = 0.0;
 static float IBLintensity = 1.0f;
@@ -26,7 +26,7 @@ bool& AppConfig::getNeedsResize()
 	return needsResize;
 }
 
-void AppConfig::setNeedsResize(bool _needsResize)
+void AppConfig::setNeedsResize(const bool _needsResize)
 {
 	needsResize = _needsResize;
 }
@@ -51,12 +51,27 @@ const int& AppConfig::getViewportHeight()
 	return viewportHeight;
 }
 
-void AppConfig::setWindowHeight(int height)
+void AppConfig::setViewportWidth(const int width)
+{
+	viewportWidth = width;
+}
+
+void AppConfig::setViewportHeight(const int height)
+{
+	viewportHeight = height;
+}
+
+void AppConfig::setWindowWidth(const int width)
+{
+	windowWidth = width;
+}
+
+void AppConfig::setWindowHeight(const int height)
 {
 	windowHeight = height;
 }
 
-void AppConfig::setWindowMinimized(bool _isMnimized)
+void AppConfig::setWindowMinimized(const bool _isMnimized)
 {
 	isMinimized = _isMnimized;
 }
@@ -96,43 +111,32 @@ int& AppConfig::getBVHMaxDepth()
 	return bvhMaxDepth;
 }
 
-void AppConfig::setDeltaTime(double value)
+void AppConfig::setDeltaTime(const double value)
 {
 	deltaTime = value;
 }
+
 double AppConfig::getDeltaTime()
 {
 	return deltaTime;
-}
-
-void AppConfig::setWindowWidth(int width)
-{
-	windowWidth = width;
-}
-
-void AppConfig::setViewportHeight(int height)
-{
-	viewportHeight = height;
-}
-
-void AppConfig::setViewportWidth(int width)
-{
-	viewportWidth = width;
 }
 
 float* AppConfig::getClearColor()
 {
 	return clearColor;
 }
+
 bool& AppConfig::getIsBlurred()
 {
 	return isBackgroundBlurred;
 }
+
 float& AppConfig::getBlurAmount()
 {
 	return blurAmount;
 }
-void AppConfig::setClearColor(float r, float g, float b, float a)
+
+void AppConfig::setClearColor(const float r, const float g, float b, float a)
 {
 	clearColor[0] = r;
 	clearColor[1] = g;
@@ -145,7 +149,7 @@ bool& AppConfig::getDrawWSUI()
 	return drawWSUI;
 }
 
-void AppConfig::setCaptureNextFrame(bool capture)
+void AppConfig::setCaptureNextFrame(const bool capture)
 {
 	captureNextFrame = capture;
 }

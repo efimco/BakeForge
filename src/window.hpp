@@ -1,16 +1,15 @@
 #pragma once
 
-#include <windows.h>
 #include <d3d11_4.h>
+#include <windows.h>
 
 class Window
 {
 public:
-	Window(HINSTANCE hInstance);
+	explicit Window(HINSTANCE hInstance);
 	~Window() = default;
 
 	const HWND& getHandle() const;
-
 
 private:
 	HWND m_hWindow;

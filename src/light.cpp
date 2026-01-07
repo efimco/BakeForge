@@ -5,7 +5,7 @@
 
 #include "scene.hpp"
 
-Light::Light(LightType type, glm::vec3 position, std::string_view nodeName)
+Light::Light(const LightType type, const glm::vec3 position, const std::string_view nodeName)
 	: SceneNode(nodeName)
 	, type(type)
 {
@@ -71,7 +71,7 @@ bool Light::differsFrom(const SceneNode& node) const
 
 std::unique_ptr<SceneNode> Light::clone() const
 {
-	std::unique_ptr<Light> lightNode = std::make_unique<Light>(type, transform.position, name);
+	auto lightNode = std::make_unique<Light>(type, transform.position, name);
 	lightNode->copyFrom(*this);
 	return lightNode;
 }

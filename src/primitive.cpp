@@ -16,11 +16,11 @@ Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
 {
 }
 
-void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
+void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData) const
 {
 
 	m_sharedData->vertexData = std::move(vertexData);
-	auto numVerts = m_sharedData->vertexData.size();
+	const auto numVerts = m_sharedData->vertexData.size();
 	D3D11_BUFFER_DESC vertexBufferDesc = {};
 	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	vertexBufferDesc.ByteWidth = static_cast<UINT>(numVerts * sizeof(InterleavedData));
@@ -37,7 +37,7 @@ void Primitive::setVertexData(std::vector<InterleavedData>&& vertexData)
 	assert(SUCCEEDED(hr));
 }
 
-void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
+void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
 {
 	m_sharedData->indexData = std::move(indexData);
 	D3D11_BUFFER_DESC indexBufferDesc = {};
@@ -66,7 +66,7 @@ const ComPtr<ID3D11Buffer>& Primitive::getVertexBuffer() const
 	return m_sharedData->vertexBuffer;
 }
 
-void Primitive::buildBVH()
+void Primitive::buildBVH() const
 {
 	if (m_sharedData->vertexData.empty())
 	{
@@ -97,8 +97,10 @@ void Primitive::buildBVH()
 		m_sharedData->bboxes[i] = m_sharedData->triangles[i].get_bbox();
 		m_sharedData->centers[i] = m_sharedData->triangles[i].get_center();
 	}
-	m_sharedData->bvh = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(m_sharedData->bboxes, m_sharedData->centers));
-	std::printf("Built BVH with %zu nodes for %zu triangles.\n", m_sharedData->bvh->nodes.size(), m_sharedData->triangles.size());
+	m_sharedData->bvh = std::make_unique<Bvh>(
+		bvh::v2::DefaultBuilder<Node>::build(m_sharedData->bboxes, m_sharedData->centers));
+	std::printf("Built BVH with %zu nodes for %zu triangles.\n", m_sharedData->bvh->nodes.size()
+	            , m_sharedData->triangles.size());
 }
 
 const Bvh* Primitive::getBVH() const
@@ -106,7 +108,7 @@ const Bvh* Primitive::getBVH() const
 	return m_sharedData->bvh.get();
 }
 
-BBox Primitive::getWorldBBox(glm::mat4 worldMatrix) const
+BBox Primitive::getWorldBBox(const glm::mat4& worldMatrix) const
 {
 	if (m_sharedData->vertexData.empty() || !m_sharedData->bbox)
 	{
@@ -120,20 +122,19 @@ BBox Primitive::getWorldBBox(glm::mat4 worldMatrix) const
 	Vec3 localMax = m_sharedData->bbox->max;
 
 	// All 8 corners of the local bbox
-	glm::vec4 corners[8] = {
-		glm::vec4(localMin[0], localMin[1], localMin[2], 1.0f),
-		glm::vec4(localMax[0], localMin[1], localMin[2], 1.0f),
-		glm::vec4(localMin[0], localMax[1], localMin[2], 1.0f),
-		glm::vec4(localMax[0], localMax[1], localMin[2], 1.0f),
-		glm::vec4(localMin[0], localMin[1], localMax[2], 1.0f),
-		glm::vec4(localMax[0], localMin[1], localMax[2], 1.0f),
-		glm::vec4(localMin[0], localMax[1], localMax[2], 1.0f),
-		glm::vec4(localMax[0], localMax[1], localMax[2], 1.0f),
-	};
+	glm::vec4 corners[8] = {glm::vec4(localMin[0], localMin[1], localMin[2], 1.0f)
+	                        , glm::vec4(localMax[0], localMin[1], localMin[2], 1.0f)
+	                        , glm::vec4(localMin[0], localMax[1], localMin[2], 1.0f)
+	                        , glm::vec4(localMax[0], localMax[1], localMin[2], 1.0f)
+	                        , glm::vec4(localMin[0], localMin[1], localMax[2], 1.0f)
+	                        , glm::vec4(localMax[0], localMin[1], localMax[2], 1.0f)
+	                        , glm::vec4(localMin[0], localMax[1], localMax[2], 1.0f)
+	                        , glm::vec4(localMax[0], localMax[1], localMax[2], 1.0f)
+	                        ,};
 
-	for (int i = 0; i < 8; ++i)
+	for (auto corner : corners)
 	{
-		glm::vec4 worldCorner = worldMatrix * corners[i];
+		glm::vec4 worldCorner = worldMatrix * corner;
 		worldBBox.extend(Vec3(worldCorner.x, worldCorner.y, worldCorner.z));
 	}
 
@@ -150,7 +151,7 @@ void Primitive::copyFrom(const SceneNode& node)
 	name = node.name;
 	transform = node.transform;
 
-	if (auto primitiveNode = dynamic_cast<const Primitive*>(&node))
+	if (const auto primitiveNode = dynamic_cast<const Primitive*>(&node))
 	{
 		m_sharedData = primitiveNode->m_sharedData;
 		material = primitiveNode->material;
@@ -161,7 +162,7 @@ bool Primitive::differsFrom(const SceneNode& node) const
 {
 	if (!SceneNode::differsFrom(node))
 	{
-		if (const Primitive* primitiveNode = dynamic_cast<const Primitive*>(&node))
+		if (const auto primitiveNode = dynamic_cast<const Primitive*>(&node))
 		{
 			return material != primitiveNode->material;
 		}
@@ -199,4 +200,3 @@ static std::optional<Bvh> loadBVH(const std::string& file_name)
 	StdInputStream stream(in);
 	return std::make_optional(Bvh::deserialize(stream));
 }
-

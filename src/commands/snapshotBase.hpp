@@ -5,10 +5,16 @@
 class SnapshotBase : public CommandBase
 {
 public:
-	void setAllowMerging(bool value) { m_allowMerging = value; }
+	void setAllowMerging(const bool value)
+	{
+		m_allowMerging = value;
+	}
 
 	[[nodiscard]]
-	bool getAllowMerging() const { return m_allowMerging; }
+	bool getAllowMerging() const
+	{
+		return m_allowMerging;
+	}
 
 protected:
 	friend class CommandManager;

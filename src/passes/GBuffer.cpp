@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "appConfig.hpp"
-#include "debugPassMacros.hpp"
+
 #include "GBufferTextures.hpp"
 #include "material.hpp"
 #include "texture.hpp"
@@ -13,7 +13,7 @@
 #include "shaderManager.hpp"
 
 
-static const D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] =
+static constexpr D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] =
 {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -70,10 +70,10 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 }
 
 void GBuffer::draw(const glm::mat4& view,
-	const glm::mat4& projection,
-	const glm::vec3& cameraPosition,
-	Scene* scene,
-	ComPtr<ID3D11DepthStencilView> dsv)
+                   const glm::mat4& projection,
+                   const glm::vec3& cameraPosition,
+                   Scene* scene,
+                   ComPtr<ID3D11DepthStencilView> dsv)
 {
 
 	beginDebugEvent(L"GBuffer Pass");
@@ -86,7 +86,7 @@ void GBuffer::draw(const glm::mat4& view,
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_context->OMSetRenderTargets(5, m_rtvs, dsv.Get());
 
-	for (auto rtv : m_rtvs)
+	for (const auto rtv : m_rtvs)
 	{
 		m_context->ClearRenderTargetView(rtv, AppConfig::getClearColor());
 	}
@@ -105,7 +105,7 @@ void GBuffer::draw(const glm::mat4& view,
 	static const UINT offset = 0;
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		auto objectID = static_cast<int>(handle);
+		const auto objectID = static_cast<int>(handle);
 		if (!prim->material)
 		{
 			std::cerr << "Primitive " << objectID << " has no material!" << std::endl;
@@ -125,19 +125,19 @@ void GBuffer::draw(const glm::mat4& view,
 }
 
 void GBuffer::update(const glm::mat4& view,
-	const glm::mat4& projection,
-	const glm::vec3& cameraPosition,
-	Scene* scene,
-	int objectID,
-	Primitive* prim)
+                     const glm::mat4& projection,
+                     const glm::vec3& cameraPosition,
+                     Scene* scene,
+                     const int objectID,
+                     Primitive* prim) const
 {
-	glm::mat4 model = prim->getWorldMatrix();
-	glm::mat4 mvp = projection * view * model;
+	const glm::mat4 model = prim->getWorldMatrix();
+	const glm::mat4 mvp = projection * view * model;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
-		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
+		const auto cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
 		// Use inverse-transpose of the model matrix (upper-left 3x3) for correct normal transformation
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
@@ -236,7 +236,8 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating MetallicRoughness RTV: " << hr << std::endl;
 	}
 	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_metallicRoughness.Get(), &metallicRoughnessSRVDesc, &srv_metallicRoughness);
+		HRESULT hr = m_device->CreateShaderResourceView(t_metallicRoughness.Get(), &metallicRoughnessSRVDesc,
+		                                                &srv_metallicRoughness);
 		if (FAILED(hr))
 			std::cerr << "Error Creating MetallicRoughness SRV: " << hr << std::endl;
 	}

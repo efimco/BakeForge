@@ -17,8 +17,8 @@ using namespace Microsoft::WRL;
 class CubeMapPass : public BasePass
 {
 public:
-	CubeMapPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, std::string hdrImagePath);
-	~CubeMapPass() = default;
+	CubeMapPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, const std::string& hdrImagePath);
+	~CubeMapPass() override = default;
 
 	void createOrResize();
 	void draw(glm::mat4& view, glm::mat4& projection);
@@ -29,7 +29,7 @@ public:
 	std::string& getHDRIPath();
 
 private:
-	void update(glm::mat4& view, glm::mat4& projection);
+	void update(const glm::mat4& view, const glm::mat4& projection) const;
 	void createCubeMapResources();
 	void createBackgroundResources();
 	void createIrradianceMap();

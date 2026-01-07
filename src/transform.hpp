@@ -18,18 +18,6 @@ struct Transform
 	void rotate(const glm::vec3& rotation);
 	void setScale(const glm::vec3& scale);
 
-	bool exactlyEqual(const Transform& other) const
-	{
-		constexpr float epsilon = 1e-5f;
-		return glm::all(glm::epsilonEqual(position, other.position, epsilon))
-			&& glm::all(glm::epsilonEqual(rotation, other.rotation, epsilon))
-			&& glm::all(glm::epsilonEqual(scale, other.scale, epsilon));
-	}
-
-	bool nearlyEqual(const Transform& other) const
-	{
-		return position == other.position
-			&& rotation == other.rotation
-			&& scale == other.scale;
-	}
+	bool exactlyEqual(const Transform& other) const;
+	bool nearlyEqual(const Transform& other) const;
 };

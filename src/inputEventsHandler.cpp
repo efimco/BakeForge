@@ -21,6 +21,7 @@ static bool isKeySPressed = false;
 static bool isKeyDPressed = false;
 static bool isKeyQPressed = false;
 static bool isKeyEPressed = false;
+static bool isKeyFPressed = false;
 static bool isKeyLShiftPressed = false;
 static bool isKeyF11Pressed = false;
 static bool isKeyF12Pressed = false;
@@ -29,12 +30,13 @@ bool InputEvents::getMouseInViewport()
 {
 	return isMouseInViewport;
 }
-void InputEvents::setMouseInViewport(bool state)
+
+void InputEvents::setMouseInViewport(const bool state)
 {
 	isMouseInViewport = state;
 }
 
-bool InputEvents::isMouseClicked(MouseButtons button)
+bool InputEvents::isMouseClicked(const MouseButtons button)
 {
 	switch (button)
 	{
@@ -53,7 +55,7 @@ bool InputEvents::isMouseClicked(MouseButtons button)
 	}
 }
 
-bool InputEvents::isMouseDown(MouseButtons button)
+bool InputEvents::isMouseDown(const MouseButtons button)
 {
 	switch (button)
 	{
@@ -72,7 +74,7 @@ bool InputEvents::isMouseDown(MouseButtons button)
 	}
 }
 
-void InputEvents::setMouseDown(MouseButtons button, bool state)
+void InputEvents::setMouseDown(const MouseButtons button, const bool state)
 {
 	switch (button)
 	{
@@ -90,7 +92,7 @@ void InputEvents::setMouseDown(MouseButtons button, bool state)
 	}
 }
 
-void InputEvents::setMouseClicked(MouseButtons button, bool state)
+void InputEvents::setMouseClicked(const MouseButtons button, const bool state)
 {
 	switch (button)
 	{
@@ -120,49 +122,37 @@ void InputEvents::setMouseClicked(MouseButtons button, bool state)
 	}
 }
 
-bool InputEvents::isKeyDown(KeyButtons key)
+bool InputEvents::isKeyDown(const KeyButtons key)
 {
 	switch (key)
 	{
 	case KeyButtons::KEY_W:
 		return isKeyWPressed;
-		break;
 	case KeyButtons::KEY_A:
 		return isKeyAPressed;
-		break;
 	case KeyButtons::KEY_S:
 		return isKeySPressed;
-		break;
 	case KeyButtons::KEY_D:
 		return isKeyDPressed;
-		break;
 	case KeyButtons::KEY_Q:
 		return isKeyQPressed;
-		break;
 	case KeyButtons::KEY_E:
 		return isKeyEPressed;
-		break;
+	case KeyButtons::KEY_F:
+		return isKeyFPressed;
 	case KeyButtons::KEY_LSHIFT:
 		return isKeyLShiftPressed;
-		break;
 	case KeyButtons::KEY_F11:
 		return isKeyF11Pressed;
-		break;
 	case KeyButtons::KEY_F12:
 		return isKeyF12Pressed;
-		break;
 	default:
 		return false;
-		break;
 	}
 }
 
-void InputEvents::setKeyDown(KeyButtons key, bool state)
+void InputEvents::setKeyDown(const KeyButtons key, const bool state)
 {
-	if (state)
-	{
-		std::cout << "Key pressed: " << static_cast<int>(key) << std::endl;
-	}
 	switch (key)
 	{
 	case KeyButtons::KEY_W:
@@ -183,6 +173,9 @@ void InputEvents::setKeyDown(KeyButtons key, bool state)
 	case KeyButtons::KEY_E:
 		isKeyEPressed = state;
 		break;
+	case KeyButtons::KEY_F:
+		isKeyFPressed = state;
+		break;
 	case KeyButtons::KEY_LSHIFT:
 		isKeyLShiftPressed = state;
 		break;
@@ -194,7 +187,7 @@ void InputEvents::setKeyDown(KeyButtons key, bool state)
 	}
 }
 
-void InputEvents::setMouseDelta(float deltaX, float deltaY)
+void InputEvents::setMouseDelta(const float deltaX, const float deltaY)
 {
 	mouseDeltaX = deltaX;
 	mouseDeltaY = deltaY;
@@ -211,10 +204,8 @@ float InputEvents::getMouseWheel()
 	return mouseWheel;
 }
 
-float InputEvents::setMouseWheel(float wheel)
+float InputEvents::setMouseWheel(const float wheel)
 {
 	mouseWheel = wheel;
 	return mouseWheel;
 }
-
-

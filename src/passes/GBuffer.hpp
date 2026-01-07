@@ -15,23 +15,24 @@ class ShaderManager;
 class Camera;
 
 using namespace Microsoft::WRL;
+
 class GBuffer : public BasePass
 {
 public:
 	GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
-	~GBuffer() = default;
+	~GBuffer() override = default;
 
 	void draw(const glm::mat4& view,
-		const glm::mat4& projection,
-		const glm::vec3& cameraPosition,
-		Scene* scene,
-		ComPtr<ID3D11DepthStencilView> dsv);
+	          const glm::mat4& projection,
+	          const glm::vec3& cameraPosition,
+	          Scene* scene,
+	          ComPtr<ID3D11DepthStencilView> dsv);
 	void update(const glm::mat4& view,
-		const glm::mat4& projection,
-		const glm::vec3& cameraPosition,
-		Scene* scene,
-		int objectID,
-		Primitive* prim);
+	            const glm::mat4& projection,
+	            const glm::vec3& cameraPosition,
+	            Scene* scene,
+	            int objectID,
+	            Primitive* prim) const;
 	void createOrResize();
 	GBufferTextures getGBufferTextures() const;
 	ComPtr<ID3D11ShaderResourceView> getAlbedoSRV() const;
@@ -42,7 +43,6 @@ public:
 	ComPtr<ID3D11RenderTargetView> getObjectIDRTV() const;
 
 private:
-
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 

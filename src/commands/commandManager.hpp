@@ -15,13 +15,11 @@ public:
 	void undo();
 	void redo();
 
-	[[nodiscard]]
 	bool hasUndoCommands() const;
 
-	[[nodiscard]]
 	bool hasRedoCommands() const;
 
-	void setMergeFence();
+	void setMergeFence() const;
 	void clearUndoBuffer();
 	void clearRedoBuffer();
 
@@ -30,5 +28,5 @@ private:
 	std::vector<std::unique_ptr<CommandBase>> m_redoBuffer;
 
 	static std::unique_ptr<CommandBase> commitInternal(CommandBase* command);
-	SnapshotBase* getLastUndoAsSnapshot();
+	SnapshotBase* getLastUndoAsSnapshot() const;
 };

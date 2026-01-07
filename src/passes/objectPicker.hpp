@@ -17,7 +17,8 @@ class ObjectPicker
 public:
 	ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	uint32_t readBackID;
-	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene);
+	void dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, const uint32_t* mousePos, Scene* scene);
+
 private:
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;

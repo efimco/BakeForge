@@ -88,7 +88,7 @@ void applyDitheredNoise(uint2 DTid, inout float4 outcol)
 
 	float3 rnd = hash32(seed);
 
-	outcol += float4((rnd - 0.5) / 255.0, 0.0);
+	outcol += float4((rnd - 0.) / 128.0, 0.0);
 }
 
 float3x3 getIrradianceMapRotation()
@@ -212,16 +212,16 @@ float3 outline(uint3 DTid, uint objectID)
 {
 	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0 
 		return float3(0.0, 0.0, 0.0);
-	float3 outlineColor = float3(0.95, 0.05, 0.0);
-	float thickness = 1.5;
+	float3 outlineColor = float3(0.65, 0.25, 0.0);
+	int thickness = 1;
 
 	// Simple outline based on object ID difference with neighboring pixels
 	bool isEdge = false;
 	[unroll]
-		for (int y = -1; y <= 1; y++)
+		for (int y = -thickness; y <= thickness; y++)
 		{
 			[unroll]
-			for (int x = -1; x <= 1; x++)
+			for (int x = -thickness; x <= thickness; x++)
 			{
 				if (x == 0 && y == 0) continue;
 				uint neighborID = tObjectID.Load(int3(DTid.xy + int2(x, y), 0));
@@ -332,15 +332,13 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	float4 finalColor = float4(0.0, 0.0, 0.0, 1.0);
 
 	// Early exit for background
+	applyIBL(finalColor.rgb, gbuffer);
 	if (gbuffer.albedo.a < 0.1)
 	{
 		drawBackground(DTid.xy);
 	}
-	applyIBL(finalColor.rgb, gbuffer);
-	if (gbuffer.albedo.a > 0.1)
-	{
-		applyLighting(finalColor.rgb, gbuffer);
-	}
+
+	applyLighting(finalColor.rgb, gbuffer);
 
 	linearRGBtoSRGB(finalColor.rgb);
 	aces(finalColor.rgb);

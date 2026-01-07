@@ -34,26 +34,21 @@ struct ImportProgress;
 
 enum class FileType
 {
-	IMAGE,
-	MODEL,
-	UNKNOWN
+	IMAGE, MODEL, UNKNOWN
 };
 
 class UIManager
 {
 public:
-	UIManager(
-		ComPtr<ID3D11Device> device,
-		ComPtr<ID3D11DeviceContext> deviceContext,
-		const HWND& hwnd);
+	explicit UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd);
 	~UIManager();
 
 	void draw(
-		const ComPtr<ID3D11ShaderResourceView>& srv,
-		const GBuffer& gbuffer,
-		Scene* scene,
-		const glm::mat4& view,
-		const glm::mat4& projection);
+		const ComPtr<ID3D11ShaderResourceView>& srv
+		, const GBuffer& gbuffer
+		, Scene* scene
+		, const glm::mat4& view
+		, const glm::mat4& projection);
 	uint32_t* getMousePos();
 
 private:
@@ -66,36 +61,36 @@ private:
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	Scene* m_scene;
-	void showSceneSettings();
+	void showSceneSettings() const;
 	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
-	void showChWSnappingOptions(); //ChW stands for "Child Window"
-	void showChWViewportOptions();
-	void showChWImportProgress(std::shared_ptr<ImportProgress> progress);
-	void showInvisibleDockWindow();
-	void showMaterialBrowser();
+	static void showChWSnappingOptions(); //ChW stands for "Child Window"
+	static void showChWViewportOptions();
+	static void showChWImportProgress(std::shared_ptr<ImportProgress> progress);
+	static void showInvisibleDockWindow();
+	void showMaterialBrowser() const;
 
-	void processInputEvents();
+	void processInputEvents() const;
 	void processGizmo();
 	void processNodeDuplication();
 	void processNodeDeletion();
-	void processUndoRedo();
+	void processUndoRedo() const;
 
 	void drawSceneGraph();
-	void handleNodeSelection(SceneNode* node);
+	void handleNodeSelection(SceneNode* node) const;
 	void handleNodeDragDrop(SceneNode* node);
 	void drawNode(SceneNode* node);
-	const char* getNodeIcon(SceneNode* node);
+	static const char* getNodeIcon(SceneNode* node);
 
 	void showProperties();
-	void showPrimitiveProperties(Primitive* primitive);
-	void showMaterialProperties(std::shared_ptr<Material> material);
-	void showLightProperties(Light* light);
-	void showCameraProperties(Camera* camera);
+	void showPrimitiveProperties(Primitive* primitive) const;
+	static void showMaterialProperties(std::shared_ptr<Material> material);
+	void showLightProperties(Light* light) const;
+	void showCameraProperties(Camera* camera) const;
 
 	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
 
-	std::string openFileDialog(FileType outFileType);
+	static std::string openFileDialog(FileType outFileType);
 
 	glm::mat4 m_view;
 	glm::mat4 m_projection;

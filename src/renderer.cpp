@@ -29,14 +29,14 @@
 Renderer::Renderer(const HWND& hwnd)
 {
 
-	HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
+	const HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
 	if (rdocModule)
 	{
-		pRENDERDOC_GetAPI RENDERDOC_GetAPI =
-			(pRENDERDOC_GetAPI)GetProcAddress(rdocModule, "RENDERDOC_GetAPI");
+		const auto RENDERDOC_GetAPI = reinterpret_cast<pRENDERDOC_GetAPI>(
+			GetProcAddress(rdocModule, "RENDERDOC_GetAPI"));
 		if (RENDERDOC_GetAPI)
 		{
-			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&m_rdocAPI);
+			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, reinterpret_cast<void**>(&m_rdocAPI));
 		}
 	}
 	m_device = std::make_unique<DXDevice>(hwnd);
@@ -65,7 +65,8 @@ Renderer::Renderer(const HWND& hwnd)
 	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
-	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(), "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext()
+	                                              , "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	resize();
@@ -81,7 +82,7 @@ void Renderer::draw()
 	}
 	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
 	{
-		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), NULL);
+		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), nullptr);
 	}
 	if (AppConfig::getNeedsResize())
 	{
@@ -97,15 +98,20 @@ void Renderer::draw()
 
 	// --- CPU Updates ---
 	m_scene->updateAsyncImport();
-	m_scene->rebuildSceneBVHIfDirty();
-	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+	if (m_scene->isSceneBVHDirty())
+	{
+		m_scene->buildSceneBVH();
+	}
+	const std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
 	AppConfig::setDeltaTime(m_deltaTime.count());
 
-	m_scene->getActiveCamera()->processMovementControls();
+	m_scene->getActiveCamera()->processMovementControls(m_scene->getActiveNode());
 	m_view = m_scene->getActiveCamera()->getViewMatrix();
-	float aspectRatio = (float)AppConfig::getViewportWidth() / (float)AppConfig::getViewportHeight();
+	const auto vWidth = static_cast<float>(AppConfig::getViewportWidth());
+	const auto vHeight = static_cast<float>(AppConfig::getViewportHeight());
+	const float aspectRatio = vWidth / vHeight;
 	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov), aspectRatio, 0.1f, 100.0f);
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
@@ -115,30 +121,20 @@ void Renderer::draw()
 
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection, m_scene.get());
-	m_gBuffer->draw(m_view, m_projection,
-		m_scene->getActiveCamera()->transform.position,
-		m_scene.get(),
-		m_zPrePass->getDSV());
+	m_gBuffer->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get()
+	                , m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view, m_projection);
 	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get(), m_gBuffer->getObjectIDRTV());
-	m_deferredPass->draw(m_view, m_projection,
-		m_scene->getActiveCamera()->transform.position,
-		m_scene.get(),
-		m_gBuffer->getGBufferTextures(),
-		m_zPrePass->getDepthSRV(),
-		m_cubeMapPass->getBackgroundSRV(),
-		m_cubeMapPass->getIrradianceSRV(),
-		m_cubeMapPass->getPrefilteredSRV(),
-		m_cubeMapPass->getBRDFLutSRV(),
-		m_worldSpaceUIPass->getSRV()
-	);
+	m_deferredPass->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get()
+	                     , m_gBuffer->getGBufferTextures(), m_zPrePass->getDepthSRV(), m_cubeMapPass->getBackgroundSRV()
+	                     , m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV()
+	                     , m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
 	// Debug BVH visualization (draws on top of deferred output)
 	m_debugBVHPass->setEnabled(AppConfig::getShowBVH());
 	m_debugBVHPass->setShowPrimitiveBVH(AppConfig::getShowPrimitiveBVH());
 	m_debugBVHPass->setMaxDepth(AppConfig::getBVHMaxDepth());
-	m_debugBVHPass->draw(m_view, m_projection, m_scene.get(),
-		m_deferredPass->getFinalRTV(), m_zPrePass->getDSV());
+	m_debugBVHPass->draw(m_view, m_projection, m_scene.get(), m_deferredPass->getFinalRTV(), m_zPrePass->getDSV());
 
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
@@ -153,11 +149,11 @@ void Renderer::draw()
 	m_device->getSwapChain()->Present(0, 0);
 	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
 	{
-		m_rdocAPI->EndFrameCapture(NULL, NULL);
+		m_rdocAPI->EndFrameCapture(nullptr, nullptr);
 
 		if (m_rdocAPI->GetNumCaptures() > 0)
 		{
-			uint32_t idx = m_rdocAPI->GetNumCaptures() - 1;
+			const uint32_t idx = m_rdocAPI->GetNumCaptures() - 1;
 			char path[512];
 			uint32_t pathLen = sizeof(path);
 			uint64_t timestamp;
@@ -178,15 +174,16 @@ void Renderer::resize()
 	m_depthStencilBuffer.Reset();
 	m_depthStencilView.Reset();
 
-	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight(), DXGI_FORMAT_UNKNOWN, 0);
+	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight()
+	                                        , DXGI_FORMAT_UNKNOWN, 0);
 
 	{
-		HRESULT hr = m_device->getSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer);
+		const HRESULT hr = m_device->getSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
 	{
-		HRESULT hr = m_device->getDevice()->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_backBufferRTV);
+		const HRESULT hr = m_device->getDevice()->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_backBufferRTV);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -212,7 +209,9 @@ void Renderer::resize()
 		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-		hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilViewDesc, &m_depthStencilView);
+		hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(),
+		                                                   &depthStencilViewDesc
+		                                                   , &m_depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -225,6 +224,4 @@ void Renderer::resize()
 	viewport.MinDepth = 0.0f;
 
 	m_device->getContext()->RSSetViewports(1, &viewport);
-
-
 }

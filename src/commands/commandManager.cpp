@@ -58,7 +58,7 @@ void CommandManager::undo()
 void CommandManager::redo()
 {
 	assert(hasRedoCommands());
-	std::unique_ptr<CommandBase> commandToRedo = std::move(m_redoBuffer.back());
+	const std::unique_ptr<CommandBase> commandToRedo = std::move(m_redoBuffer.back());
 	m_redoBuffer.pop_back();
 
 	std::unique_ptr<CommandBase> commandToUndo = commitInternal(commandToRedo.get());
@@ -77,7 +77,7 @@ bool CommandManager::hasRedoCommands() const
 	return !m_redoBuffer.empty();
 }
 
-void CommandManager::setMergeFence()
+void CommandManager::setMergeFence() const
 {
 	if (SnapshotBase* dataSnapshot = getLastUndoAsSnapshot())
 	{
@@ -98,14 +98,14 @@ void CommandManager::clearRedoBuffer()
 std::unique_ptr<CommandBase> CommandManager::commitInternal(CommandBase* command)
 {
 	std::unique_ptr<CommandBase> commitCommand = command->exec();
-	if (auto snapshot = dynamic_cast<SnapshotBase*>(command))
+	if (const auto snapshot = dynamic_cast<SnapshotBase*>(command))
 	{
 		snapshot->onCommitTransaction();
 	}
 	return commitCommand;
 }
 
-SnapshotBase* CommandManager::getLastUndoAsSnapshot()
+SnapshotBase* CommandManager::getLastUndoAsSnapshot() const
 {
 	return hasUndoCommands() ? dynamic_cast<SnapshotBase*>(m_undoBuffer.back().get()) : nullptr;
 }

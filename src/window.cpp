@@ -4,17 +4,18 @@
 #include "imgui.h"
 #include "appConfig.hpp"
 
-Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
+Window::Window(HINSTANCE hInstance)
+	: m_hWindow(NULL)
 {
-	LPCSTR CLASS_NAME = "Sample Window Class";
-	LPCSTR WINDOW_NAME = "TimeToDX";
+	const auto CLASS_NAME = "Sample Window Class";
+	const auto WINDOW_NAME = "TimeToDX";
 	m_windClass = {};
 	m_windClass.lpfnWndProc = Window::WindowProc;
 	m_windClass.hInstance = hInstance;
 	m_windClass.lpszClassName = CLASS_NAME;
 	m_windClass.style = CS_HREDRAW | CS_VREDRAW;
 	m_windClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	m_windClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	m_windClass.hbrBackground = reinterpret_cast<HBRUSH>((COLOR_WINDOW + 1));
 
 	RegisterClass(&m_windClass);
 
@@ -24,13 +25,13 @@ Window::Window(HINSTANCE hInstance) : m_hWindow(NULL)
 		WINDOW_NAME,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		hInstance,
-		NULL
-	);
+		nullptr
+		);
 
-	if (m_hWindow != NULL)
+	if (m_hWindow != nullptr)
 	{
 		ShowWindow(m_hWindow, SW_SHOWDEFAULT);
 	}
@@ -57,8 +58,8 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	case WM_SIZE:
 	{
-		int width = LOWORD(lParam);
-		int height = HIWORD(lParam);
+		const int width = LOWORD(lParam);
+		const int height = HIWORD(lParam);
 		if (wParam == SIZE_MINIMIZED)
 		{
 			AppConfig::setWindowMinimized(true);
@@ -88,6 +89,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 		return 0;
 	}
+	default: ;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

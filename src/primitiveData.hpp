@@ -8,9 +8,20 @@ using Vec3 = bvh::v2::Vec<float, 3>;
 struct Position
 {
 	float x, y, z;
-	operator Vec3() const { return Vec3{ x, y, z }; }
+
+	explicit operator Vec3() const
+	{
+		return Vec3{x, y, z};
+	}
+
 	Position() = default;
-	Position(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
+
+	Position(const float x_, const float y_, const float z_)
+		: x(x_)
+		, y(y_)
+		, z(z_)
+	{
+	};
 };
 
 struct TexCoords
@@ -18,15 +29,28 @@ struct TexCoords
 	float u, v;
 
 	TexCoords() = default;
-	TexCoords(float _u, float _v) : u(_u), v(_v) {};
+
+	TexCoords(const float u_, const float v_)
+		: u(u_)
+		, v(v_)
+	{
+	};
 };
 
 struct Normals
 {
 	float nx, ny, nz;
 	Normals() = default;
-	Normals(float _nx, float _ny, float _nz) : nx(_nx), ny(_ny), nz(_nz) {};
+
+	Normals(const float nx_, const float ny_, float nz_);;
 };
+
+inline Normals::Normals(const float nx_, const float ny_, const float nz_)
+	: nx(nx_)
+	, ny(ny_)
+	, nz(nz_)
+{
+}
 
 struct InterleavedData
 {
@@ -34,12 +58,12 @@ struct InterleavedData
 	TexCoords texCoords;
 	Normals normals;
 	InterleavedData() = default;
-	InterleavedData(Position _position,
-		TexCoords _texCoords,
-		Normals _normals)
-		: position(_position),
-		texCoords(_texCoords),
-		normals(_normals) {
+
+	InterleavedData(const Position position_, const TexCoords texCoords_, const Normals normals_)
+		: position(position_)
+		, texCoords(texCoords_)
+		, normals(normals_)
+	{
 	};
 
 };

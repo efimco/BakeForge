@@ -4,7 +4,10 @@
 
 #include "stb_image.h"
 
-Texture::Texture(const ComPtr<ID3D11Device>& _device) : device(_device) {}
+Texture::Texture(const ComPtr<ID3D11Device>& _device)
+	: device(_device)
+{
+}
 
 Texture::Texture(Texture&& other, ComPtr<ID3D11Device> _device)
 {
@@ -32,7 +35,7 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 	else
 		format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.Format = format;
-	texDesc.MipLevels = 0;  // Let D3D calculate mip count
+	texDesc.MipLevels = 0; // Let D3D calculate mip count
 	texDesc.ArraySize = 1;
 	texDesc.SampleDesc.Count = 1;
 	texDesc.SampleDesc.Quality = 0;
@@ -58,15 +61,15 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 	{
 		device->GetImmediateContext(&context);
 	}
-	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(), 
-		image.width * image.component, 0);
+	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(),
+	                           image.width * image.component, 0);
 
 	// Create Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = texDesc.Format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;  // Use all mip levels
+	srvDesc.Texture2D.MipLevels = -1; // Use all mip levels
 	{
 		HRESULT hr = device->CreateShaderResourceView(textureResource.Get(), &srvDesc, &srv);
 		if (FAILED(hr))
@@ -76,6 +79,7 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 	}
 	context->GenerateMips(srv.Get());
 }
+
 uint32_t GetBytesPerPixel(DXGI_FORMAT format);
 
 Texture::Texture(std::string filepath, ComPtr<ID3D11Device> _device, bool isHdr)
@@ -163,8 +167,7 @@ uint32_t GetBytesPerPixel(DXGI_FORMAT format)
 		return 16;
 	case DXGI_FORMAT_R16G16B16A16_FLOAT:
 		return 8;
-		// Add more formats as needed
 	default:
-		return 0; // Unknown format
+		return 0;
 	}
 }

@@ -4,7 +4,7 @@
 
 #include "appConfig.hpp"
 #include "GBufferTextures.hpp"
-#include "debugPassMacros.hpp"
+
 #include "shaderManager.hpp"
 #include "scene.hpp"
 #include "light.hpp"
@@ -22,7 +22,8 @@ struct alignas(16) DeferredConstantBuffer
 	int drawWSUI;
 };
 
-DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
+DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+	: BasePass(device, context)
 {
 	createOrResize();
 	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");
@@ -52,7 +53,7 @@ DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 			std::cerr << "Error Creating Lights SRV: " << hr << std::endl;
 	}
 
-	createSamplerState(SamplerPreset::LinearClamp);
+	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 
 	D3D11_BUFFER_DESC constantBufferDesc = {};
 	constantBufferDesc.ByteWidth = sizeof(DeferredConstantBuffer);
@@ -122,21 +123,21 @@ void DeferredPass::createOrResize()
 			std::cerr << "Error Creating Final UAV: " << hr << std::endl;
 	}
 }
-void DeferredPass::draw(const glm::mat4& view,
-	const glm::mat4& projection,
-	const glm::vec3& cameraPosition,
-	Scene* scene,
-	const GBufferTextures& gbufferTextures,
-	ComPtr<ID3D11ShaderResourceView> depthSRV,
-	ComPtr<ID3D11ShaderResourceView> backgroundSRV,
-	ComPtr<ID3D11ShaderResourceView> irradianceSRV,
-	ComPtr<ID3D11ShaderResourceView> prefilteredSRV,
-	ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
-	ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV
-)
-{
-	DEBUG_PASS_START(L"Deferred Pass Draw");
 
+void DeferredPass::draw(const glm::mat4& view
+                        , const glm::mat4& projection
+                        , const glm::vec3& cameraPosition
+                        , Scene* scene
+                        , const GBufferTextures& gbufferTextures
+                        , ComPtr<ID3D11ShaderResourceView> depthSRV
+                        , ComPtr<ID3D11ShaderResourceView> backgroundSRV
+                        , ComPtr<ID3D11ShaderResourceView> irradianceSRV
+                        , ComPtr<ID3D11ShaderResourceView> prefilteredSRV
+                        , ComPtr<ID3D11ShaderResourceView> brdfLutSRV
+                        , ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV)
+{
+
+	beginDebugEvent(L"Deffered Pass");
 	if (AppConfig::getNeedsResize())
 	{
 		createOrResize();
@@ -151,7 +152,7 @@ void DeferredPass::draw(const glm::mat4& view,
 	HRESULT hr = m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
-		DeferredConstantBuffer* cbData = static_cast<DeferredConstantBuffer*>(mappedResource.pData);
+		auto* cbData = static_cast<DeferredConstantBuffer*>(mappedResource.pData);
 		cbData->IBLrotationY = AppConfig::getIBLRotation();
 		cbData->IBLintensity = AppConfig::getIBLIntensity();
 		cbData->selectedID = scene->getActiveNodeID();
@@ -166,44 +167,55 @@ void DeferredPass::draw(const glm::mat4& view,
 	m_context->CSSetShader(m_shaderManager->getComputeShader("deferred"), nullptr, 0);
 
 	// Set SRVs
-	ID3D11ShaderResourceView* srvs[] = {
-		gbufferTextures.albedoSRV.Get(),
-		gbufferTextures.metallicRoughnessSRV.Get(),
-		gbufferTextures.normalSRV.Get(),
-		gbufferTextures.positionSRV.Get(),
-		gbufferTextures.objectIDSRV.Get(),
-		depthSRV.Get(),
-		m_lightsSRV.Get(),
-		backgroundSRV.Get(),
-		irradianceSRV.Get(),
-		prefilteredSRV.Get(),
-		brdfLutSRV.Get(),
-		worldSpaceUISRV.Get()
-	};
+	ID3D11ShaderResourceView* srvs[] = {gbufferTextures.albedoSRV.Get()
+	                                    , gbufferTextures.metallicRoughnessSRV.Get()
+	                                    , gbufferTextures.normalSRV.Get()
+	                                    , gbufferTextures.positionSRV.Get()
+	                                    , gbufferTextures.objectIDSRV.Get()
+	                                    , depthSRV.Get()
+	                                    , m_lightsSRV.Get()
+	                                    , backgroundSRV.Get()
+	                                    , irradianceSRV.Get()
+	                                    , prefilteredSRV.Get()
+	                                    , brdfLutSRV.Get()
+	                                    , worldSpaceUISRV.Get()};
 	m_context->CSSetShaderResources(0, 12, srvs);
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
 	// Set UAVs
-	ID3D11UnorderedAccessView* uavs[] = {
-		m_finalUAV.Get()
-	};
+	ID3D11UnorderedAccessView* uavs[] = {m_finalUAV.Get()};
 	m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
 	// Dispatch compute shader
-	UINT dispatchX = static_cast<UINT>(std::ceil((AppConfig::getViewportWidth() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
-	UINT dispatchY = static_cast<UINT>(std::ceil((AppConfig::getViewportHeight() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
-	if (dispatchX == 0) dispatchX = 1;
-	if (dispatchY == 0) dispatchY = 1;
+	UINT dispatchX = static_cast<UINT>(std::ceil(
+		(AppConfig::getViewportWidth() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
+	UINT dispatchY = static_cast<UINT>(std::ceil(
+		(AppConfig::getViewportHeight() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
+	if (dispatchX == 0)
+		dispatchX = 1;
+	if (dispatchY == 0)
+		dispatchY = 1;
 	m_context->Dispatch(dispatchX, dispatchY, 1);
 
 	// Unbind SRVs and UAVs
-	ID3D11ShaderResourceView* nullSRVs[12] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	ID3D11ShaderResourceView* nullSRVs[12] = {nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr
+	                                          , nullptr};
 	m_context->CSSetShaderResources(0, 12, nullSRVs);
-	ID3D11UnorderedAccessView* nullUAVs[1] = { nullptr };
+	ID3D11UnorderedAccessView* nullUAVs[1] = {nullptr};
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAVs, nullptr);
 
-	DEBUG_PASS_END();
+	endDebugEvent();
 }
 
 
@@ -217,7 +229,7 @@ ComPtr<ID3D11RenderTargetView> DeferredPass::getFinalRTV() const
 	return m_finalRTV;
 }
 
-void DeferredPass::updateLights(Scene* scene)
+void DeferredPass::updateLights(Scene* scene) const
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
 	HRESULT hr = m_context->Map(m_lightsBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);

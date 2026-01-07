@@ -1,11 +1,11 @@
 #include "DXDevice.hpp"
 
-#include <assert.h>
+#include <cassert>
 
 DXDevice::DXDevice(const HWND& hWindow)
 {
-	D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1 };
-	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
+	D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_1};
+	constexpr UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 	UINT deviceCreationFlags = 0;
 #if defined(_DEBUG)
 	// If the project is in a debug build, enable the debug layer.
@@ -14,16 +14,16 @@ DXDevice::DXDevice(const HWND& hWindow)
 
 	{
 		HRESULT hr = D3D11CreateDevice(
-			nullptr,				  // IDXGIAdapter* pAdapter
+			nullptr,                  // IDXGIAdapter* pAdapter
 			D3D_DRIVER_TYPE_HARDWARE, // D3D_DRIVER_TYPE DriverType
-			nullptr,				  // HMODULE Software
-			deviceCreationFlags,	  // UINT flags
-			featureLevels,			  // CONST D3D_FEATURE_LEVEL* pFeatureLevels
-			numFeatureLevels,		  // UINT FeatureLevels
-			D3D11_SDK_VERSION,		  // UINT SDKVersion,
-			&m_d3dDevice,			  //_COM_Outptr_opt_ ID3D11Device** ppDevice
-			nullptr,				  // D3D_FEATURE_LEVEL* pFeatureLevel
-			&m_d3dDeviceContext);	  // ID3D11DeviceContext** ppImmediateContext
+			nullptr,                  // HMODULE Software
+			deviceCreationFlags,      // UINT flags
+			featureLevels,            // CONST D3D_FEATURE_LEVEL* pFeatureLevels
+			numFeatureLevels,         // UINT FeatureLevels
+			D3D11_SDK_VERSION,        // UINT SDKVersion,
+			&m_d3dDevice,             //_COM_Outptr_opt_ ID3D11Device** ppDevice
+			nullptr,                  // D3D_FEATURE_LEVEL* pFeatureLevel
+			&m_d3dDeviceContext);     // ID3D11DeviceContext** ppImmediateContext
 		assert(SUCCEEDED(hr));
 	}
 

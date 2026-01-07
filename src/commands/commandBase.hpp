@@ -8,8 +8,10 @@ class CommandBase
 public:
 	virtual ~CommandBase() = default;
 
-	[[nodiscard]]
-	bool shouldBreakHistory() const { return m_breakHistory; }
+	bool shouldBreakHistory() const
+	{
+		return m_breakHistory;
+	}
 
 protected:
 	friend class CommandManager;

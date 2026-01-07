@@ -3,14 +3,14 @@
 #include <vector>
 
 BasePass::BasePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
-	:m_device(device)
+	: m_device(device)
 	, m_context(context)
 	, m_shaderManager(std::make_unique<ShaderManager>(device))
 {
 	m_context.As(&m_annotation);
 }
 
-ComPtr<ID3D11RasterizerState> BasePass::createRSState(RasterizerPreset preset)
+ComPtr<ID3D11RasterizerState> BasePass::createRSState(const RasterizerPreset preset) const
 {
 	switch (preset)
 	{
@@ -29,10 +29,10 @@ ComPtr<ID3D11RasterizerState> BasePass::createRSState(RasterizerPreset preset)
 	}
 }
 
-ComPtr<ID3D11RasterizerState> BasePass::createRSState(D3D11_CULL_MODE cullMode,
-	D3D11_FILL_MODE fillMode,
-	bool depthClipEnable,
-	bool antialiasedLineEnable)
+ComPtr<ID3D11RasterizerState> BasePass::createRSState(const D3D11_CULL_MODE cullMode,
+                                                      const D3D11_FILL_MODE fillMode,
+                                                      const bool depthClipEnable,
+                                                      const bool antialiasedLineEnable) const
 {
 	D3D11_RASTERIZER_DESC desc = {};
 	desc.CullMode = cullMode;
@@ -69,9 +69,9 @@ ComPtr<ID3D11DepthStencilState> BasePass::createDSState(DepthStencilPreset prese
 }
 
 ComPtr<ID3D11DepthStencilState> BasePass::createDSState(
-	bool depthEnable,
-	D3D11_DEPTH_WRITE_MASK writeMask,
-	D3D11_COMPARISON_FUNC depthFunc)
+	const bool depthEnable,
+	const D3D11_DEPTH_WRITE_MASK writeMask,
+	const D3D11_COMPARISON_FUNC depthFunc) const
 {
 	D3D11_DEPTH_STENCIL_DESC desc = {};
 	desc.DepthEnable = depthEnable;
@@ -86,7 +86,7 @@ ComPtr<ID3D11DepthStencilState> BasePass::createDSState(
 	return state;
 }
 
-ComPtr<ID3D11SamplerState> BasePass::createSamplerState(SamplerPreset preset)
+ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const SamplerPreset preset)
 {
 	switch (preset)
 	{
@@ -104,8 +104,8 @@ ComPtr<ID3D11SamplerState> BasePass::createSamplerState(SamplerPreset preset)
 }
 
 ComPtr<ID3D11SamplerState> BasePass::createSamplerState(
-	D3D11_FILTER filter,
-	D3D11_TEXTURE_ADDRESS_MODE addressMode)
+	const D3D11_FILTER filter,
+	const D3D11_TEXTURE_ADDRESS_MODE addressMode)
 {
 	D3D11_SAMPLER_DESC desc = {};
 	desc.Filter = filter;
@@ -122,7 +122,7 @@ ComPtr<ID3D11SamplerState> BasePass::createSamplerState(
 	return state;
 }
 
-void BasePass::setViewport(UINT width, UINT height)
+void BasePass::setViewport(const UINT width, const UINT height) const
 {
 	D3D11_VIEWPORT viewport = {};
 	viewport.Width = static_cast<float>(width);
@@ -134,27 +134,28 @@ void BasePass::setViewport(UINT width, UINT height)
 	m_context->RSSetViewports(1, &viewport);
 }
 
-void BasePass::unbindRenderTargets(UINT count)
+void BasePass::unbindRenderTargets(const UINT count) const
 {
-	std::vector<ID3D11RenderTargetView*> nullRTVs(count, nullptr);
+	const std::vector<ID3D11RenderTargetView*> nullRTVs(count, nullptr);
 	m_context->OMSetRenderTargets(count, nullRTVs.data(), nullptr);
 }
 
-void BasePass::unbindShaderResources(UINT startSlot, UINT count)
+void BasePass::unbindShaderResources(const UINT startSlot, const UINT count)
 {
-	std::vector<ID3D11ShaderResourceView*> nullSRVs(count, nullptr);
+	const std::vector<ID3D11ShaderResourceView*> nullSRVs(count, nullptr);
 	m_context->PSSetShaderResources(startSlot, count, nullSRVs.data());
 	m_context->CSSetShaderResources(startSlot, count, nullSRVs.data());
 }
 
-void BasePass::unbindComputeUAVs(UINT startSlot, UINT count)
+void BasePass::unbindComputeUAVs(const UINT startSlot, const UINT count) const
 {
-	if (count == 0) return;
-	std::vector<ID3D11UnorderedAccessView*> nullUAVs(count, nullptr);
+	if (count == 0)
+		return;
+	const std::vector<ID3D11UnorderedAccessView*> nullUAVs(count, nullptr);
 	m_context->CSSetUnorderedAccessViews(startSlot, count, nullUAVs.data(), nullptr);
 }
 
-void BasePass::beginDebugEvent(const wchar_t* name)
+void BasePass::beginDebugEvent(const wchar_t* name) const
 {
 	if (m_annotation)
 	{
@@ -162,7 +163,7 @@ void BasePass::beginDebugEvent(const wchar_t* name)
 	}
 }
 
-void BasePass::endDebugEvent()
+void BasePass::endDebugEvent() const
 {
 	if (m_annotation)
 	{

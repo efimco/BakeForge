@@ -3,7 +3,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "debugPassMacros.hpp"
+
 #include "appConfig.hpp"
 
 FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context)
@@ -21,11 +21,11 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	assert(SUCCEEDED(hr));
 
 	// Create vertex buffer for fullscreen quad
-	float vertices[] = {
-		-1.0f, -1.0f, 0.0, 0.0f, 1.0f,  // Bottom-left
-		 1.0f, -1.0f, 0.0, 1.0f, 1.0f,  // Bottom-right
-		-1.0f,  1.0f, 0.0, 0.0f, 0.0f,  // Top-left
-		 1.0f,  1.0f, 0.0, 1.0f, 0.0f   // Top-right
+	constexpr float vertices[] = {
+		-1.0f, -1.0f, 0.0, 0.0f, 1.0f, // Bottom-left
+		1.0f, -1.0f, 0.0, 1.0f, 1.0f,  // Bottom-right
+		-1.0f, 1.0f, 0.0, 0.0f, 0.0f,  // Top-left
+		1.0f, 1.0f, 0.0, 1.0f, 0.0f    // Top-right
 	};
 
 	D3D11_BUFFER_DESC vertexBufferDesc = {};
@@ -40,9 +40,9 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	assert(SUCCEEDED(hr));
 
 	// Create index buffer for fullscreen quad
-	UINT indices[] = {
-		0, 1, 2,  // First triangle
-		1, 3, 2   // Second triangle
+	const UINT indices[] = {
+		0, 1, 2, // First triangle
+		1, 3, 2  // Second triangle
 	};
 
 	D3D11_BUFFER_DESC indexBufferDesc = {};
@@ -65,8 +65,8 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 
 void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 {
-	static const UINT stride = 5 * sizeof(float);
-	static const UINT offset = 0;
+	static constexpr UINT stride = 5 * sizeof(float);
+	static constexpr UINT offset = 0;
 
 	beginDebugEvent(L"FSQuad Pass");
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -83,7 +83,8 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 
 
 	m_context->DrawIndexed(6, 0, 0);
-	if (!m_samplerState) {
+	if (!m_samplerState)
+	{
 		std::cerr << "Sampler missing\n";
 	}
 	ID3D11ShaderResourceView* nullSRV = nullptr;

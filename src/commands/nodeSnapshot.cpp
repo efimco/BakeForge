@@ -1,4 +1,3 @@
-
 #include "nodeSnapshot.hpp"
 
 #include "scene.hpp"
@@ -43,7 +42,7 @@ namespace Snapshot
 
 	bool SceneNodeCopy::containsChanges() const
 	{
-		SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+		const SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 		assert(sceneNode);
 		return m_sceneNodeClone->differsFrom(*sceneNode);
 	}
@@ -89,12 +88,10 @@ namespace Snapshot
 
 	bool SceneNodeTransform::containsChanges() const
 	{
-		SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
+		const SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 		assert(sceneNode);
-		return
-			sceneNode->transform.position != m_savedTransform.position ||
-			sceneNode->transform.rotation != m_savedTransform.rotation ||
-			sceneNode->transform.scale != m_savedTransform.scale;
+		return sceneNode->transform.position != m_savedTransform.position || sceneNode->transform.rotation !=
+			m_savedTransform.rotation || sceneNode->transform.scale != m_savedTransform.scale;
 	}
 
 	void SceneNodeTransform::onCommitTransaction()

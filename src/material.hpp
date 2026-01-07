@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include <d3d11_4.h>
 #include <glm/glm.hpp>
@@ -18,6 +18,7 @@ struct Material
 	float roughnessValue;
 	std::shared_ptr<Texture> normal;
 	ID3D11ShaderResourceView* const* getSRVs();
+
 private:
-	ID3D11ShaderResourceView* m_srvCache[3] = { nullptr, nullptr, nullptr };
+	ID3D11ShaderResourceView* m_srvCache[3] = {nullptr, nullptr, nullptr};
 };

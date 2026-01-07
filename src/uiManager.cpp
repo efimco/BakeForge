@@ -1,66 +1,68 @@
 #include "uiManager.hpp"
 
-#include <iostream>
-#include <glm/gtc/type_ptr.hpp>
-#include <windows.h>
-#include <memory>
 #include <commdlg.h>
+#include <iostream>
+#include <memory>
+#include <windows.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #define IM_VEC2_CLASS_EXTRA
+#include "ImGuizmo.h"
+#include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
-#include "imgui_impl_dx11.h"
-#include "ImGuizmo.h"
 
 #include "appConfig.hpp"
 #include "inputEventsHandler.hpp"
-#include "debugPassMacros.hpp"
 #include "passes/GBuffer.hpp"
 
-#include "scene.hpp"
+#include "camera.hpp"
 #include "light.hpp"
 #include "primitive.hpp"
-#include "camera.hpp"
+#include "scene.hpp"
 
+#include "commands/commandManager.hpp"
 #include "commands/nodeCommand.hpp"
 #include "commands/nodeSnapshot.hpp"
 #include "commands/scopedTransaction.hpp"
-#include "commands/commandManager.hpp"
 
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
 static bool gUseSnap(false);
-static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
-static glm::ivec3 gSnapRotate = { 15, 15, 15 };
-static glm::ivec3 gSnapScale = { 1, 1, 1 };
+static glm::ivec3 gSnapTranslate = {1, 1, 1};
+static glm::ivec3 gSnapRotate = {15, 15, 15};
+static glm::ivec3 gSnapScale = {1, 1, 1};
 
-UIManager::UIManager(ComPtr<ID3D11Device> device,
-	ComPtr<ID3D11DeviceContext> deviceContext,
-	const HWND& hwnd) :
-	m_hwnd(hwnd),
-	m_commandManager(std::make_unique<CommandManager>())
+UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
+	: m_hwnd(hwnd)
+	, m_commandManager(std::make_unique<CommandManager>())
 {
 	m_device = device;
 	m_context = deviceContext;
 	ImGui_ImplWin32_EnableDpiAwareness();
-	float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
+	const float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	m_io = &ImGui::GetIO(); (void*)m_io;
-	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-	m_io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+	m_io = &ImGui::GetIO();
+	static_cast<void*>(m_io);
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+	m_io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
 
 	ImGui::StyleColorsDark();
 
 	ImGuiStyle& style = ImGui::GetStyle();
-	style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-	style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
-	m_io->ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-	m_io->ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+	style.ScaleAllSizes(main_scale);
+	// Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+	style.FontScaleDpi = main_scale;
+	// Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+	m_io->ConfigDpiScaleFonts = true;
+	// [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+	m_io->ConfigDpiScaleViewports = true;
+	// [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -86,7 +88,8 @@ UIManager::UIManager(ComPtr<ID3D11Device> device,
 		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		flipDesc.Flags = 0;
 
-		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC * desc_templates, int desc_templates_count);
+		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates
+		                                             , int desc_templates_count);
 		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
 	}
 	m_isMouseInViewport = false;
@@ -99,16 +102,20 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer& gbuffer, Scene* scene, const glm::mat4& view, const glm::mat4& projection)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv
+                     , const GBuffer& gbuffer
+                     , Scene* scene
+                     , const glm::mat4& view
+                     , const glm::mat4& projection)
 {
 	m_view = view;
 	m_projection = projection;
-	DEBUG_PASS_START(L"UIManager Draw");
+
 	m_scene = scene;
 	// Always check window validity before starting a new frame
 	if (!IsWindow(m_hwnd) || !m_scene)
 	{
-		DEBUG_PASS_END();
+
 		return;
 	}
 
@@ -138,12 +145,47 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv, const GBuffer&
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
-	DEBUG_PASS_END();
+
 }
 
 uint32_t* UIManager::getMousePos()
 {
 	return m_mousePos;
+}
+
+void UIManager::showSceneSettings() const
+{
+	static float f = 0.0f;
+	static int counter = 0;
+
+	ImGui::Begin("SceneSettings");
+	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
+	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
+	ImGui::DragFloat("Environment Map Intensity", &AppConfig::getBackgroundIntensity(), 1.0f, 0.0f, 1.0f);
+	ImGui::Separator();
+
+	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
+	if (AppConfig::getIsBlurred())
+	{
+		ImGui::SliderFloat("Blur Amount", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
+	}
+	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
+	ImGui::Separator();
+
+	// Debug BVH visualization
+	ImGui::TextWrapped("Debug Visualization");
+	ImGui::Checkbox("Show BVH", &AppConfig::getShowBVH());
+	if (AppConfig::getShowBVH())
+	{
+		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
+		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20
+		                 , AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
+	}
+
+	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",
+	                   1000.0f / m_io->Framerate, m_io->Framerate);
+	ImGui::End();
+
 }
 
 void UIManager::showMainMenuBar()
@@ -152,10 +194,18 @@ void UIManager::showMainMenuBar()
 	{
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New Scene", "Ctrl+N")) { /* TODO: New scene */ }
-			if (ImGui::MenuItem("Open...", "Ctrl+O")) { /* TODO: Open file dialog */ }
-			if (ImGui::MenuItem("Save", "Ctrl+S")) { /* TODO: Save scene */ }
-			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) { /* TODO: Save as dialog */ }
+			if (ImGui::MenuItem("New Scene", "Ctrl+N"))
+			{ /* TODO: New scene */
+			}
+			if (ImGui::MenuItem("Open...", "Ctrl+O"))
+			{ /* TODO: Open file dialog */
+			}
+			if (ImGui::MenuItem("Save", "Ctrl+S"))
+			{ /* TODO: Save scene */
+			}
+			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
+			{ /* TODO: Save as dialog */
+			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
 			{
@@ -166,36 +216,70 @@ void UIManager::showMainMenuBar()
 				std::cout << "Import model triggered from menu\n";
 				m_importProgress = m_scene->getImportProgress();
 			}
-			if (ImGui::MenuItem("Export...", "Ctrl+E")) { /* TODO: Export */ }
+			if (ImGui::MenuItem("Export...", "Ctrl+E"))
+			{ /* TODO: Export */
+			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Exit", "Alt+F4")) { PostQuitMessage(0); }
+			if (ImGui::MenuItem("Exit", "Alt+F4"))
+			{
+				PostQuitMessage(0);
+			}
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("Edit"))
 		{
-			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false)) { /* TODO: Undo */ }
-			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) { /* TODO: Redo */ }
+			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false))
+			{ /* TODO: Undo */
+			}
+			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false))
+			{ /* TODO: Redo */
+			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Cut", "Ctrl+X", false, false)) { /* TODO: Cut */ }
-			if (ImGui::MenuItem("Copy", "Ctrl+C", false, false)) { /* TODO: Copy */ }
-			if (ImGui::MenuItem("Paste", "Ctrl+V", false, false)) { /* TODO: Paste */ }
-			if (ImGui::MenuItem("Delete", "Del")) { /* TODO: Delete selected */ }
+			if (ImGui::MenuItem("Cut", "Ctrl+X", false, false))
+			{ /* TODO: Cut */
+			}
+			if (ImGui::MenuItem("Copy", "Ctrl+C", false, false))
+			{ /* TODO: Copy */
+			}
+			if (ImGui::MenuItem("Paste", "Ctrl+V", false, false))
+			{ /* TODO: Paste */
+			}
+			if (ImGui::MenuItem("Delete", "Del"))
+			{ /* TODO: Delete selected */
+			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Select All", "Ctrl+A")) { /* TODO: Select all */ }
-			if (ImGui::MenuItem("Deselect All", "Ctrl+D")) { m_scene->clearSelectedNodes(); }
+			if (ImGui::MenuItem("Select All", "Ctrl+A"))
+			{ /* TODO: Select all */
+			}
+			if (ImGui::MenuItem("Deselect All", "Ctrl+D"))
+			{
+				m_scene->clearSelectedNodes();
+			}
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("View"))
 		{
-			if (ImGui::MenuItem("Viewport", nullptr, true)) { /* Toggle viewport */ }
-			if (ImGui::MenuItem("Scene Graph", nullptr, true)) { /* Toggle scene graph */ }
-			if (ImGui::MenuItem("Properties", nullptr, true)) { /* Toggle properties */ }
-			if (ImGui::MenuItem("Material Browser", nullptr, true)) { /* Toggle material browser */ }
-			if (ImGui::MenuItem("GBuffer", nullptr, true)) { /* Toggle GBuffer view */ }
+			if (ImGui::MenuItem("Viewport", nullptr, true))
+			{ /* Toggle viewport */
+			}
+			if (ImGui::MenuItem("Scene Graph", nullptr, true))
+			{ /* Toggle scene graph */
+			}
+			if (ImGui::MenuItem("Properties", nullptr, true))
+			{ /* Toggle properties */
+			}
+			if (ImGui::MenuItem("Material Browser", nullptr, true))
+			{ /* Toggle material browser */
+			}
+			if (ImGui::MenuItem("GBuffer", nullptr, true))
+			{ /* Toggle GBuffer view */
+			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Reset Layout")) { /* TODO: Reset docking layout */ }
+			if (ImGui::MenuItem("Reset Layout"))
+			{ /* TODO: Reset docking layout */
+			}
 			ImGui::EndMenu();
 		}
 
@@ -203,55 +287,75 @@ void UIManager::showMainMenuBar()
 		{
 			if (ImGui::BeginMenu("Mesh"))
 			{
-				if (ImGui::MenuItem("Cube")) { /* TODO: Add cube */ }
-				if (ImGui::MenuItem("Sphere")) { /* TODO: Add sphere */ }
-				if (ImGui::MenuItem("Plane")) { /* TODO: Add plane */ }
-				if (ImGui::MenuItem("Cylinder")) { /* TODO: Add cylinder */ }
+				if (ImGui::MenuItem("Cube"))
+				{ /* TODO: Add cube */
+				}
+				if (ImGui::MenuItem("Sphere"))
+				{ /* TODO: Add sphere */
+				}
+				if (ImGui::MenuItem("Plane"))
+				{ /* TODO: Add plane */
+				}
+				if (ImGui::MenuItem("Cylinder"))
+				{ /* TODO: Add cylinder */
+				}
 				ImGui::EndMenu();
 			}
 			if (ImGui::BeginMenu("Light"))
 			{
-				glm::vec3 lightPos = glm::vec3(0.0f, 1.0f, 0.0f);
+				auto lightPos = glm::vec3(0.0f, 1.0f, 0.0f);
 				if (m_scene->getLights().size() > 0)
 				{
-					auto lastAddedLight = std::prev(m_scene->getLights().end());
+					const auto lastAddedLight = std::prev(m_scene->getLights().end());
 					lightPos = lastAddedLight->second->transform.position + glm::vec3(1.0f, 0.0f, 0.0f);
 				}
 
 				if (ImGui::MenuItem("Point Light"))
 				{
-					std::unique_ptr<Light> pointLight = std::make_unique<Light>(POINT_LIGHT, lightPos, "Point Light");
+					auto pointLight = std::make_unique<Light>(POINT_LIGHT, lightPos, "Point Light");
 					m_scene->addLight(pointLight.get());
 					m_scene->addChild(std::move(pointLight));
 				}
 				if (ImGui::MenuItem("Directional Light"))
 				{
-					std::unique_ptr<Light> dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, lightPos, "Directional Light");
+					auto dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, lightPos, "Directional Light");
 					m_scene->addLight(dirLight.get());
 					m_scene->addChild(std::move(dirLight));
 				}
 				if (ImGui::MenuItem("Spot Light"))
 				{
-					std::unique_ptr<Light> spotLight = std::make_unique<Light>(SPOT_LIGHT, lightPos, "Spot Light");
+					auto spotLight = std::make_unique<Light>(SPOT_LIGHT, lightPos, "Spot Light");
 					m_scene->addLight(spotLight.get());
 					m_scene->addChild(std::move(spotLight));
 				}
 				ImGui::EndMenu();
 			}
-			if (ImGui::MenuItem("Empty Node")) { /* TODO: Add empty node */ }
+			if (ImGui::MenuItem("Empty Node"))
+			{ /* TODO: Add empty node */
+			}
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("Render"))
 		{
-			if (ImGui::MenuItem("Render Image")) { /* TODO: Render to file */ }
+			if (ImGui::MenuItem("Render Image"))
+			{ /* TODO: Render to file */
+			}
 			ImGui::Separator();
 			if (ImGui::BeginMenu("Debug Views"))
 			{
-				if (ImGui::MenuItem("Albedo")) { /* TODO: Show albedo only */ }
-				if (ImGui::MenuItem("Normals")) { /* TODO: Show normals */ }
-				if (ImGui::MenuItem("Metallic/Roughness")) { /* TODO: Show metallic/roughness */ }
-				if (ImGui::MenuItem("Depth")) { /* TODO: Show depth */ }
+				if (ImGui::MenuItem("Albedo"))
+				{ /* TODO: Show albedo only */
+				}
+				if (ImGui::MenuItem("Normals"))
+				{ /* TODO: Show normals */
+				}
+				if (ImGui::MenuItem("Metallic/Roughness"))
+				{ /* TODO: Show metallic/roughness */
+				}
+				if (ImGui::MenuItem("Depth"))
+				{ /* TODO: Show depth */
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenu();
@@ -259,8 +363,12 @@ void UIManager::showMainMenuBar()
 
 		if (ImGui::BeginMenu("Help"))
 		{
-			if (ImGui::MenuItem("About")) { /* TODO: Show about dialog */ }
-			if (ImGui::MenuItem("Documentation")) { /* TODO: Open docs */ }
+			if (ImGui::MenuItem("About"))
+			{ /* TODO: Show about dialog */
+			}
+			if (ImGui::MenuItem("Documentation"))
+			{ /* TODO: Open docs */
+			}
 			ImGui::EndMenu();
 		}
 
@@ -268,55 +376,9 @@ void UIManager::showMainMenuBar()
 	}
 }
 
-void UIManager::showInvisibleDockWindow()
-{
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
-		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
-
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport->Pos);
-	ImGui::SetNextWindowSize(viewport->Size);
-	ImGui::SetNextWindowViewport(viewport->ID);
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("InvisibleDockSpaceWindow", nullptr, windowFlags);
-	ImGui::PopStyleVar(3);
-
-	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
-	ImGui::End();
-}
-
-void UIManager::showMaterialBrowser()
-{
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
-	ImGui::Begin("Material Browser", nullptr, windowFlags);
-	std::vector<std::string> materialNames = m_scene->getMaterialNames();
-	ImVec2 contentRegion = ImGui::GetContentRegionAvail();
-	float maxItemSize = 100.0f;
-	int itemsPerRow = int(floor(contentRegion.x / (maxItemSize + ImGui::GetStyle().ItemSpacing.x)));
-	float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
-	for (int i = 0; i < materialNames.size(); i++)
-	{
-		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
-		{
-			// Material selected
-		}
-		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
-		{
-			ImGui::SameLine();
-		}
-	}
-	ImGui::End();
-}
-
-
 void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
-	ImGuiWindowFlags windowFlags =
+	constexpr ImGuiWindowFlags windowFlags =
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
@@ -335,8 +397,8 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	m_isMouseInViewport = ImGui::IsWindowHovered();
 
 
-	ImVec2 uv0 = ImVec2(0, 0);
-	ImVec2 uv1 = ImVec2(1, 1);
+	constexpr auto uv0 = ImVec2(0, 0);
+	constexpr auto uv1 = ImVec2(1, 1);
 	static ImVec2 prevSize = ImGui::GetContentRegionAvail();
 	ImVec2 size = ImGui::GetContentRegionAvail();
 	size.x = static_cast<int>(size.x) % 2 == 0 ? size.x : size.x - 1;
@@ -351,13 +413,14 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 		prevSize = size;
 	}
 
-	ImTextureRef tex = srv.Get();
-	ImVec2 mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x, m_io->MousePos.y - ImGui::GetWindowPos().y);
+	const ImTextureRef tex = srv.Get();
+	const auto mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x
+	                             , m_io->MousePos.y - ImGui::GetWindowPos().y);
 	m_mousePos[0] = static_cast<uint32_t>(mousePos.x);
 	m_mousePos[1] = static_cast<uint32_t>(mousePos.y);
 
 	// Set up ImGuizmo to draw in this viewport
-	ImVec2 windowPos = ImGui::GetWindowPos();
+	const ImVec2 windowPos = ImGui::GetWindowPos();
 	ImGuizmo::SetRect(windowPos.x, windowPos.y, size.x, size.y);
 
 	ImGui::Image(tex, size, uv0, uv1);
@@ -374,12 +437,12 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	}
 
 
-
 	processGizmo();
 
 	ImGui::End();
 	ImGui::PopStyleVar(3);
 }
+
 
 void UIManager::showChWSnappingOptions()
 {
@@ -441,7 +504,52 @@ void UIManager::showChWImportProgress(std::shared_ptr<ImportProgress> progress)
 	ImGui::EndChild();
 }
 
-void UIManager::processInputEvents()
+void UIManager::showInvisibleDockWindow()
+{
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
+
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->Pos);
+	ImGui::SetNextWindowSize(viewport->Size);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("InvisibleDockSpaceWindow", nullptr, windowFlags);
+	ImGui::PopStyleVar(3);
+
+	const ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGui::End();
+}
+
+void UIManager::showMaterialBrowser() const
+{
+	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
+	ImGui::Begin("Material Browser", nullptr, windowFlags);
+	const std::vector<std::string> materialNames = m_scene->getMaterialNames();
+	const ImVec2 contentRegion = ImGui::GetContentRegionAvail();
+	constexpr float maxItemSize = 100.0f;
+	const int itemsPerRow = static_cast<int>(floor(contentRegion.x / (maxItemSize + ImGui::GetStyle().ItemSpacing.x)));
+	const float itemSize = (contentRegion.x - (itemsPerRow) * ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
+	for (int i = 0; i < materialNames.size(); i++)
+	{
+		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
+		{
+			// Material selected
+		}
+		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
+		{
+			ImGui::SameLine();
+		}
+	}
+	ImGui::End();
+}
+
+void UIManager::processInputEvents() const
 {
 	InputEvents::setMouseClicked(MouseButtons::LEFT_BUTTON, m_io->MouseClicked[0]);
 	InputEvents::setMouseClicked(MouseButtons::MIDDLE_BUTTON, m_io->MouseClicked[2]);
@@ -462,6 +570,7 @@ void UIManager::processInputEvents()
 	InputEvents::setKeyDown(KeyButtons::KEY_D, ImGui::IsKeyDown(ImGuiKey_D));
 	InputEvents::setKeyDown(KeyButtons::KEY_Q, ImGui::IsKeyDown(ImGuiKey_Q));
 	InputEvents::setKeyDown(KeyButtons::KEY_E, ImGui::IsKeyDown(ImGuiKey_E));
+	InputEvents::setKeyDown(KeyButtons::KEY_F, ImGui::IsKeyDown(ImGuiKey_F));
 	InputEvents::setKeyDown(KeyButtons::KEY_LSHIFT, ImGui::IsKeyDown(ImGuiKey_LeftShift));
 	InputEvents::setKeyDown(KeyButtons::KEY_F12, ImGui::IsKeyDown(ImGuiKey_F12));
 	InputEvents::setKeyDown(KeyButtons::KEY_F11, ImGui::IsKeyPressed(ImGuiKey_F11, false));
@@ -485,12 +594,12 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
-	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, activeNode };
+	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{m_commandManager.get(), m_scene, activeNode};
 
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
-	float* matrix = glm::value_ptr(worldMatrix);
-	float* viewMatrix = const_cast<float*>(glm::value_ptr(m_view));
-	float* projectionMatrix = const_cast<float*>(glm::value_ptr(m_projection));
+	const auto matrix = glm::value_ptr(worldMatrix);
+	const auto viewMatrix = const_cast<float*>(glm::value_ptr(m_view));
+	const auto projectionMatrix = const_cast<float*>(glm::value_ptr(m_projection));
 	glm::vec3 currentSnapValue;
 	switch (mCurrentGizmoOperation)
 	{
@@ -507,7 +616,8 @@ void UIManager::processGizmo()
 		currentSnapValue = glm::vec3(0.0f);
 		break;
 	}
-	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, gUseSnap ? &currentSnapValue[0] : NULL);
+	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL
+	                     , gUseSnap ? &currentSnapValue[0] : NULL);
 	if (ImGuizmo::IsUsing())
 	{
 		m_isMouseInViewport = false;
@@ -518,7 +628,7 @@ void UIManager::processGizmo()
 		if (activeNode->parent && !dynamic_cast<Scene*>(activeNode->parent))
 		{
 			// Has a non-Scene parent: convert world -> local
-			glm::mat4 parentWorldInverse = glm::inverse(activeNode->parent->getWorldMatrix());
+			const glm::mat4 parentWorldInverse = glm::inverse(activeNode->parent->getWorldMatrix());
 			localMatrix = parentWorldInverse * newWorldMatrix;
 		}
 		else
@@ -527,7 +637,8 @@ void UIManager::processGizmo()
 			localMatrix = newWorldMatrix;
 		}
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation, matrixScale);
+		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation
+		                                      , matrixScale);
 		activeNode->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
 		activeNode->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
 		activeNode->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
@@ -561,8 +672,8 @@ void UIManager::processNodeDeletion()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
-		bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
+		const bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
+		const bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
 		auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
 		m_commandManager->commitCommand(std::move(removeSceneNode));
 		if (isPrimitive)
@@ -576,10 +687,11 @@ void UIManager::processNodeDeletion()
 	}
 }
 
-void UIManager::processUndoRedo()
+void UIManager::processUndoRedo() const
 {
 	// We put a merge fence when mouse is released
-	bool isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right);
+	const bool isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(
+		ImGuiMouseButton_Right);
 	if (isMouseReleased)
 	{
 		m_commandManager->setMergeFence();
@@ -617,7 +729,7 @@ void UIManager::drawSceneGraph()
 	static ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
 		ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY;
 
-	ImVec2 availableSize = ImGui::GetContentRegionAvail();
+	const ImVec2 availableSize = ImGui::GetContentRegionAvail();
 	if (ImGui::BeginTable("SceneGraph", 1, tableFlags, availableSize))
 	{
 		ImGui::TableSetupColumn(m_scene->name.c_str(), ImGuiTableColumnFlags_WidthStretch);
@@ -629,10 +741,11 @@ void UIManager::drawSceneGraph()
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 			{
-				SceneNode* draggedNode = *(SceneNode**)payload->Data;
+				SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
 				if (draggedNode && draggedNode->parent)
 				{
-					auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
+					auto reparentSceneNode = std::make_unique<
+						Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
 					m_commandManager->commitCommand(std::move(reparentSceneNode));
 				}
 			}
@@ -642,11 +755,43 @@ void UIManager::drawSceneGraph()
 	ImGui::End();
 }
 
+void UIManager::handleNodeSelection(SceneNode* node) const
+{
+	if (ImGui::IsItemClicked())
+	{
+		const bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
+		m_scene->setActiveNode(node, addToSelection);
+	}
+}
+
+void UIManager::handleNodeDragDrop(SceneNode* targetNode)
+{
+	if (ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("SCENE_NODE", &targetNode, sizeof(SceneNode*));
+		ImGui::Text("%s", targetNode->name.c_str());
+		ImGui::EndDragDropSource();
+	}
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
+		{
+			SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
+			if (draggedNode && draggedNode != targetNode && draggedNode->parent)
+			{
+				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetNode);
+				m_commandManager->commitCommand(std::move(reparentSceneNode));
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
+}
+
 void UIManager::drawNode(SceneNode* node)
 {
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	bool isScene = dynamic_cast<Scene*>(node);
+	const bool isScene = dynamic_cast<Scene*>(node);
 	if (isScene)
 	{
 		for (auto& child : node->children)
@@ -658,17 +803,17 @@ void UIManager::drawNode(SceneNode* node)
 
 	const bool isFolder = (node->children.size() > 0);
 	const char* icon = getNodeIcon(node);
-	std::string label = std::string(icon) + " " + node->name;
+	const std::string label = std::string(icon) + " " + node->name;
 	if (isFolder)
 	{
 		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-		bool isSelected = m_scene->isNodeSelected(node);
+		const bool isSelected = m_scene->isNodeSelected(node);
 		if (isSelected)
 		{
 			nodeFlags |= ImGuiTreeNodeFlags_Selected;
 		}
 
-		bool open = ImGui::TreeNodeEx(label.c_str(), nodeFlags);
+		const bool open = ImGui::TreeNodeEx(label.c_str(), nodeFlags);
 		handleNodeSelection(node);
 		handleNodeDragDrop(node);
 
@@ -686,7 +831,7 @@ void UIManager::drawNode(SceneNode* node)
 	else
 	{
 		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-		bool isSelected = m_scene->isNodeSelected(node);
+		const bool isSelected = m_scene->isNodeSelected(node);
 		if (isSelected)
 		{
 			nodeFlags |= ImGuiTreeNodeFlags_Selected;
@@ -721,38 +866,6 @@ const char* UIManager::getNodeIcon(SceneNode* node)
 	return "[D]"; // Default document icon
 }
 
-void UIManager::handleNodeSelection(SceneNode* node)
-{
-	if (ImGui::IsItemClicked())
-	{
-		bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
-		m_scene->setActiveNode(node, addToSelection);
-	}
-}
-
-void UIManager::handleNodeDragDrop(SceneNode* targetNode)
-{
-	if (ImGui::BeginDragDropSource())
-	{
-		ImGui::SetDragDropPayload("SCENE_NODE", &targetNode, sizeof(SceneNode*));
-		ImGui::Text("%s", targetNode->name.c_str());
-		ImGui::EndDragDropSource();
-	}
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
-		{
-			SceneNode* draggedNode = *reinterpret_cast<SceneNode**>(payload->Data);
-			if (draggedNode && draggedNode != targetNode && draggedNode->parent)
-			{
-				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetNode);
-				m_commandManager->commitCommand(std::move(reparentSceneNode));
-			}
-		}
-		ImGui::EndDragDropTarget();
-	}
-}
-
 void UIManager::showProperties()
 {
 	ImGui::Begin("Properties");
@@ -775,28 +888,28 @@ void UIManager::showProperties()
 	ImGui::End();
 }
 
-void UIManager::showPrimitiveProperties(Primitive* prim)
+void UIManager::showPrimitiveProperties(Primitive* primitive) const
 {
 	{
-		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, prim };
+		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{m_commandManager.get(), m_scene, primitive};
 
 		ImGui::Text("Type: Primitive");
-		ImGui::Text("Name: %s", prim->name.c_str());
-		ImGui::DragFloat3("Position", &prim->transform.position[0], 0.1f);
-		ImGui::DragFloat3("Rotation", &prim->transform.rotation[0], 0.1f);
-		ImGui::DragFloat3("Scale", &prim->transform.scale[0], 0.1f);
+		ImGui::Text("Name: %s", primitive->name.c_str());
+		ImGui::DragFloat3("Position", &primitive->transform.position[0], 0.1f);
+		ImGui::DragFloat3("Rotation", &primitive->transform.rotation[0], 0.1f);
+		ImGui::DragFloat3("Scale", &primitive->transform.scale[0], 0.1f);
 	}
 
 	{
 		const auto& materialNames = m_scene->getMaterialNames();
 		int currentMaterialIndex = -1;
 		// Find current material index
-		if (currentMaterialIndex < 0 && prim->material)
+		if (currentMaterialIndex < 0 && primitive->material)
 		{
 			int index = 0;
 			for (const auto& name : materialNames)
 			{
-				if (m_scene->getMaterial(name) == prim->material)
+				if (m_scene->getMaterial(name) == primitive->material)
 				{
 					currentMaterialIndex = index;
 					break;
@@ -806,8 +919,10 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 		}
 
 		// Save previous material index
-		int previousMaterialIndex = currentMaterialIndex;
-		if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size() ? materialNames[currentMaterialIndex].c_str() : "Select Material"))
+		const int previousMaterialIndex = currentMaterialIndex;
+		if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size()
+		                      ? materialNames[currentMaterialIndex].c_str()
+		                      : "Select Material"))
 		{
 			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
@@ -817,9 +932,12 @@ void UIManager::showPrimitiveProperties(Primitive* prim)
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, prim };
-						std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
-						prim->material = selectedMaterial;
+						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{
+							m_commandManager.get()
+							, m_scene
+							, primitive};
+						const std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
+						primitive->material = selectedMaterial;
 					}
 				}
 				if (isSelected)
@@ -837,9 +955,9 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 	return;
 }
 
-void UIManager::showLightProperties(Light* light)
+void UIManager::showLightProperties(Light* light) const
 {
-	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light };
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene, light};
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
@@ -854,9 +972,10 @@ void UIManager::showLightProperties(Light* light)
 	ImGui::DragFloat("Radius", &light->radius, 0.1f, 0.0f, 100.0f);
 }
 
-void UIManager::showCameraProperties(Camera* camera)
+
+void UIManager::showCameraProperties(Camera* camera) const
 {
-	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera };
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene, camera};
 
 	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
@@ -864,11 +983,10 @@ void UIManager::showCameraProperties(Camera* camera)
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
 }
 
-
-std::string UIManager::openFileDialog(FileType outFileType)
+std::string UIManager::openFileDialog(const FileType outFileType)
 {
 	OPENFILENAME ofn;
-	char fileName[260] = { 0 };
+	char fileName[260] = {0};
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = nullptr;
@@ -898,38 +1016,4 @@ std::string UIManager::openFileDialog(FileType outFileType)
 	}
 
 	return std::string();
-}
-
-void UIManager::showSceneSettings()
-{
-	static float f = 0.0f;
-	static int counter = 0;
-
-	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
-	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
-	ImGui::DragFloat("Environment Map Intensity", &AppConfig::getBackgroundIntensity(), 1.0f, 0.0f, 1.0f);
-	ImGui::Separator();
-
-	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
-	if (AppConfig::getIsBlurred())
-	{
-		ImGui::SliderFloat("Blur Amount", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
-	}
-	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
-	ImGui::Separator();
-
-	// Debug BVH visualization
-	ImGui::TextWrapped("Debug Visualization");
-	ImGui::Checkbox("Show BVH", &AppConfig::getShowBVH());
-	if (AppConfig::getShowBVH())
-	{
-		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
-		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20, AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
-	}
-
-	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",
-		1000.0f / m_io->Framerate, m_io->Framerate);
-	ImGui::End();
-
 }

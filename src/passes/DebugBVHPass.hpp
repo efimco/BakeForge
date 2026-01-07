@@ -25,18 +25,42 @@ public:
 	DebugBVHPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~DebugBVHPass() = default;
 
-	void draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene,
-		const ComPtr<ID3D11RenderTargetView>& rtv,
-		const ComPtr<ID3D11DepthStencilView>& dsv, int maxDepth = -1);
+	void draw(const glm::mat4& view
+	          , const glm::mat4& projection
+	          , Scene* scene
+	          , const ComPtr<ID3D11RenderTargetView>& rtv
+	          , const ComPtr<ID3D11DepthStencilView>& dsv
+	          , int maxDepth = -1);
 
-	void setEnabled(bool enabled) { m_enabled = enabled; }
-	bool isEnabled() const { return m_enabled; }
+	void setEnabled(bool enabled)
+	{
+		m_enabled = enabled;
+	}
 
-	void setMaxDepth(int depth) { m_maxDepth = depth; }
-	int getMaxDepth() const { return m_maxDepth; }
+	bool isEnabled() const
+	{
+		return m_enabled;
+	}
 
-	void setShowPrimitiveBVH(bool show) { m_showPrimitiveBVH = show; }
-	bool getShowPrimitiveBVH() const { return m_showPrimitiveBVH; }
+	void setMaxDepth(const int depth)
+	{
+		m_maxDepth = depth;
+	}
+
+	int getMaxDepth() const
+	{
+		return m_maxDepth;
+	}
+
+	void setShowPrimitiveBVH(bool show)
+	{
+		m_showPrimitiveBVH = show;
+	}
+
+	bool getShowPrimitiveBVH() const
+	{
+		return m_showPrimitiveBVH;
+	}
 
 private:
 	void updateVertexBuffer(Scene* scene, int maxDepth);

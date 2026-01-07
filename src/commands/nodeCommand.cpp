@@ -7,10 +7,7 @@
 namespace Command
 {
 
-	DuplicateSceneNode::DuplicateSceneNode(
-		Scene* inScene,
-		SceneNode* inSceneNode,
-		bool reuseNodeHandle)
+	DuplicateSceneNode::DuplicateSceneNode(Scene* inScene, SceneNode* inSceneNode, const bool reuseNodeHandle)
 		: m_scene(inScene)
 		, m_nodeHandle(reuseNodeHandle ? inScene->findHandleOfNode(inSceneNode) : SceneNodeHandle::invalidHandle())
 		, m_validateName(!reuseNodeHandle)

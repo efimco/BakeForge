@@ -24,10 +24,11 @@ class DebugBVHPass;
 class WorldSpaceUIPass;
 
 using namespace Microsoft::WRL;
+
 class Renderer
 {
 public:
-	Renderer(const HWND& hwnd);
+	explicit Renderer(const HWND& hwnd);
 	~Renderer();
 	Renderer(const Renderer& other) = delete;
 
@@ -66,5 +67,5 @@ private:
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
 	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
 	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
-	RENDERDOC_API_1_1_2* m_rdocAPI = NULL;
+	RENDERDOC_API_1_1_2* m_rdocAPI = nullptr;
 };

@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include <wrl.h>
 #include <d3d11_4.h>
+#include <wrl.h>
 
 #include <tiny_gltf.h>
 
@@ -16,7 +16,7 @@ struct Texture
 	ComPtr<ID3D11Texture2D> textureResource;
 	ComPtr<ID3D11ShaderResourceView> srv;
 	D3D11_TEXTURE2D_DESC texDesc;
-	Texture(const ComPtr<ID3D11Device>& device);
+	explicit Texture(const ComPtr<ID3D11Device>& device);
 	Texture(Texture&& other, ComPtr<ID3D11Device> device);
 	Texture(const Texture& other) = delete;
 	Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context = nullptr);

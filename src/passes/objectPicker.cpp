@@ -16,6 +16,7 @@ struct cbPicking
 };
 
 ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+	: readBackID(0)
 {
 	m_device = device;
 	m_context = context;
@@ -44,7 +45,7 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 		assert(SUCCEEDED(hr));
 	}
 
-	{// Staging buffer for readback
+	{ // Staging buffer for readback
 		D3D11_BUFFER_DESC desc = {};
 		desc.Usage = D3D11_USAGE_STAGING;
 		desc.ByteWidth = sizeof(readBackID);
@@ -67,13 +68,14 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 	}
 }
 
-void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uint32_t* mousePos, Scene* scene)
+void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, const uint32_t* mousePos, Scene* scene)
 {
+
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedCB = {};
 		HRESULT hr = m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedCB);
 		assert(SUCCEEDED(hr));
-		cbPicking* cb = reinterpret_cast<cbPicking*>(mappedCB.pData);
+		const auto cb = static_cast<cbPicking*>(mappedCB.pData);
 		cb->mousePosX = mousePos[0];
 		cb->mousePosY = mousePos[1];
 		cb->padding[0] = 0;
@@ -89,9 +91,9 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 	m_context->Dispatch(1, 1, 1);
 
 
-	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+	ID3D11ShaderResourceView* nullSRV[1] = {nullptr};
 	m_context->CSSetShaderResources(0, 1, nullSRV);
-	ID3D11UnorderedAccessView* nullUAV[1] = { nullptr };
+	ID3D11UnorderedAccessView* nullUAV[1] = {nullptr};
 	m_context->CSSetUnorderedAccessViews(0, 1, nullUAV, nullptr);
 
 	m_context->CopyResource(m_stagingBuffer.Get(), m_structuredBuffer.Get());
@@ -99,7 +101,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, uin
 	{
 		HRESULT hr = m_context->Map(m_stagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
 		assert(SUCCEEDED(hr));
-		readBackID = *reinterpret_cast<uint32_t*>(mapped.pData);
+		readBackID = *static_cast<uint32_t*>(mapped.pData);
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
 	}
 	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON) && InputEvents::getMouseInViewport())

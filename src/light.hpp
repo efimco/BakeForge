@@ -6,9 +6,7 @@
 
 enum LightType
 {
-	POINT_LIGHT = 0,
-	DIRECTIONAL_LIGHT = 1,
-	SPOT_LIGHT = 2
+	POINT_LIGHT = 0, DIRECTIONAL_LIGHT = 1, SPOT_LIGHT = 2
 };
 
 struct alignas(16) LightData
@@ -18,9 +16,9 @@ struct alignas(16) LightData
 	float intensity;
 	glm::vec3 color;
 	glm::vec3 direction;
-	float padding1; // Padding to align to 16 bytes
+	float padding1;       // Padding to align to 16 bytes
 	glm::vec2 spotParams; // x: inner cone angle, y: outer cone angle
-	glm::vec2 padding2; // Additional padding to align to 16 bytes
+	glm::vec2 padding2;   // Additional padding to align to 16 bytes
 	glm::vec3 attenuations;
 	float radius; // radius for point lights
 	uint32_t objectID;
@@ -41,9 +39,9 @@ public:
 	float radius = 1.0f;
 	LightType type = POINT_LIGHT;
 
-	virtual void onCommitTransaction(Scene& scene) override;
-	virtual void copyFrom(const SceneNode& node) override;
-	virtual bool differsFrom(const SceneNode& node) const override;
-	virtual std::unique_ptr<SceneNode> clone() const override;
+	void onCommitTransaction(Scene& scene) override;
+	void copyFrom(const SceneNode& node) override;
+	bool differsFrom(const SceneNode& node) const override;
+	std::unique_ptr<SceneNode> clone() const override;
 
 };

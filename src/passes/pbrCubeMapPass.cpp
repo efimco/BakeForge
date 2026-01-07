@@ -4,58 +4,135 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "texture.hpp"
-#include "debugPassMacros.hpp"
+
 #include "appConfig.hpp"
 
 static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
-	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
-float* cubeData = new float[]
-	{
-		// +X face
-		1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f,
-			// -X face
-			-1.0f, -1.0f, 1.0f,
-			-1.0f, -1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, 1.0f,
-			-1.0f, -1.0f, 1.0f,
-			// +Y face
-			-1.0f, 1.0f, -1.0f,
-			1.0f, 1.0f, -1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			-1.0f, 1.0f, 1.0f,
-			-1.0f, 1.0f, -1.0f,
-			// -Y face
-			-1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, 1.0f,
-			// +Z face
-			-1.0f, -1.0f, 1.0f,
-			-1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-			-1.0f, -1.0f, 1.0f,
-			// -Z face
-			1.0f, -1.0f, -1.0f,
-			1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f
-	};
+auto cubeData = new float[]
+{
+	// +X face
+	1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	,
+	// -X face
+	-1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	,
+	// +Y face
+	-1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	,
+	// -Y face
+	-1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	,
+	// +Z face
+	-1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	,
+	// -Z face
+	1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, -1.0f
+	, 1.0f
+	, -1.0f
+	, -1.0f
+};
 
 struct alignas(16) CubeMapConstantBufferData
 {
@@ -81,9 +158,11 @@ struct alignas(16) PrefilteredMapConstantBufferData
 
 
 CubeMapPass::CubeMapPass(
-	ComPtr<ID3D11Device> device,
-	ComPtr<ID3D11DeviceContext> context,
-	std::string hdrImagePath) : BasePass(device, context), m_hdrImagePath(hdrImagePath)
+	ComPtr<ID3D11Device> device
+	, ComPtr<ID3D11DeviceContext> context
+	, const std::string& hdrImagePath)
+	: BasePass(device, context)
+	, m_hdrImagePath(hdrImagePath)
 {
 	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device, true);
 
@@ -133,7 +212,7 @@ CubeMapPass::CubeMapPass(
 			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferPointer(),
 			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferSize(),
 			&m_inputLayout
-		);
+			);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -150,10 +229,11 @@ void CubeMapPass::createOrResize()
 {
 	createBackgroundResources();
 }
+
 void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
-	DEBUG_PASS_START(L"CubeMapPass::draw");
 
+	beginDebugEvent(L"CubemapBGDrawPass");
 	if (AppConfig::getRegeneratePrefilteredMap())
 	{
 		createPrefilteredMap();
@@ -167,12 +247,12 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	constexpr float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	m_context->ClearRenderTargetView(m_backgroundRTV.Get(), clearColor);
 
 	// Set vertex buffer
-	UINT stride = sizeof(float) * 3;
-	UINT offset = 0;
+	constexpr UINT stride = sizeof(float) * 3;
+	constexpr UINT offset = 0;
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
 	m_context->VSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
 	m_context->PSSetConstantBuffers(0, 1, m_backgroundConstantBuffer.GetAddressOf());
@@ -190,7 +270,8 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 	m_context->Draw(36, 0); // 36 vertices for a cube
 	unbindRenderTargets(1);
 	unbindShaderResources(0, 2);
-	DEBUG_PASS_END();
+	endDebugEvent();
+
 
 }
 
@@ -219,7 +300,7 @@ std::string& CubeMapPass::getHDRIPath()
 	return m_hdrImagePath;
 }
 
-void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
+void CubeMapPass::update(const glm::mat4& view, const glm::mat4& projection) const
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_backgroundConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -227,7 +308,7 @@ void CubeMapPass::update(glm::mat4& view, glm::mat4& projection)
 	{
 		throw std::runtime_error("Failed to map constant buffer.");
 	}
-	CubeMapConstantBufferData* data = reinterpret_cast<CubeMapConstantBufferData*>(mappedResource.pData);
+	const auto data = static_cast<CubeMapConstantBufferData*>(mappedResource.pData);
 	// Remove translation from view matrix so skybox stays centered on camera
 	glm::mat4 viewNoTranslation = view;
 	viewNoTranslation[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -310,10 +391,9 @@ void CubeMapPass::createCubeMapResources()
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
 	m_context->Map(m_equirectToCubemapConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	EquirectToCubempConstantBufferData* data = reinterpret_cast<EquirectToCubempConstantBufferData*>(mappedResource.pData);
+	auto data = static_cast<EquirectToCubempConstantBufferData*>(mappedResource.pData);
 	data->faceSize = sideSize;
 	m_context->Unmap(m_equirectToCubemapConstantBuffer.Get(), 0);
-
 
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
@@ -328,7 +408,7 @@ void CubeMapPass::createCubeMapResources()
 			throw std::runtime_error("Failed to create sampler state.");
 		}
 	}
-	DEBUG_PASS_START(L"CubeMapGeneration");
+
 	m_context->CSSetSamplers(0, 1, samplerState.GetAddressOf());
 
 	m_context->CSSetUnorderedAccessViews(0, 1, m_CubeMapUAV.GetAddressOf(), nullptr);
@@ -339,7 +419,7 @@ void CubeMapPass::createCubeMapResources()
 	uint32_t gy = (sideSize + 7) / 8;
 	m_context->Dispatch(gx, gy, 6);
 
-	DEBUG_PASS_END();
+
 }
 
 void CubeMapPass::createBackgroundResources()
@@ -389,8 +469,8 @@ void CubeMapPass::createBackgroundResources()
 
 void CubeMapPass::createIrradianceMap()
 {
-
-	static const uint32_t irradianceMapSize = 32;
+	beginDebugEvent(L"Irradiance Map");
+	static constexpr uint32_t irradianceMapSize = 32;
 	D3D11_TEXTURE2D_DESC irradianceDesc = {};
 	irradianceDesc.ArraySize = 6; // 6 faces for cubemap
 	irradianceDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
@@ -460,12 +540,12 @@ void CubeMapPass::createIrradianceMap()
 	HRESULT hr = m_context->Map(irradianceConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
-		EquirectToCubempConstantBufferData* data = reinterpret_cast<EquirectToCubempConstantBufferData*>(mappedResource.pData);
+		auto data = static_cast<EquirectToCubempConstantBufferData*>(mappedResource.pData);
 		data->faceSize = irradianceMapSize;
 		m_context->Unmap(irradianceConstantBuffer.Get(), 0);
 	}
 
-	DEBUG_PASS_START(L"IrradianceMapGeneration");
+
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->CSSetUnorderedAccessViews(0, 1, m_irradianceUAV.GetAddressOf(), nullptr);
 	m_context->CSSetShaderResources(0, 1, m_CubeMapSRV.GetAddressOf());
@@ -482,12 +562,13 @@ void CubeMapPass::createIrradianceMap()
 	m_context->CSSetShaderResources(0, 1, &nullSRV);
 	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 	m_context->CSSetSamplers(0, 1, &nullSampler);
-	DEBUG_PASS_END();
+	endDebugEvent();
 
 }
 
 void CubeMapPass::createPrefilteredMap()
 {
+	beginDebugEvent(L"PrefilteredMap");
 	if (m_prefilteredTexture)
 	{
 		// Release existing resources
@@ -495,8 +576,8 @@ void CubeMapPass::createPrefilteredMap()
 		m_prefilteredSRV.Reset();
 	}
 
-	const uint32_t prefilteredMapSize = 512;
-	const uint32_t numMips = 9; // 0-8 mip levels to match shader
+	constexpr uint32_t prefilteredMapSize = 512;
+	constexpr uint32_t numMips = 9; // 0-8 mip levels to match shader
 
 	D3D11_TEXTURE2D_DESC prefilteredMapDesc = {};
 	prefilteredMapDesc.ArraySize = 6; // 6 faces for cubemap
@@ -548,7 +629,6 @@ void CubeMapPass::createPrefilteredMap()
 		}
 	}
 
-	DEBUG_PASS_START(L"PrefilteredMapGeneration");
 
 	// Generate each mip level separately
 	for (uint32_t mip = 0; mip < numMips; ++mip)
@@ -561,7 +641,7 @@ void CubeMapPass::createPrefilteredMap()
 		HRESULT hr = m_context->Map(prefilteredConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		if (SUCCEEDED(hr))
 		{
-			PrefilteredMapConstantBufferData* data = reinterpret_cast<PrefilteredMapConstantBufferData*>(mappedResource.pData);
+			auto data = static_cast<PrefilteredMapConstantBufferData*>(mappedResource.pData);
 			data->mipSize = currentMipSize;
 			data->mipLevel = mip;
 			m_context->Unmap(prefilteredConstantBuffer.Get(), 0);
@@ -602,12 +682,13 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 		m_context->CSSetSamplers(0, 1, &nullSampler);
 	}
+	endDebugEvent();
 
-	DEBUG_PASS_END();
 }
 
 void CubeMapPass::createBRDFLut()
 {
+	beginDebugEvent(L"BRDFLut");
 	if (m_brdfLutTexture)
 	{
 		// Release existing resources
@@ -615,7 +696,7 @@ void CubeMapPass::createBRDFLut()
 		m_brdfLutSRV.Reset();
 		m_brdfLutUAV.Reset();
 	}
-	const uint32_t brdfLUTsize = 256;
+	constexpr uint32_t brdfLUTsize = 256;
 
 	D3D11_TEXTURE2D_DESC brdfLUTDesc = {};
 	brdfLUTDesc.ArraySize = 1;
@@ -661,7 +742,6 @@ void CubeMapPass::createBRDFLut()
 		}
 	}
 
-	DEBUG_PASS_START(L"BRDFLUTGeneration");
 
 	// Generate BRDF LUT
 	m_context->CSSetUnorderedAccessViews(0, 1, m_brdfLutUAV.GetAddressOf(), nullptr);
@@ -673,5 +753,5 @@ void CubeMapPass::createBRDFLut()
 	ID3D11UnorderedAccessView* nullUAV = nullptr;
 	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 
-	DEBUG_PASS_END();
+	endDebugEvent();
 }

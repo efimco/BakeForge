@@ -75,10 +75,6 @@ SceneNode* Scene::getNodeByHandle(SceneNodeHandle handle)
 	return nullptr;
 }
 
-SceneNode* Scene::getRootNode() const
-{
-	return children.front().get();
-}
 
 bool Scene::isNameUsed(std::string_view name) const
 {
@@ -110,7 +106,7 @@ void Scene::addLight(Light* light)
 
 Light* Scene::getLightByID(size_t id)
 {
-	auto it = m_lights.find(SceneNodeHandle{ static_cast<int>(id) });
+	auto it = m_lights.find(SceneNodeHandle{static_cast<int>(id)});
 	if (it != m_lights.end())
 	{
 		return it->second;
@@ -125,7 +121,7 @@ SceneUnorderedMap<Primitive*>& Scene::getPrimitives()
 
 Primitive* Scene::getPrimitiveByID(size_t id)
 {
-	auto it = m_primitives.find(SceneNodeHandle{ static_cast<int>(id) });
+	auto it = m_primitives.find(SceneNodeHandle{static_cast<int>(id)});
 	if (it != m_primitives.end())
 	{
 		return it->second;
@@ -198,20 +194,6 @@ int32_t Scene::getActiveNodeID()
 	return -1;
 }
 
-int32_t Scene::getActivePrimitiveID()
-{
-	if (auto activePrim = dynamic_cast<Primitive*>(m_activeNode))
-	{
-		for (auto& [handle, prim] : m_primitives)
-		{
-			if (activePrim == prim)
-			{
-				return static_cast<int32_t>(handle);
-			}
-		}
-	}
-	return -1;
-}
 
 void Scene::setActiveNode(SceneNode* node, bool addToSelection)
 {
@@ -302,9 +284,9 @@ void Scene::deleteNode(SceneNode* node)
 }
 
 SceneNode* Scene::adoptClonedNode(
-	std::unique_ptr<SceneNode>&& clonedNode,
-	SceneNodeHandle preferredHandle
-)
+	std::unique_ptr<SceneNode>&& clonedNode
+	, SceneNodeHandle preferredHandle
+	)
 {
 	if (!preferredHandle.isValid())
 	{
@@ -383,13 +365,6 @@ bool Scene::isSceneBVHDirty() const
 	return m_sceneBVHDirty;
 }
 
-void Scene::rebuildSceneBVHIfDirty()
-{
-	if (m_sceneBVHDirty)
-	{
-		buildSceneBVH();
-	}
-}
 
 void Scene::validateName(SceneNode* node)
 {
@@ -463,4 +438,18 @@ void Scene::updateAsyncImport()
 			m_importDevice = nullptr;
 		}
 	}
+}
+
+std::shared_ptr<ImportProgress> Scene::getImportProgress() const
+{
+	return m_importProgress;
+}
+
+void Scene::saveScene(std::string_view filepath)
+{
+
+}
+
+void Scene::loadScene(std::string_view filepath)
+{
 }

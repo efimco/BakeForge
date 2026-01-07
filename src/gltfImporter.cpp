@@ -10,9 +10,9 @@
 #include "material.hpp"
 #include "scene.hpp"
 
-static bool g_buildBVHOnImport = false;
+static bool g_buildBVHOnImport = true;
 
-GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device> device, Scene* scene)
+GLTFModel::GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene* scene)
 	: m_device(device)
 	, m_scene(scene)
 	, m_deferredContext(nullptr)
@@ -22,76 +22,62 @@ GLTFModel::GLTFModel(std::string path, ComPtr<ID3D11Device> device, Scene* scene
 	processGlb(model);
 }
 
-GLTFModel::GLTFModel(std::string path,
-	ComPtr<ID3D11Device> device,
-	ComPtr<ID3D11DeviceContext> deferredContext,
-	std::shared_ptr<ImportProgress> progress)
-	: m_device(device)
-	, m_deferredContext(deferredContext)
-	, m_scene(nullptr)
-	, m_progress(progress)
-{
-	const tinygltf::Model model = readGlb(path);
-	processGlb(model);
-}
-
-
-
 GLTFModel::~GLTFModel()
 {
 	std::cout << "GLTFModel Destructor Called" << std::endl;
 }
 
+
 std::future<AsyncImportResult> GLTFModel::importModelAsync(
-	std::string path
+	const std::string& path
 	, ComPtr<ID3D11Device> device
 	, std::shared_ptr<ImportProgress> progress)
 {
 	return std::async(std::launch::async, [path, device, progress]() -> AsyncImportResult
+	{
+		AsyncImportResult result;
+		result.progress = progress;
+		try
 		{
-			AsyncImportResult result;
-			result.progress = progress;
-			try
-			{
-				progress->setStage("Creating deferred context...");
+			progress->setStage("Creating deferred context...");
 
-				ComPtr<ID3D11DeviceContext> deferredCtx;
-				HRESULT hr = device->CreateDeferredContext(0, &deferredCtx);
-				if (FAILED(hr))
-				{
-					progress->hasFailed = true;
-					progress->message = "Failed to create deferred context";
-					return result;
-				}
-
-				GLTFModel importer(path, device, deferredCtx, progress);
-
-				result.primitives = std::move(importer.m_pendingPrimitives);
-				result.textures = std::move(importer.m_pendingTextures);
-				result.materials = std::move(importer.m_pendingMaterials);
-
-				progress->setStage("Finishing command list...");
-				hr = deferredCtx->FinishCommandList(FALSE, &result.commandList);
-				if (FAILED(hr))
-				{
-					progress->hasFailed = true;
-					progress->message = "Failed to finish command list";
-					return result;
-				}
-
-				progress->progress = 1.0f;
-				progress->isCompleted = true;
-				progress->setStage("Ready");
-
-			}
-			catch (const std::exception& e)
+			ComPtr<ID3D11DeviceContext> deferredCtx;
+			HRESULT hr = device->CreateDeferredContext(0, &deferredCtx);
+			if (FAILED(hr))
 			{
 				progress->hasFailed = true;
-				progress->message = e.what();
+				progress->message = "Failed to create deferred context";
+				return result;
 			}
 
-			return result;
-		});
+			GLTFModel importer(path, device, deferredCtx, progress);
+
+			result.primitives = std::move(importer.m_pendingPrimitives);
+			result.textures = std::move(importer.m_pendingTextures);
+			result.materials = std::move(importer.m_pendingMaterials);
+
+			progress->setStage("Finishing command list...");
+			hr = deferredCtx->FinishCommandList(FALSE, &result.commandList);
+			if (FAILED(hr))
+			{
+				progress->hasFailed = true;
+				progress->message = "Failed to finish command list";
+				return result;
+			}
+
+			progress->progress = 1.0f;
+			progress->isCompleted = true;
+			progress->setStage("Ready");
+
+		}
+		catch (const std::exception& e)
+		{
+			progress->hasFailed = true;
+			progress->message = e.what();
+		}
+
+		return result;
+	});
 }
 
 void GLTFModel::finalizeAsyncImport(
@@ -121,6 +107,19 @@ void GLTFModel::finalizeAsyncImport(
 	}
 
 	scene->markSceneBVHDirty();
+}
+
+GLTFModel::GLTFModel(const std::string& path
+                     , ComPtr<ID3D11Device> device
+                     , ComPtr<ID3D11DeviceContext> deferredContext
+                     , std::shared_ptr<ImportProgress> progress)
+	: m_device(device)
+	, m_deferredContext(deferredContext)
+	, m_scene(nullptr)
+	, m_progress(progress)
+{
+	const tinygltf::Model model = readGlb(path);
+	processGlb(model);
 }
 
 
@@ -155,20 +154,28 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 {
 	std::cout << "Processing GLTF model with " << model.meshes.size() << " meshes" << std::endl;
 
-	if (m_progress) m_progress->setStage("Processing Textures...");
-	if (m_progress) m_progress->progress = 0.1f;
+	if (m_progress)
+		m_progress->setStage("Processing Textures...");
+	if (m_progress)
+		m_progress->progress = 0.1f;
 	processTextures(model);
 
-	if (m_progress) m_progress->setStage("Processing Images...");
-	if (m_progress) m_progress->progress = 0.2f;
+	if (m_progress)
+		m_progress->setStage("Processing Images...");
+	if (m_progress)
+		m_progress->progress = 0.2f;
 	processImages(model);
 
-	if (m_progress) m_progress->setStage("Processing Materials...");
-	if (m_progress) m_progress->progress = 0.3f;
+	if (m_progress)
+		m_progress->setStage("Processing Materials...");
+	if (m_progress)
+		m_progress->progress = 0.3f;
 	processMaterials(model);
 
-	if (m_progress) m_progress->setStage("Processing Meshes...");
-	if (m_progress) m_progress->progress = 0.4f;
+	if (m_progress)
+		m_progress->setStage("Processing Meshes...");
+	if (m_progress)
+		m_progress->progress = 0.4f;
 	size_t totalPrimitives = 0;
 	for (const auto& mesh : model.meshes)
 	{
@@ -193,7 +200,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			const auto numVert = posBuffer.size();
 			for (int i = 0; i < numVert; i++)
 			{
-				InterleavedData interData;
+				InterleavedData interData{};
 				interData.position = posBuffer[i];
 				interData.texCoords = i < texCoordsBuffer.size() ? texCoordsBuffer[i] : TexCoords(0, 0);
 				interData.normals = i < normalBuffer.size() ? normalBuffer[i] : Normals(0, 1, 0);
@@ -201,7 +208,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			}
 			size_t meshIndex = &mesh - &model.meshes[0];
 			Transform transform = getTransformFromNode(meshIndex, model);
-			std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
+			auto primitive = std::make_unique<Primitive>(m_device);
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
 			primitive->material = m_materialIndex[gltfPrimitive.material];
@@ -221,7 +228,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			processedPrimitives++;
 			if (m_progress)
 			{
-				m_progress->progress = 0.4f + 0.6f * (float(processedPrimitives) / totalPrimitives);
+				m_progress->progress = 0.4f + 0.6f * (static_cast<float>(processedPrimitives) / totalPrimitives);
 			}
 
 			if (m_scene)
@@ -275,6 +282,7 @@ void GLTFModel::processImages(const tinygltf::Model& model)
 		m_imageIndex[i] = texture;
 	}
 }
+
 void GLTFModel::processMaterials(const tinygltf::Model& model)
 {
 	for (int i = 0; i < model.materials.size(); i++)
@@ -288,7 +296,8 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 
 		if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
 		{
-			mat->metallicRoughness = m_imageIndex[m_textureIndex[material.pbrMetallicRoughness.metallicRoughnessTexture.index]];
+			const auto index = material.pbrMetallicRoughness.metallicRoughnessTexture.index;
+			mat->metallicRoughness = m_imageIndex[m_textureIndex[index]];
 		}
 		if (material.normalTexture.index != -1)
 		{
@@ -302,7 +311,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]),
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]),
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3])
-			);
+				);
 		}
 
 		mat->roughnessValue = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
@@ -334,9 +343,12 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 	}
 }
 
-void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Position>& verticies)
+void GLTFModel::processPosAttribute(const tinygltf::Model& model
+                                    , const tinygltf::Mesh& mesh
+                                    , const tinygltf::Primitive& primitive
+                                    , std::vector<Position>& verticies)
 {
-	if (primitive.attributes.find("POSITION") == primitive.attributes.end())
+	if (!primitive.attributes.contains("POSITION"))
 	{
 		std::cerr << "No POSITION attribute found in primitive " << mesh.name << std::endl;
 		return;
@@ -355,17 +367,23 @@ void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf
 		Position position(-INFINITY, -INFINITY, -INFINITY);
 		for (int j = 0; j < components; j++)
 		{
-			if (j == 0) position.x = posFloatPtr[i * components + j];
-			else if (j == 1) position.y = posFloatPtr[i * components + j];
-			else if (j == 2) position.z = posFloatPtr[i * components + j];
+			if (j == 0)
+				position.x = posFloatPtr[i * components + j];
+			else if (j == 1)
+				position.y = posFloatPtr[i * components + j];
+			else if (j == 2)
+				position.z = posFloatPtr[i * components + j];
 		}
 		verticies.push_back(position);
 	}
 }
 
-void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<TexCoords>& texCoords)
+void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model
+                                         , const tinygltf::Mesh& mesh
+                                         , const tinygltf::Primitive& primitive
+                                         , std::vector<TexCoords>& texCoords)
 {
-	if (primitive.attributes.find("TEXCOORD_0") == primitive.attributes.end())
+	if (!primitive.attributes.contains("TEXCOORD_0"))
 	{
 		std::cerr << "No TEXCOORD_0 attribute found in primitive " << mesh.name << std::endl;
 		return;
@@ -375,25 +393,64 @@ void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model, const tin
 	const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
 	const unsigned char* posDataPtr = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-	const float* posFloatPtr = reinterpret_cast<const float*>(posDataPtr);
-	size_t vertexCount = accessor.count;
-	int components = (accessor.type == TINYGLTF_TYPE_VEC2) ? 2 : 0;
+	const auto posFloatPtr = reinterpret_cast<const float*>(posDataPtr);
+	const size_t vertexCount = accessor.count;
+	const int components = (accessor.type == TINYGLTF_TYPE_VEC2) ? 2 : 0;
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
 		TexCoords texCoord(-INFINITY, -INFINITY);
 		for (int j = 0; j < components; j++)
 		{
-			if (j == 0) texCoord.u = posFloatPtr[i * components + j];
-			else if (j == 1) texCoord.v = posFloatPtr[i * components + j];
+			if (j == 0)
+				texCoord.u = posFloatPtr[i * components + j];
+			else if (j == 1)
+				texCoord.v = posFloatPtr[i * components + j];
 		}
 		texCoords.push_back(texCoord);
 	}
 }
 
-void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals)
+void GLTFModel::processIndexAttrib(const tinygltf::Model& model
+                                   , const tinygltf::Mesh& mesh
+                                   , const tinygltf::Primitive& primitive
+                                   , std::vector<uint32_t>& indicies)
 {
-	if (primitive.attributes.find("NORMAL") == primitive.attributes.end())
+	if (primitive.indices < 0)
+	{
+		std::cerr << "No indices found in primitive " << mesh.name << std::endl;
+		return;
+	}
+	const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
+	const tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+	const tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
+
+
+	const void* pIndexData = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+	const size_t indexCount = indexAccessor.count;
+	if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+	{
+		const auto indices = static_cast<const uint16_t*>(pIndexData);
+		indicies.assign(indices, indices + indexCount);
+	}
+	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+	{
+		const uint32_t* indices = static_cast<const uint32_t*>(pIndexData);
+		indicies.assign(indices, indices + indexCount);
+	}
+	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+	{
+		const auto indices = static_cast<const uint8_t*>(pIndexData);
+		indicies.assign(indices, indices + indexCount);
+	}
+}
+
+void GLTFModel::processNormalsAttribute(const tinygltf::Model& model
+                                        , const tinygltf::Mesh& mesh
+                                        , const tinygltf::Primitive& primitive
+                                        , std::vector<Normals>& normals)
+{
+	if (!primitive.attributes.contains("NORMAL"))
 	{
 		std::cerr << "No NORMAL attribute found in primitive " << mesh.name << std::endl;
 		return;
@@ -403,24 +460,28 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tiny
 	const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
 	const unsigned char* dataPtr = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-	const float* floatPtr = reinterpret_cast<const float*>(dataPtr);
-	size_t vertexCount = accessor.count;
-	int components = (accessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
+	const auto floatPtr = reinterpret_cast<const float*>(dataPtr);
+	const size_t vertexCount = accessor.count;
+	const int components = (accessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
 		Normals normal(-INFINITY, -INFINITY, -INFINITY);
 		for (int j = 0; j < components; j++)
 		{
-			if (j == 0) normal.nx = floatPtr[i * components + j];
-			else if (j == 1) normal.ny = floatPtr[i * components + j];
-			else if (j == 2) normal.nz = floatPtr[i * components + j];
+			if (j == 0)
+				normal.nx = floatPtr[i * components + j];
+			else if (j == 1)
+				normal.ny = floatPtr[i * components + j];
+			else if (j == 2)
+				normal.nz = floatPtr[i * components + j];
 		}
 		normals.push_back(normal);
 	}
 }
 
-Transform GLTFModel::getTransformFromNode(size_t meshIndex, const tinygltf::Model& model)
+
+Transform GLTFModel::getTransformFromNode(const size_t meshIndex, const tinygltf::Model& model)
 {
 	Transform transform;
 	transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -436,16 +497,16 @@ Transform GLTFModel::getTransformFromNode(size_t meshIndex, const tinygltf::Mode
 	if (node.translation.size() != 0)
 	{
 		transform.position = glm::vec3(node.translation[0], node.translation[1],
-			node.translation[2]);
+		                               node.translation[2]);
 	}
 
 	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 	if (node.rotation.size() != 0)
 	{
-		glm::quat quatRot(static_cast<float>(node.rotation[3]),
-			static_cast<float>(node.rotation[0]),
-			static_cast<float>(node.rotation[1]),
-			static_cast<float>(node.rotation[2]));
+		const glm::quat quatRot(static_cast<float>(node.rotation[3]),
+		                        static_cast<float>(node.rotation[0]),
+		                        static_cast<float>(node.rotation[1]),
+		                        static_cast<float>(node.rotation[2]));
 		transform.rotation = glm::eulerAngles(quatRot);
 	}
 
@@ -457,36 +518,4 @@ Transform GLTFModel::getTransformFromNode(size_t meshIndex, const tinygltf::Mode
 	transform.matrix = glm::mat4(1.0f);
 	transform.updateMatrix();
 	return transform;
-}
-
-
-void GLTFModel::processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies)
-{
-	if (primitive.indices < 0)
-	{
-		std::cerr << "No indices found in primitive " << mesh.name << std::endl;
-		return;
-	}
-	const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
-	const tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccessor.bufferView];
-	const tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
-
-
-	const void* pIndexData = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
-	size_t indexCount = indexAccessor.count;
-	if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-	{
-		const uint16_t* indices = reinterpret_cast<const uint16_t*>(pIndexData);
-		indicies.assign(indices, indices + indexCount);
-	}
-	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-	{
-		const uint32_t* indices = reinterpret_cast<const uint32_t*>(pIndexData);
-		indicies.assign(indices, indices + indexCount);
-	}
-	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
-	{
-		const uint8_t* indices = reinterpret_cast<const uint8_t*>(pIndexData);
-		indicies.assign(indices, indices + indexCount);
-	}
 }

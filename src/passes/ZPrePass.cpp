@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "appConfig.hpp"
-#include "debugPassMacros.hpp"
+
 #include "material.hpp"
 #include "texture.hpp"
 #include "shaderManager.hpp"
@@ -16,14 +16,14 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 modelViewProjection;
 };
 
-static const D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] =
-{
-	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-};
+static constexpr D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] = {
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	, {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	,};
 
 
-ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
+ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+	: BasePass(device, context)
 {
 
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
@@ -35,12 +35,10 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 	m_shaderManager->LoadPixelShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "PS");
 
 	{
-		HRESULT hr = m_device->CreateInputLayout(
-			s_zPrePassInputLayoutDesc,
-			ARRAYSIZE(s_zPrePassInputLayoutDesc),
-			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer(),
-			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize(),
-			&m_inputLayout);
+		HRESULT hr = m_device->CreateInputLayout(s_zPrePassInputLayoutDesc, ARRAYSIZE(s_zPrePassInputLayoutDesc)
+		                                         , m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer()
+		                                         , m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize()
+		                                         , &m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
 
@@ -61,7 +59,8 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 
 void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* scene)
 {
-	DEBUG_PASS_START(L"ZPrePass Draw");
+
+	beginDebugEvent(L"ZPrePass");
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetRenderTargets(0, nullptr, dsv.Get());
@@ -96,7 +95,8 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 	}
 	unbindRenderTargets(1);
 	unbindShaderResources(0, 1);
-	DEBUG_PASS_END();
+	endDebugEvent();
+
 }
 
 ComPtr<ID3D11DepthStencilView> ZPrePass::getDSV()
@@ -104,14 +104,14 @@ ComPtr<ID3D11DepthStencilView> ZPrePass::getDSV()
 	return dsv;
 }
 
-void ZPrePass::update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim)
+void ZPrePass::update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim) const
 {
-	glm::mat4 mvp = projection * view * prim->getWorldMatrix();
+	const glm::mat4 mvp = projection * view * prim->getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
-		ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
+		auto* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
