@@ -21,6 +21,7 @@ struct Texture;
 struct Material;
 class Light;
 class Camera;
+class Baker;
 
 using Scalar = float;
 using Vec3 = bvh::v2::Vec<Scalar, 3>;
@@ -58,18 +59,18 @@ public:
 	void addMaterial(std::shared_ptr<Material> material);
 	std::vector<std::string> getMaterialNames() const;
 
-	SceneNode* getActiveNode();
-	int32_t getActiveNodeID();
+	SceneNode* getActiveNode() const;
+	int32_t getActiveNodeID() const;
 	void setActiveNode(SceneNode* node, bool addToSelection = false);
 	void deselectNode(SceneNode* node);
 	void clearSelectedNodes();
-	bool isNodeSelected(SceneNode* node);
+	bool isNodeSelected(SceneNode* node) const;
 
-	bool areLightsDirty();
+	bool areLightsDirty() const;
 	void setLightsDirty(bool dirty = true);
 
 	void setActiveCamera(Camera* camera);
-	Camera* getActiveCamera();
+	Camera* getActiveCamera() const;
 
 	void deleteNode(SceneNode* node);
 	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode
@@ -82,17 +83,18 @@ public:
 	void validateName(SceneNode* node);
 	const Bvh* getSceneBVH() const;
 
-	void importModel(std::string filepath, ComPtr<ID3D11Device> device);
+	void importModel(const std::string& filepath, ComPtr<ID3D11Device> device);
 	void updateAsyncImport(); // called each frame
 	std::shared_ptr<ImportProgress> getImportProgress() const;
 
-	void saveScene(std::string_view filepath);
-	void loadScene(std::string_view filepath);
+	static void saveScene(std::string_view filepath);
+	static void loadScene(std::string_view filepath);
 
 private:
 	SceneUnorderedMap<Primitive*> m_primitives;
 	SceneUnorderedMap<Light*> m_lights;
 	SceneUnorderedMap<Camera*> m_cameras;
+	SceneUnorderedMap<Baker*> m_bakers;
 	StringUnorderedMap<std::shared_ptr<Texture>> m_textures;   // path + actual texture
 	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	StringUnorderedMap<uint32_t> m_nodeNames;

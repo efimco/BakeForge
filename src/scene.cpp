@@ -1,15 +1,15 @@
 #include "scene.hpp"
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
-#include "primitive.hpp"
-#include "light.hpp"
-#include "texture.hpp"
-#include "material.hpp"
 #include "camera.hpp"
+#include "light.hpp"
+#include "material.hpp"
+#include "primitive.hpp"
+#include "texture.hpp"
 
-Scene::Scene(std::string_view name)
+Scene::Scene(const std::string_view name)
 {
 	this->name = name;
 }
@@ -58,17 +58,17 @@ SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 	return SceneNodeHandle::invalidHandle();
 }
 
-SceneNode* Scene::getNodeByHandle(SceneNodeHandle handle)
+SceneNode* Scene::getNodeByHandle(const SceneNodeHandle handle)
 {
-	if (auto it = m_primitives.find(handle); it != m_primitives.end())
+	if (const auto it = m_primitives.find(handle); it != m_primitives.end())
 	{
 		return it->second;
 	}
-	if (auto it = m_lights.find(handle); it != m_lights.end())
+	if (const auto it = m_lights.find(handle); it != m_lights.end())
 	{
 		return it->second;
 	}
-	if (auto it = m_cameras.find(handle); it != m_cameras.end())
+	if (const auto it = m_cameras.find(handle); it != m_cameras.end())
 	{
 		return it->second;
 	}
@@ -76,7 +76,7 @@ SceneNode* Scene::getNodeByHandle(SceneNodeHandle handle)
 }
 
 
-bool Scene::isNameUsed(std::string_view name) const
+bool Scene::isNameUsed(const std::string_view name) const
 {
 	return m_nodeNames.contains(name);
 }
@@ -104,9 +104,9 @@ void Scene::addLight(Light* light)
 	setLightsDirty();
 }
 
-Light* Scene::getLightByID(size_t id)
+Light* Scene::getLightByID(const size_t id)
 {
-	auto it = m_lights.find(SceneNodeHandle{static_cast<int>(id)});
+	const auto it = m_lights.find(SceneNodeHandle{static_cast<int>(id)});
 	if (it != m_lights.end())
 	{
 		return it->second;
@@ -119,9 +119,9 @@ SceneUnorderedMap<Primitive*>& Scene::getPrimitives()
 	return m_primitives;
 }
 
-Primitive* Scene::getPrimitiveByID(size_t id)
+Primitive* Scene::getPrimitiveByID(const size_t id)
 {
-	auto it = m_primitives.find(SceneNodeHandle{static_cast<int>(id)});
+	const auto it = m_primitives.find(SceneNodeHandle{static_cast<int>(id)});
 	if (it != m_primitives.end())
 	{
 		return it->second;
@@ -145,9 +145,9 @@ size_t Scene::getPrimitiveCount() const
 	return m_primitives.size();
 }
 
-std::shared_ptr<Texture> Scene::getTexture(std::string_view name)
+std::shared_ptr<Texture> Scene::getTexture(const std::string_view name)
 {
-	auto it = m_textures.find(name);
+	const auto it = m_textures.find(name);
 	if (it != m_textures.end())
 	{
 		return it->second;
@@ -160,9 +160,9 @@ void Scene::addTexture(std::shared_ptr<Texture> texture)
 	m_textures[texture->name] = std::move(texture);
 }
 
-std::shared_ptr<Material> Scene::getMaterial(std::string_view name)
+std::shared_ptr<Material> Scene::getMaterial(const std::string_view name)
 {
-	auto it = m_materials.find(name);
+	const auto it = m_materials.find(name);
 	if (it != m_materials.end())
 	{
 		return it->second;
@@ -180,12 +180,12 @@ std::vector<std::string> Scene::getMaterialNames() const
 	return materialNames;
 }
 
-SceneNode* Scene::getActiveNode()
+SceneNode* Scene::getActiveNode() const
 {
 	return m_activeNode;
 }
 
-int32_t Scene::getActiveNodeID()
+int32_t Scene::getActiveNodeID() const
 {
 	if (m_activeNode)
 	{
@@ -195,7 +195,7 @@ int32_t Scene::getActiveNodeID()
 }
 
 
-void Scene::setActiveNode(SceneNode* node, bool addToSelection)
+void Scene::setActiveNode(SceneNode* node, const bool addToSelection)
 {
 	if (!addToSelection)
 	{
@@ -221,7 +221,7 @@ void Scene::clearSelectedNodes()
 	m_activeNode = nullptr;
 }
 
-bool Scene::isNodeSelected(SceneNode* node)
+bool Scene::isNodeSelected(SceneNode* node) const
 {
 	return m_selectedNodes.contains(node);
 }
@@ -231,12 +231,12 @@ void Scene::addMaterial(std::shared_ptr<Material> material)
 	m_materials.emplace(material->name, material);
 }
 
-bool Scene::areLightsDirty()
+bool Scene::areLightsDirty() const
 {
 	return m_lightsAreDirty;
 }
 
-void Scene::setLightsDirty(bool dirty)
+void Scene::setLightsDirty(const bool dirty)
 {
 	m_lightsAreDirty = dirty;
 }
@@ -248,7 +248,7 @@ void Scene::setActiveCamera(Camera* camera)
 
 void Scene::deleteNode(SceneNode* node)
 {
-	SceneNodeHandle nodeHandle = findHandleOfNode(node);
+	const SceneNodeHandle nodeHandle = findHandleOfNode(node);
 	if (dynamic_cast<Primitive*>(node))
 	{
 		m_primitives.erase(nodeHandle);
@@ -259,7 +259,7 @@ void Scene::deleteNode(SceneNode* node)
 		m_lights.erase(nodeHandle);
 		setLightsDirty();
 	}
-	if (auto camera = dynamic_cast<Camera*>(node))
+	if (const auto camera = dynamic_cast<Camera*>(node))
 	{
 		if (m_cameras.size() <= 1)
 		{
@@ -317,7 +317,7 @@ SceneNode* Scene::adoptClonedNode(
 	return nodeClone;
 }
 
-Camera* Scene::getActiveCamera()
+Camera* Scene::getActiveCamera() const
 {
 	return m_activeCamera;
 }
@@ -331,14 +331,14 @@ void Scene::buildSceneBVH()
 		m_sceneBVHDirty = false;
 		return;
 	}
-	auto startTime = std::chrono::high_resolution_clock::now();
+	const auto startTime = std::chrono::high_resolution_clock::now();
 
 	const size_t primCount = m_primitives.size();
 	m_primBboxes.resize(primCount);
 	m_primCenters.resize(primCount);
 
 	int32_t i = 0;
-	for (auto& [handle, prim] : m_primitives)
+	for (const auto& [handle, prim] : m_primitives)
 	{
 		glm::mat4 worldMatrix = prim->getWorldMatrix();
 		m_primBboxes[i] = prim->getWorldBBox(worldMatrix);
@@ -347,10 +347,10 @@ void Scene::buildSceneBVH()
 	}
 
 	m_sceneBVH = std::make_unique<Bvh>(
-		bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters));
+		bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters);
 	m_sceneBVHDirty = false;
-	auto endTime = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+	const auto endTime = std::chrono::high_resolution_clock::now();
+	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 	std::cout << "Built scene BVH with " << m_sceneBVH->nodes.size() << " nodes for " << primCount << " primitives in "
 		<< duration << " ms." << std::endl;
 }
@@ -368,7 +368,7 @@ bool Scene::isSceneBVHDirty() const
 
 void Scene::validateName(SceneNode* node)
 {
-	auto genericName = node->name.substr(0, node->name.find_last_of('.'));
+	const auto genericName = node->name.substr(0, node->name.find_last_of('.'));
 	if (isNameUsed(genericName))
 	{
 		uint32_t& counter = getNameCounter(genericName);
@@ -386,7 +386,7 @@ const Bvh* Scene::getSceneBVH() const
 	return m_sceneBVH.get();
 }
 
-void Scene::importModel(std::string filepath, ComPtr<ID3D11Device> device)
+void Scene::importModel(const std::string& filepath, ComPtr<ID3D11Device> device)
 {
 	if (filepath.empty())
 	{
@@ -413,7 +413,7 @@ void Scene::updateAsyncImport()
 	{
 		if (m_importProgress)
 		{
-			std::string stage = m_importProgress->getStage();
+			const std::string stage = m_importProgress->getStage();
 			if (!stage.empty())
 			{
 				std::cout << "Import progress: " << stage << std::endl;
