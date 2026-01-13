@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 
+#include "baker.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"
@@ -55,6 +56,32 @@ SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 			return it->first;
 		}
 	}
+	if (auto baker = dynamic_cast<Baker*>(node))
+	{
+		const auto it = std::ranges::find_if(
+			m_bakers,
+			[baker](const std::pair<SceneNodeHandle, Baker*>& x)
+			{
+				return x.second == baker;
+			});
+		if (it != m_bakers.end())
+		{
+			return it->first;
+		}
+	}
+	if (auto bakerNode = dynamic_cast<BakerNode*>(node))
+	{
+		const auto it = std::ranges::find_if(
+			m_bakerNodes,
+			[bakerNode](const std::pair<SceneNodeHandle, BakerNode*>& x)
+			{
+				return x.second == bakerNode;
+			});
+		if (it != m_bakerNodes.end())
+		{
+			return it->first;
+		}
+	}
 	return SceneNodeHandle::invalidHandle();
 }
 
@@ -69,6 +96,14 @@ SceneNode* Scene::getNodeByHandle(const SceneNodeHandle handle)
 		return it->second;
 	}
 	if (const auto it = m_cameras.find(handle); it != m_cameras.end())
+	{
+		return it->second;
+	}
+	if (const auto it = m_bakers.find(handle); it != m_bakers.end())
+	{
+		return it->second;
+	}
+	if (const auto it = m_bakerNodes.find(handle); it != m_bakerNodes.end())
 	{
 		return it->second;
 	}
@@ -89,6 +124,31 @@ uint32_t& Scene::getNameCounter(std::string_view name)
 		it = m_nodeNames.emplace(name, 0).first;
 	}
 	return it->second;
+}
+
+void Scene::addChild(std::unique_ptr<SceneNode>&& child)
+{
+	if (const auto light = dynamic_cast<Light*>(child.get()))
+	{
+		addLight(light);
+	}
+	if (const auto primitive = dynamic_cast<Primitive*>(child.get()))
+	{
+		addPrimitive(primitive);
+	}
+	if (const auto camera = dynamic_cast<Camera*>(child.get()))
+	{
+		addCamera(camera);
+	}
+	if (const auto baker = dynamic_cast<Baker*>(child.get()))
+	{
+		addBaker(baker);
+	}
+	if (const auto node = dynamic_cast<BakerNode*>(child.get()))
+	{
+		addBakerNode(node);
+	}
+	SceneNode::addChild(std::move(child));
 }
 
 void Scene::addPrimitive(Primitive* primitive)
@@ -138,6 +198,20 @@ void Scene::addCamera(Camera* camera)
 {
 	validateName(camera);
 	m_cameras.emplace(SceneNodeHandle::generateHandle(), camera);
+}
+
+void Scene::addBaker(Baker* baker)
+{
+	validateName(baker);
+	m_bakers.emplace(SceneNodeHandle::generateHandle(), baker);
+	addBakerNode(baker->lowPoly.get());
+	addBakerNode(baker->highPoly.get());
+}
+
+void Scene::addBakerNode(BakerNode* node)
+{
+	validateName(node);
+	m_bakerNodes.emplace(SceneNodeHandle::generateHandle(), node);
 }
 
 size_t Scene::getPrimitiveCount() const
@@ -347,7 +421,7 @@ void Scene::buildSceneBVH()
 	}
 
 	m_sceneBVH = std::make_unique<Bvh>(
-		bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters);
+		bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters));
 	m_sceneBVHDirty = false;
 	const auto endTime = std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();

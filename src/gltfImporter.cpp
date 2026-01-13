@@ -5,10 +5,10 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "primitive.hpp"
-#include "texture.hpp"
 #include "material.hpp"
+#include "primitive.hpp"
 #include "scene.hpp"
+#include "texture.hpp"
 
 static bool g_buildBVHOnImport = true;
 
@@ -92,7 +92,6 @@ void GLTFModel::finalizeAsyncImport(
 
 	for (auto& prim : importResult.primitives)
 	{
-		scene->addPrimitive(prim.get());
 		scene->addChild(std::move(prim));
 	}
 
@@ -218,7 +217,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				primitive->buildBVH();
 			if (m_scene)
 			{
-				m_scene->addPrimitive(primitive.get());
 				m_scene->addChild(std::move(primitive));
 			}
 			else
@@ -288,7 +286,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 	for (int i = 0; i < model.materials.size(); i++)
 	{
 		auto& material = model.materials[i];
-		std::shared_ptr<Material> mat = std::make_shared<Material>();
+		auto mat = std::make_shared<Material>();
 		if (material.pbrMetallicRoughness.baseColorTexture.index != -1)
 		{
 			mat->albedo = m_imageIndex[m_textureIndex[material.pbrMetallicRoughness.baseColorTexture.index]];
@@ -358,9 +356,9 @@ void GLTFModel::processPosAttribute(const tinygltf::Model& model
 	const tinygltf::Buffer& posBuffer = model.buffers[posBufferView.buffer];
 
 	const unsigned char* posDataPtr = posBuffer.data.data() + posAccessor.byteOffset + posBufferView.byteOffset;
-	const float* posFloatPtr = reinterpret_cast<const float*>(posDataPtr);
-	size_t vertexCount = posAccessor.count;
-	int components = (posAccessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
+	const auto posFloatPtr = reinterpret_cast<const float*>(posDataPtr);
+	const size_t vertexCount = posAccessor.count;
+	const int components = (posAccessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
@@ -435,7 +433,7 @@ void GLTFModel::processIndexAttrib(const tinygltf::Model& model
 	}
 	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 	{
-		const uint32_t* indices = static_cast<const uint32_t*>(pIndexData);
+		const auto indices = static_cast<const uint32_t*>(pIndexData);
 		indicies.assign(indices, indices + indexCount);
 	}
 	else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)

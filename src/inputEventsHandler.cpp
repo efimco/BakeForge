@@ -97,24 +97,12 @@ void InputEvents::setMouseClicked(const MouseButtons button, const bool state)
 	switch (button)
 	{
 	case LEFT_BUTTON:
-		if (!isLMouseClicked && state)
-		{
-			std::cout << "Left mouse button clicked in viewport." << std::endl;
-		}
 		isLMouseClicked = state;
 		break;
 	case MIDDLE_BUTTON:
-		if (!isMMouseClicked && state)
-		{
-			std::cout << "Middle mouse button clicked in viewport." << std::endl;
-		}
 		isMMouseClicked = state;
 		break;
 	case RIGHT_BUTTON:
-		if (!isRMouseClicked && state)
-		{
-			std::cout << "Right mouse button clicked in viewport." << std::endl;
-		}
 		isRMouseClicked = state;
 		break;
 	default:

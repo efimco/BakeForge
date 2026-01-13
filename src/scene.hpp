@@ -22,6 +22,7 @@ struct Material;
 class Light;
 class Camera;
 class Baker;
+class BakerNode;
 
 using Scalar = float;
 using Vec3 = bvh::v2::Vec<Scalar, 3>;
@@ -41,16 +42,16 @@ public:
 	bool isNameUsed(std::string_view name) const;
 	uint32_t& getNameCounter(std::string_view name);
 
-	void addPrimitive(Primitive* primitive);
+	void addChild(std::unique_ptr<SceneNode>&& child) override;
+
 	SceneUnorderedMap<Primitive*>& getPrimitives();
 	Primitive* getPrimitiveByID(size_t id);
 	size_t getPrimitiveCount() const;
 
-	void addLight(Light* light);
+
 	Light* getLightByID(size_t id);
 	SceneUnorderedMap<Light*>& getLights();
 
-	void addCamera(Camera* camera);
 
 	std::shared_ptr<Texture> getTexture(std::string_view name);
 	void addTexture(std::shared_ptr<Texture> texture);
@@ -91,10 +92,16 @@ public:
 	static void loadScene(std::string_view filepath);
 
 private:
+	void addLight(Light* light);
+	void addPrimitive(Primitive* primitive);
+	void addCamera(Camera* camera);
+	void addBaker(Baker* baker);
+	void addBakerNode(BakerNode* node);
 	SceneUnorderedMap<Primitive*> m_primitives;
 	SceneUnorderedMap<Light*> m_lights;
 	SceneUnorderedMap<Camera*> m_cameras;
 	SceneUnorderedMap<Baker*> m_bakers;
+	SceneUnorderedMap<BakerNode*> m_bakerNodes;
 	StringUnorderedMap<std::shared_ptr<Texture>> m_textures;   // path + actual texture
 	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	StringUnorderedMap<uint32_t> m_nodeNames;

@@ -82,7 +82,7 @@ private:
 	void drawNode(SceneNode* node);
 	static const char* getNodeIcon(SceneNode* node);
 
-	void showProperties();
+	void showProperties() const;
 	void showPrimitiveProperties(Primitive* primitive) const;
 	static void showMaterialProperties(std::shared_ptr<Material> material);
 	void showLightProperties(Light* light) const;

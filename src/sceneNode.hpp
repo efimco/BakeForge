@@ -17,6 +17,7 @@ public:
 	std::string name;
 	std::list<std::unique_ptr<SceneNode>> children;
 	SceneNode* parent = nullptr;
+bool movable = true;
 
 	explicit SceneNode(std::string_view nodeName = "SceneNode");
 	SceneNode(const SceneNode&) = delete;
@@ -29,7 +30,7 @@ public:
 	virtual void copyFrom(const SceneNode& node);
 	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
-	void addChild(std::unique_ptr<SceneNode>&& child);
+	virtual void addChild(std::unique_ptr<SceneNode>&& child);
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
 	glm::mat4 getWorldMatrix();
 };

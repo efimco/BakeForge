@@ -16,6 +16,7 @@
 #include "inputEventsHandler.hpp"
 #include "passes/GBuffer.hpp"
 
+#include  "baker.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "primitive.hpp"
@@ -35,8 +36,10 @@ static glm::ivec3 gSnapRotate = {15, 15, 15};
 static glm::ivec3 gSnapScale = {1, 1, 1};
 
 UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
-	: m_hwnd(hwnd)
-	, m_commandManager(std::make_unique<CommandManager>())
+	: m_commandManager(std::make_unique<CommandManager>())
+	, m_hwnd(hwnd)
+	, m_mousePos{}
+	, m_scene(nullptr)
 {
 	m_device = device;
 	m_context = deviceContext;
@@ -155,8 +158,6 @@ uint32_t* UIManager::getMousePos()
 
 void UIManager::showSceneSettings() const
 {
-	static float f = 0.0f;
-	static int counter = 0;
 
 	ImGui::Begin("SceneSettings");
 	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
@@ -209,7 +210,7 @@ void UIManager::showMainMenuBar()
 			ImGui::Separator();
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
 			{
-				std::string filepath = openFileDialog(FileType::MODEL);
+				const std::string filepath = openFileDialog(FileType::MODEL);
 				if (filepath.empty())
 					return;
 				m_scene->importModel(filepath, m_device);
@@ -313,25 +314,27 @@ void UIManager::showMainMenuBar()
 				if (ImGui::MenuItem("Point Light"))
 				{
 					auto pointLight = std::make_unique<Light>(POINT_LIGHT, lightPos, "Point Light");
-					m_scene->addLight(pointLight.get());
 					m_scene->addChild(std::move(pointLight));
 				}
 				if (ImGui::MenuItem("Directional Light"))
 				{
 					auto dirLight = std::make_unique<Light>(DIRECTIONAL_LIGHT, lightPos, "Directional Light");
-					m_scene->addLight(dirLight.get());
 					m_scene->addChild(std::move(dirLight));
 				}
 				if (ImGui::MenuItem("Spot Light"))
 				{
 					auto spotLight = std::make_unique<Light>(SPOT_LIGHT, lightPos, "Spot Light");
-					m_scene->addLight(spotLight.get());
 					m_scene->addChild(std::move(spotLight));
 				}
 				ImGui::EndMenu();
 			}
 			if (ImGui::MenuItem("Empty Node"))
 			{ /* TODO: Add empty node */
+			}
+			if (ImGui::MenuItem("Baker"))
+			{
+				auto baker = std::make_unique<Baker>("Baker");
+				m_scene->addChild(std::move(baker));
 			}
 			ImGui::EndMenu();
 		}
@@ -506,7 +509,8 @@ void UIManager::showChWImportProgress(std::shared_ptr<ImportProgress> progress)
 
 void UIManager::showInvisibleDockWindow()
 {
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
 		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
 
@@ -581,6 +585,8 @@ void UIManager::processGizmo()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode == nullptr)
 		return;
+	if (!activeNode->movable)
+		return;
 	ImGuizmo::SetDrawlist();
 	if (!ImGuizmo::IsUsing())
 	{
@@ -616,8 +622,8 @@ void UIManager::processGizmo()
 		currentSnapValue = glm::vec3(0.0f);
 		break;
 	}
-	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL
-	                     , gUseSnap ? &currentSnapValue[0] : NULL);
+	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, nullptr
+	                     , gUseSnap ? &currentSnapValue[0] : nullptr);
 	if (ImGuizmo::IsUsing())
 	{
 		m_isMouseInViewport = false;
@@ -764,12 +770,12 @@ void UIManager::handleNodeSelection(SceneNode* node) const
 	}
 }
 
-void UIManager::handleNodeDragDrop(SceneNode* targetNode)
+void UIManager::handleNodeDragDrop(SceneNode* node)
 {
 	if (ImGui::BeginDragDropSource())
 	{
-		ImGui::SetDragDropPayload("SCENE_NODE", &targetNode, sizeof(SceneNode*));
-		ImGui::Text("%s", targetNode->name.c_str());
+		ImGui::SetDragDropPayload("SCENE_NODE", &node, sizeof(SceneNode*));
+		ImGui::Text("%s", node->name.c_str());
 		ImGui::EndDragDropSource();
 	}
 	if (ImGui::BeginDragDropTarget())
@@ -777,9 +783,9 @@ void UIManager::handleNodeDragDrop(SceneNode* targetNode)
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 		{
 			SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
-			if (draggedNode && draggedNode != targetNode && draggedNode->parent)
+			if (draggedNode && draggedNode != node && draggedNode->parent)
 			{
-				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetNode);
+				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, node);
 				m_commandManager->commitCommand(std::move(reparentSceneNode));
 			}
 		}
@@ -800,11 +806,11 @@ void UIManager::drawNode(SceneNode* node)
 		}
 		return;
 	}
-
+	const auto baker = dynamic_cast<Baker*>(node);
 	const bool isFolder = (node->children.size() > 0);
 	const char* icon = getNodeIcon(node);
 	const std::string label = std::string(icon) + " " + node->name;
-	if (isFolder)
+	if (isFolder || baker)
 	{
 		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 		const bool isSelected = m_scene->isNodeSelected(node);
@@ -822,6 +828,11 @@ void UIManager::drawNode(SceneNode* node)
 			for (auto& child : node->children)
 			{
 				drawNode(child.get());
+			}
+			if (baker)
+			{
+				drawNode(baker->lowPoly.get());
+				drawNode(baker->highPoly.get());
 			}
 			ImGui::TreePop();
 		}
@@ -854,19 +865,31 @@ const char* UIManager::getNodeIcon(SceneNode* node)
 	{
 		return "[P]"; // Primitive
 	}
-	else if (!node->children.empty())
-	{
-		return "[F]"; // Folder
-	}
 	else if (dynamic_cast<Camera*>(node))
 	{
 		return "[C]"; // Camera
+	}
+	else if (dynamic_cast<Baker*>(node))
+	{
+		return "[BKR]";
+	}
+	else if (dynamic_cast<LowPolyNode*>(node))
+	{
+		return "[LP]";
+	}
+	else if (dynamic_cast<HighPolyNode*>(node))
+	{
+		return "[HP]";
+	}
+	else if (!node->children.empty())
+	{
+		return "[SN]"; // Folder
 	}
 
 	return "[D]"; // Default document icon
 }
 
-void UIManager::showProperties()
+void UIManager::showProperties() const
 {
 	ImGui::Begin("Properties");
 	if (m_scene->getActiveNode())
@@ -926,7 +949,7 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 		{
 			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
-				bool isSelected = (currentMaterialIndex == n);
+				const bool isSelected = (currentMaterialIndex == n);
 				if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
 				{
 					currentMaterialIndex = n;
