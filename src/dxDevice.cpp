@@ -1,4 +1,4 @@
-#include "DXDevice.hpp"
+#include "dxDevice.hpp"
 
 #include <cassert>
 
@@ -13,17 +13,16 @@ DXDevice::DXDevice(const HWND& hWindow)
 #endif
 
 	{
-		HRESULT hr = D3D11CreateDevice(
-			nullptr,                  // IDXGIAdapter* pAdapter
-			D3D_DRIVER_TYPE_HARDWARE, // D3D_DRIVER_TYPE DriverType
-			nullptr,                  // HMODULE Software
-			deviceCreationFlags,      // UINT flags
-			featureLevels,            // CONST D3D_FEATURE_LEVEL* pFeatureLevels
-			numFeatureLevels,         // UINT FeatureLevels
-			D3D11_SDK_VERSION,        // UINT SDKVersion,
-			&m_d3dDevice,             //_COM_Outptr_opt_ ID3D11Device** ppDevice
-			nullptr,                  // D3D_FEATURE_LEVEL* pFeatureLevel
-			&m_d3dDeviceContext);     // ID3D11DeviceContext** ppImmediateContext
+		HRESULT hr = D3D11CreateDevice(nullptr,					 // IDXGIAdapter* pAdapter
+									   D3D_DRIVER_TYPE_HARDWARE, // D3D_DRIVER_TYPE DriverType
+									   nullptr,					 // HMODULE Software
+									   deviceCreationFlags,		 // UINT flags
+									   featureLevels,			 // CONST D3D_FEATURE_LEVEL* pFeatureLevels
+									   numFeatureLevels,		 // UINT FeatureLevels
+									   D3D11_SDK_VERSION,		 // UINT SDKVersion,
+									   &m_d3dDevice,			 //_COM_Outptr_opt_ ID3D11Device** ppDevice
+									   nullptr,					 // D3D_FEATURE_LEVEL* pFeatureLevel
+									   &m_d3dDeviceContext);	 // ID3D11DeviceContext** ppImmediateContext
 		assert(SUCCEEDED(hr));
 	}
 

@@ -37,9 +37,9 @@ struct PSOutput
 {
 	float4 albedo : SV_TARGET0;
 	float2 metallicRoughness : SV_TARGET1;
-	float3 normal : SV_TARGET2;
+	float4 normal : SV_TARGET2;
 	float4 fragPos : SV_TARGET3;
-	uint objectID : SV_TARGET4;
+	float objectID : SV_TARGET4;
 };
 
 VertexOutput VS(VertexInput input)
@@ -95,9 +95,9 @@ PSOutput PS(VertexOutput input)
 	output.metallicRoughness = float2(metallic, roughness);
 
 	// Encode normal from [-1,1] to [0,1] for storage in UNORM render target
-	output.normal = worldNormal * 0.5f + 0.5f;
+	output.normal = float4(worldNormal * 0.5f + 0.5f, 1.0f);
 
 
-	output.objectID = objectID;
+	output.objectID = (float)objectID;
 	return output;
 }

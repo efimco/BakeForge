@@ -1,5 +1,4 @@
 #include "appConfig.hpp"
-#include "renderdoc/renderdoc_app.h"
 
 static int windowWidth = 2;
 static int windowHeight = 2;
@@ -49,6 +48,11 @@ const int& AppConfig::getViewportWidth()
 const int& AppConfig::getViewportHeight()
 {
 	return viewportHeight;
+}
+
+float AppConfig::getAspectRatio()
+{
+	return static_cast<float>(viewportWidth) / viewportHeight;
 }
 
 void AppConfig::setViewportWidth(const int width)

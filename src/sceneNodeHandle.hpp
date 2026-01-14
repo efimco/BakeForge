@@ -15,8 +15,7 @@ public:
 
 	SceneNodeHandle() = default;
 
-	explicit SceneNodeHandle(int32_t inHandle)
-		: handle(inHandle)
+	explicit SceneNodeHandle(int32_t inHandle) : handle(inHandle)
 	{
 	}
 

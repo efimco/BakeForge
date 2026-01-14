@@ -1,18 +1,18 @@
 #pragma once
 
-#include <memory>
-
 #include <d3d11_4.h>
-#include <wrl.h>
 #include <glm/glm.hpp>
+#include <memory>
+#include <wrl.h>
 
-#include "basePass.hpp"
 #include "GBufferTextures.hpp"
+#include "basePass.hpp"
 
 class Scene;
 class Primitive;
 class ShaderManager;
 class Camera;
+class RTVCollector;
 
 using namespace Microsoft::WRL;
 
@@ -23,16 +23,16 @@ public:
 	~GBuffer() override = default;
 
 	void draw(const glm::mat4& view,
-	          const glm::mat4& projection,
-	          const glm::vec3& cameraPosition,
-	          Scene* scene,
-	          ComPtr<ID3D11DepthStencilView> dsv);
+			  const glm::mat4& projection,
+			  const glm::vec3& cameraPosition,
+			  Scene* scene,
+			  ComPtr<ID3D11DepthStencilView> dsv);
 	void update(const glm::mat4& view,
-	            const glm::mat4& projection,
-	            const glm::vec3& cameraPosition,
-	            Scene* scene,
-	            int objectID,
-	            Primitive* prim) const;
+				const glm::mat4& projection,
+				const glm::vec3& cameraPosition,
+				Scene* scene,
+				float objectID,
+				Primitive* prim) const;
 	void createOrResize();
 	GBufferTextures getGBufferTextures() const;
 	ComPtr<ID3D11ShaderResourceView> getAlbedoSRV() const;
@@ -68,4 +68,5 @@ private:
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 
 	ID3D11RenderTargetView* m_rtvs[5];
+	std::unique_ptr<RTVCollector> m_rtvCollector;
 };

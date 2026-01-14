@@ -3,29 +3,28 @@
 #include <cassert>
 #include <iostream>
 
-
 #include "appConfig.hpp"
+#include "rtvCollector.hpp"
+#include "shaderManager.hpp"
 
-FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context)
-	: BasePass(_device, _context)
+FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context) : BasePass(_device, _context)
 {
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_shaderManager->LoadPixelShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
 
-	HRESULT hr = m_device->CreateInputLayout(
-		FSQuadInputLayoutDesc,
-		ARRAYSIZE(FSQuadInputLayoutDesc),
-		m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferPointer(),
-		m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferSize(),
-		&m_inputLayout);
+	HRESULT hr =
+		m_device->CreateInputLayout(FSQuadInputLayoutDesc, ARRAYSIZE(FSQuadInputLayoutDesc),
+									m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferPointer(),
+									m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferSize(), &m_inputLayout);
 	assert(SUCCEEDED(hr));
 
 	// Create vertex buffer for fullscreen quad
 	constexpr float vertices[] = {
 		-1.0f, -1.0f, 0.0, 0.0f, 1.0f, // Bottom-left
-		1.0f, -1.0f, 0.0, 1.0f, 1.0f,  // Bottom-right
-		-1.0f, 1.0f, 0.0, 0.0f, 0.0f,  // Top-left
-		1.0f, 1.0f, 0.0, 1.0f, 0.0f    // Top-right
+		1.0f,  -1.0f, 0.0, 1.0f, 1.0f, // Bottom-right
+		-1.0f, 1.0f,  0.0, 0.0f, 0.0f, // Top-left
+		1.0f,  1.0f,  0.0, 1.0f, 0.0f  // Top-right
 	};
 
 	D3D11_BUFFER_DESC vertexBufferDesc = {};
@@ -42,7 +41,7 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	// Create index buffer for fullscreen quad
 	const UINT indices[] = {
 		0, 1, 2, // First triangle
-		1, 3, 2  // Second triangle
+		1, 3, 2	 // Second triangle
 	};
 
 	D3D11_BUFFER_DESC indexBufferDesc = {};
@@ -60,7 +59,6 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_depthStencilState = createDSState(DepthStencilPreset::Disabled);
 	createOrResize();
-
 }
 
 void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
@@ -157,7 +155,7 @@ void FSQuad::createOrResize()
 	if (FAILED(hr))
 		std::cerr << "Failed to create Rasterizer State: HRESULT = " << hr << std::endl;
 
-
+	m_rtvCollector->addRTV("FSQUAD::RTV", m_srv.Get());
 	m_context->RSSetViewports(1, &viewport);
 }
 

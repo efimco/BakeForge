@@ -1,41 +1,39 @@
 #include "GBuffer.hpp"
 
-#include <iostream>
+#include <dxgiformat.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iostream>
 
 #include "appConfig.hpp"
 
 #include "GBufferTextures.hpp"
 #include "material.hpp"
-#include "texture.hpp"
-#include "scene.hpp"
 #include "primitive.hpp"
+#include "rtvCollector.hpp"
+#include "scene.hpp"
 #include "shaderManager.hpp"
 
-
-static constexpr D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] =
-{
+static constexpr D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-};
+	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
 
 struct alignas(16) ConstantBufferData
 {
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
-	int objectID;
+	float objectID;
 	float padding[3]; // Align to 16 bytes
 	glm::vec3 cameraPosition;
 	float padding2; // Align to 16 bytes
 };
 
-GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
-	: BasePass(device, context)
+GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
 	m_device = device;
 	m_context = context;
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyEqual);
 	m_samplerState = createSamplerState(SamplerPreset::AnisotropicWrap);
@@ -47,12 +45,10 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 	createOrResize();
 
 	{
-		HRESULT hr = m_device->CreateInputLayout(
-			s_gBufferInputLayoutDesc,
-			ARRAYSIZE(s_gBufferInputLayoutDesc),
-			m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferPointer(),
-			m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferSize(),
-			&m_inputLayout);
+		HRESULT hr = m_device->CreateInputLayout(s_gBufferInputLayoutDesc, ARRAYSIZE(s_gBufferInputLayoutDesc),
+												 m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferPointer(),
+												 m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferSize(),
+												 &m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
 
@@ -70,10 +66,10 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 }
 
 void GBuffer::draw(const glm::mat4& view,
-                   const glm::mat4& projection,
-                   const glm::vec3& cameraPosition,
-                   Scene* scene,
-                   ComPtr<ID3D11DepthStencilView> dsv)
+				   const glm::mat4& projection,
+				   const glm::vec3& cameraPosition,
+				   Scene* scene,
+				   ComPtr<ID3D11DepthStencilView> dsv)
 {
 
 	beginDebugEvent(L"GBuffer Pass");
@@ -105,7 +101,7 @@ void GBuffer::draw(const glm::mat4& view,
 	static const UINT offset = 0;
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		const auto objectID = static_cast<int>(handle);
+		const auto objectID = static_cast<float>(static_cast<int>(handle));
 		if (!prim->material)
 		{
 			std::cerr << "Primitive " << objectID << " has no material!" << std::endl;
@@ -121,15 +117,14 @@ void GBuffer::draw(const glm::mat4& view,
 	unbindRenderTargets(5);
 	unbindShaderResources(0, 4);
 	endDebugEvent();
-
 }
 
 void GBuffer::update(const glm::mat4& view,
-                     const glm::mat4& projection,
-                     const glm::vec3& cameraPosition,
-                     Scene* scene,
-                     const int objectID,
-                     Primitive* prim) const
+					 const glm::mat4& projection,
+					 const glm::vec3& cameraPosition,
+					 Scene* scene,
+					 const float objectID,
+					 Primitive* prim) const
 {
 	const glm::mat4 model = prim->getWorldMatrix();
 	const glm::mat4 mvp = projection * view * model;
@@ -169,7 +164,7 @@ void GBuffer::createOrResize()
 		srv_position.Reset();
 	}
 
-	//albedo
+	// albedo
 	D3D11_TEXTURE2D_DESC albedoDesc = {};
 	albedoDesc.ArraySize = 1;
 	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -205,12 +200,12 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating Albedo SRV: " << hr << std::endl;
 	}
 
-	//metallicRoughness
+	// metallicRoughness
 	D3D11_TEXTURE2D_DESC metallicRoughnessDesc;
 	metallicRoughnessDesc.ArraySize = 1;
 	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	metallicRoughnessDesc.CPUAccessFlags = 0;
-	metallicRoughnessDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	metallicRoughnessDesc.Format = DXGI_FORMAT_R16G16_UNORM;
 	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
 	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
 	metallicRoughnessDesc.MipLevels = 1;
@@ -237,13 +232,13 @@ void GBuffer::createOrResize()
 	}
 	{
 		HRESULT hr = m_device->CreateShaderResourceView(t_metallicRoughness.Get(), &metallicRoughnessSRVDesc,
-		                                                &srv_metallicRoughness);
+														&srv_metallicRoughness);
 		if (FAILED(hr))
 			std::cerr << "Error Creating MetallicRoughness SRV: " << hr << std::endl;
 	}
 
 
-	//normal
+	// normal
 	D3D11_TEXTURE2D_DESC normalDesc;
 	normalDesc.ArraySize = 1;
 	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -279,7 +274,7 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating Normal SRV: " << hr << std::endl;
 	}
 
-	//position
+	// position
 	D3D11_TEXTURE2D_DESC positionDesc;
 	positionDesc.ArraySize = 1;
 	positionDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -315,12 +310,12 @@ void GBuffer::createOrResize()
 			std::cerr << "Error Creating Position SRV: " << hr << std::endl;
 	}
 
-	//objectID
+	// objectID
 	D3D11_TEXTURE2D_DESC objectIDDesc;
 	objectIDDesc.ArraySize = 1;
 	objectIDDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	objectIDDesc.CPUAccessFlags = 0;
-	objectIDDesc.Format = DXGI_FORMAT_R32_UINT;
+	objectIDDesc.Format = DXGI_FORMAT_R32_FLOAT;
 	objectIDDesc.Height = AppConfig::getViewportHeight();
 	objectIDDesc.Width = AppConfig::getViewportWidth();
 	objectIDDesc.MipLevels = 1;
@@ -355,6 +350,11 @@ void GBuffer::createOrResize()
 	m_rtvs[3] = rtv_position.Get();
 	m_rtvs[4] = rtv_objectID.Get();
 
+	m_rtvCollector->addRTV("GBuffer::Albedo", srv_albedo.Get());
+	m_rtvCollector->addRTV("GBuffer::MetallicRoughness", srv_metallicRoughness.Get());
+	m_rtvCollector->addRTV("GBuffer::Normal", srv_normal.Get());
+	m_rtvCollector->addRTV("GBuffer::Position", srv_position.Get());
+	m_rtvCollector->addRTV("GBuffer::ObjectID", srv_objectID.Get());
 }
 
 GBufferTextures GBuffer::getGBufferTextures() const

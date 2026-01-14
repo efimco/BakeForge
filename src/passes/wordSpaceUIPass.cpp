@@ -1,10 +1,12 @@
-#include "shaderManager.hpp"
+#include "wordSpaceUIPass.hpp"
 #include <iostream>
+#include <memory>
 #include "appConfig.hpp"
 #include "light.hpp"
+#include "rtvCollector.hpp"
 #include "scene.hpp"
+#include "shaderManager.hpp"
 #include "texture.hpp"
-#include "wordSpaceUIPass.hpp"
 
 #define MAX_LIGHTS 100
 
@@ -26,14 +28,15 @@ struct alignas(16) ConstantBufferData
 
 
 static constexpr D3D11_INPUT_ELEMENT_DESC s_WSUIInputLayoutDesc[] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	, {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	,};
+	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
 
 
 WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 	: BasePass(device, context)
 {
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_lightIconTexture = std::make_shared<Texture>("../../res/icons/PointLight.png", m_device);
 	m_shaderManager->LoadPixelShader("wordSpaceUIPS", L"../../src/shaders/wordSpaceUI.hlsl", "PS");
 	m_shaderManager->LoadVertexShader("wordSpaceUIVS", L"../../src/shaders/wordSpaceUI.hlsl", "VS");
@@ -91,16 +94,16 @@ void WorldSpaceUIPass::createOrResize()
 		if (FAILED(hr))
 			std::cerr << "Error Creating WSUI SRV: " << hr << std::endl;
 	}
+	m_rtvCollector->addRTV("WSUI::wsuiTextrue", m_srv.Get());
 }
 
 void WorldSpaceUIPass::createInputLayout()
 {
-	HRESULT hr = m_device->CreateInputLayout(s_WSUIInputLayoutDesc, ARRAYSIZE(s_WSUIInputLayoutDesc)
-	                                         , m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferPointer()
-	                                         , m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferSize()
-	                                         , &m_inputLayout);
+	HRESULT hr = m_device->CreateInputLayout(s_WSUIInputLayoutDesc, ARRAYSIZE(s_WSUIInputLayoutDesc),
+											 m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferPointer(),
+											 m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferSize(),
+											 &m_inputLayout);
 	assert(SUCCEEDED(hr));
-
 }
 
 
@@ -188,11 +191,12 @@ void WorldSpaceUIPass::updateLights(Scene* scene)
 
 void WorldSpaceUIPass::createQuad()
 {
-	QuadVertex verts[4] = {{{-1.f, -1.f}, {0.f, 1.f}}
-	                       , {{-1.f, 1.f}, {0.f, 0.f}}
-	                       , {{1.f, 1.f}, {1.f, 0.f}}
-	                       , {{1.f, -1.f}, {1.f, 1.f}}
-	                       ,};
+	QuadVertex verts[4] = {
+		{{-1.f, -1.f}, {0.f, 1.f}},
+		{{-1.f, 1.f}, {0.f, 0.f}},
+		{{1.f, 1.f}, {1.f, 0.f}},
+		{{1.f, -1.f}, {1.f, 1.f}},
+	};
 
 	uint16_t idx[6] = {0, 1, 2, 0, 2, 3};
 
@@ -213,10 +217,10 @@ void WorldSpaceUIPass::createQuad()
 	m_device->CreateBuffer(&ibd, &iinit, m_indexBuffer.GetAddressOf());
 }
 
-void WorldSpaceUIPass::draw(const glm::mat4& view
-                            , const glm::mat4& projection
-                            , Scene* scene
-                            , ComPtr<ID3D11RenderTargetView> objectIDRTV)
+void WorldSpaceUIPass::draw(const glm::mat4& view,
+							const glm::mat4& projection,
+							Scene* scene,
+							ComPtr<ID3D11RenderTargetView> objectIDRTV)
 {
 
 	beginDebugEvent(L"WorldSpaceUIPass");

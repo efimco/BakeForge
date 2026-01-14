@@ -1,15 +1,16 @@
 #include "ZPrePass.hpp"
 
-#include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iostream>
 
 #include "appConfig.hpp"
 
 #include "material.hpp"
-#include "texture.hpp"
-#include "shaderManager.hpp"
 #include "primitive.hpp"
+#include "rtvCollector.hpp"
 #include "scene.hpp"
+#include "shaderManager.hpp"
+#include "texture.hpp"
 
 struct alignas(16) ConstantBufferData
 {
@@ -17,15 +18,15 @@ struct alignas(16) ConstantBufferData
 };
 
 static constexpr D3D11_INPUT_ELEMENT_DESC s_zPrePassInputLayoutDesc[] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	, {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	,};
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
 
 
-ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
-	: BasePass(device, context)
+ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
 
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_depthStencilState = createDSState(DepthStencilPreset::WriteDepth);
 
@@ -35,10 +36,10 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 	m_shaderManager->LoadPixelShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "PS");
 
 	{
-		HRESULT hr = m_device->CreateInputLayout(s_zPrePassInputLayoutDesc, ARRAYSIZE(s_zPrePassInputLayoutDesc)
-		                                         , m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer()
-		                                         , m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize()
-		                                         , &m_inputLayout);
+		HRESULT hr = m_device->CreateInputLayout(s_zPrePassInputLayoutDesc, ARRAYSIZE(s_zPrePassInputLayoutDesc),
+												 m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer(),
+												 m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize(),
+												 &m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
 
@@ -96,7 +97,6 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 	unbindRenderTargets(1);
 	unbindShaderResources(0, 1);
 	endDebugEvent();
-
 }
 
 ComPtr<ID3D11DepthStencilView> ZPrePass::getDSV()
@@ -126,7 +126,7 @@ void ZPrePass::createOrResize()
 		srv_depth.Reset();
 	}
 
-	//depth
+	// depth
 	D3D11_TEXTURE2D_DESC depthDesc;
 	depthDesc.ArraySize = 1;
 	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
@@ -167,6 +167,7 @@ void ZPrePass::createOrResize()
 		if (FAILED(hr))
 			std::cerr << "Error Creating DepthStencil SRV: " << hr << std::endl;
 	}
+	m_rtvCollector->addRTV("ZPrePass::depth", srv_depth.Get());
 }
 
 ComPtr<ID3D11ShaderResourceView> ZPrePass::getDepthSRV() const

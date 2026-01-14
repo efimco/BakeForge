@@ -32,8 +32,8 @@ Renderer::Renderer(const HWND& hwnd)
 	const HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
 	if (rdocModule)
 	{
-		const auto RENDERDOC_GetAPI = reinterpret_cast<pRENDERDOC_GetAPI>(
-			GetProcAddress(rdocModule, "RENDERDOC_GetAPI"));
+		const auto RENDERDOC_GetAPI =
+			reinterpret_cast<pRENDERDOC_GetAPI>(GetProcAddress(rdocModule, "RENDERDOC_GetAPI"));
 		if (RENDERDOC_GetAPI)
 		{
 			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, reinterpret_cast<void**>(&m_rdocAPI));
@@ -41,7 +41,6 @@ Renderer::Renderer(const HWND& hwnd)
 	}
 	m_device = std::make_unique<DXDevice>(hwnd);
 	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
-	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
 	m_camera = std::make_unique<Camera>(cameraPosition);
@@ -63,10 +62,11 @@ Renderer::Renderer(const HWND& hwnd)
 	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
-	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext()
-	                                              , "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
+												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
+	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
 }
 
@@ -119,14 +119,14 @@ void Renderer::draw()
 
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection, m_scene.get());
-	m_gBuffer->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get()
-	                , m_zPrePass->getDSV());
+	m_gBuffer->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get(),
+					m_zPrePass->getDSV());
 	m_cubeMapPass->draw(m_view, m_projection);
 	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get(), m_gBuffer->getObjectIDRTV());
-	m_deferredPass->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get()
-	                     , m_gBuffer->getGBufferTextures(), m_zPrePass->getDepthSRV(), m_cubeMapPass->getBackgroundSRV()
-	                     , m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV()
-	                     , m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
+	m_deferredPass->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get(),
+						 m_gBuffer->getGBufferTextures(), m_zPrePass->getDepthSRV(), m_cubeMapPass->getBackgroundSRV(),
+						 m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
+						 m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
 	// Debug BVH visualization (draws on top of deferred output)
 	m_debugBVHPass->setEnabled(AppConfig::getShowBVH());
@@ -142,7 +142,7 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_uiManager->draw(m_fsquad->getSRV(), *m_gBuffer, m_scene.get(), m_view, m_projection);
+	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
 	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
@@ -172,8 +172,8 @@ void Renderer::resize()
 	m_depthStencilBuffer.Reset();
 	m_depthStencilView.Reset();
 
-	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight()
-	                                        , DXGI_FORMAT_UNKNOWN, 0);
+	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight(),
+											DXGI_FORMAT_UNKNOWN, 0);
 
 	{
 		const HRESULT hr = m_device->getSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer);
@@ -207,9 +207,8 @@ void Renderer::resize()
 		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-		hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(),
-		                                                   &depthStencilViewDesc
-		                                                   , &m_depthStencilView);
+		hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilViewDesc,
+														   &m_depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
 

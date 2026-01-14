@@ -1,12 +1,11 @@
 #include "objectPicker.hpp"
 
+#include <intsafe.h>
 #include <iostream>
 
 #include "inputEventsHandler.hpp"
-#include "shaderManager.hpp"
 #include "scene.hpp"
-#include "primitive.hpp"
-#include "light.hpp"
+#include "shaderManager.hpp"
 
 struct cbPicking
 {
@@ -15,8 +14,7 @@ struct cbPicking
 	uint32_t padding[2];
 };
 
-ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
-	: readBackID(0)
+ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : readBackID(0)
 {
 	m_device = device;
 	m_context = context;
@@ -31,6 +29,7 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 		constantBufferDesc.ByteWidth = sizeof(cbPicking);
 		constantBufferDesc.StructureByteStride = 0;
 		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &m_constantBuffer);
+		assert(SUCCEEDED(hr));
 	}
 
 	{ // gpu buffer
@@ -57,7 +56,7 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 		assert(SUCCEEDED(hr));
 	}
 
-	{ //uav
+	{ // uav
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 		uavDesc.Format = DXGI_FORMAT_UNKNOWN;
 		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
@@ -65,6 +64,7 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 		uavDesc.Buffer.NumElements = 1;
 		uavDesc.Buffer.Flags = 0;
 		HRESULT hr = m_device->CreateUnorderedAccessView(m_structuredBuffer.Get(), &uavDesc, &m_uav);
+		assert(SUCCEEDED(hr));
 	}
 }
 
@@ -101,7 +101,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, con
 	{
 		HRESULT hr = m_context->Map(m_stagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
 		assert(SUCCEEDED(hr));
-		readBackID = *static_cast<uint32_t*>(mapped.pData);
+		readBackID = *static_cast<float*>(mapped.pData);
 		m_context->Unmap(m_stagingBuffer.Get(), 0);
 	}
 	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON) && InputEvents::getMouseInViewport())
@@ -114,7 +114,8 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, con
 		}
 		else
 		{
-			scene->setActiveNode(scene->getNodeByHandle(SceneNodeHandle(readBackID)), isShiftPressed);
+			scene->setActiveNode(scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID))),
+								 isShiftPressed);
 		}
 	}
 }

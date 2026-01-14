@@ -1,18 +1,19 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <memory>
 #include <atomic>
 #include <future>
+#include <memory>
 #include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 
-#include <wrl.h>
 #include <d3d11_4.h>
 #include <tiny_gltf.h>
+#include <wrl.h>
 
+#include "primitive.hpp"
 #include "primitiveData.hpp"
 
 using namespace Microsoft::WRL;
@@ -63,21 +64,17 @@ public:
 	GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene* scene);
 	~GLTFModel();
 
-	static std::future<AsyncImportResult> importModelAsync(
-		const std::string& path
-		, ComPtr<ID3D11Device> device
-		, std::shared_ptr<ImportProgress> progress);
+	static std::future<AsyncImportResult>
+	importModelAsync(const std::string& path, ComPtr<ID3D11Device> device, std::shared_ptr<ImportProgress> progress);
 
-	static void finalizeAsyncImport(
-		AsyncImportResult&& importResult
-		, ComPtr<ID3D11DeviceContext> immediateContext
-		, Scene* scene);
+	static void
+	finalizeAsyncImport(AsyncImportResult&& importResult, ComPtr<ID3D11DeviceContext> immediateContext, Scene* scene);
 
 private:
-	GLTFModel(const std::string& path
-	          , ComPtr<ID3D11Device> device
-	          , ComPtr<ID3D11DeviceContext> deferredContext
-	          , std::shared_ptr<ImportProgress> progress);
+	GLTFModel(const std::string& path,
+			  ComPtr<ID3D11Device> device,
+			  ComPtr<ID3D11DeviceContext> deferredContext,
+			  std::shared_ptr<ImportProgress> progress);
 
 	static tinygltf::Model readGlb(const std::string& path);
 	void processGlb(const tinygltf::Model& model);
@@ -85,25 +82,25 @@ private:
 	void processImages(const tinygltf::Model& model);
 	void processMaterials(const tinygltf::Model& model);
 
-	static void processPosAttribute(const tinygltf::Model& model
-	                                , const tinygltf::Mesh& mesh
-	                                , const tinygltf::Primitive& primitive
-	                                , std::vector<Position>& verticies);
+	static void processPosAttribute(const tinygltf::Model& model,
+									const tinygltf::Mesh& mesh,
+									const tinygltf::Primitive& primitive,
+									std::vector<Position>& verticies);
 
-	static void processTexCoordAttribute(const tinygltf::Model& model
-	                                     , const tinygltf::Mesh& mesh
-	                                     , const tinygltf::Primitive& primitive
-	                                     , std::vector<TexCoords>& texCoords);
+	static void processTexCoordAttribute(const tinygltf::Model& model,
+										 const tinygltf::Mesh& mesh,
+										 const tinygltf::Primitive& primitive,
+										 std::vector<TexCoords>& texCoords);
 
-	static void processIndexAttrib(const tinygltf::Model& model
-	                               , const tinygltf::Mesh& mesh
-	                               , const tinygltf::Primitive& primitive
-	                               , std::vector<uint32_t>& indicies);
+	static void processIndexAttrib(const tinygltf::Model& model,
+								   const tinygltf::Mesh& mesh,
+								   const tinygltf::Primitive& primitive,
+								   std::vector<uint32_t>& indicies);
 
-	static void processNormalsAttribute(const tinygltf::Model& model
-	                                    , const tinygltf::Mesh& mesh
-	                                    , const tinygltf::Primitive& primitive
-	                                    , std::vector<Normals>& normals);
+	static void processNormalsAttribute(const tinygltf::Model& model,
+										const tinygltf::Mesh& mesh,
+										const tinygltf::Primitive& primitive,
+										std::vector<Normals>& normals);
 
 	static Transform getTransformFromNode(size_t meshIndex, const tinygltf::Model& model);
 	ComPtr<ID3D11Device> m_device;

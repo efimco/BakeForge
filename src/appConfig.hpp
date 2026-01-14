@@ -8,6 +8,7 @@ namespace AppConfig
 	const int& getWindowHeight();
 	const int& getViewportWidth();
 	const int& getViewportHeight();
+	float getAspectRatio();
 	void setViewportWidth(int width);
 	void setViewportHeight(int height);
 	void setWindowWidth(int width);
@@ -35,4 +36,4 @@ namespace AppConfig
 	bool getCaptureNextFrame();
 
 
-}
+} // namespace AppConfig

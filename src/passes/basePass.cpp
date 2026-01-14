@@ -1,11 +1,9 @@
 #include "basePass.hpp"
-#include "shaderManager.hpp"
 #include <vector>
+#include "shaderManager.hpp"
 
 BasePass::BasePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
-	: m_device(device)
-	, m_context(context)
-	, m_shaderManager(std::make_unique<ShaderManager>(device))
+	: m_device(device), m_context(context), m_shaderManager(std::make_unique<ShaderManager>(device))
 {
 	m_context.As(&m_annotation);
 }
@@ -30,9 +28,9 @@ ComPtr<ID3D11RasterizerState> BasePass::createRSState(const RasterizerPreset pre
 }
 
 ComPtr<ID3D11RasterizerState> BasePass::createRSState(const D3D11_CULL_MODE cullMode,
-                                                      const D3D11_FILL_MODE fillMode,
-                                                      const bool depthClipEnable,
-                                                      const bool antialiasedLineEnable) const
+													  const D3D11_FILL_MODE fillMode,
+													  const bool depthClipEnable,
+													  const bool antialiasedLineEnable) const
 {
 	D3D11_RASTERIZER_DESC desc = {};
 	desc.CullMode = cullMode;
@@ -68,10 +66,9 @@ ComPtr<ID3D11DepthStencilState> BasePass::createDSState(DepthStencilPreset prese
 	}
 }
 
-ComPtr<ID3D11DepthStencilState> BasePass::createDSState(
-	const bool depthEnable,
-	const D3D11_DEPTH_WRITE_MASK writeMask,
-	const D3D11_COMPARISON_FUNC depthFunc) const
+ComPtr<ID3D11DepthStencilState> BasePass::createDSState(const bool depthEnable,
+														const D3D11_DEPTH_WRITE_MASK writeMask,
+														const D3D11_COMPARISON_FUNC depthFunc) const
 {
 	D3D11_DEPTH_STENCIL_DESC desc = {};
 	desc.DepthEnable = depthEnable;
@@ -103,9 +100,8 @@ ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const SamplerPreset pres
 	}
 }
 
-ComPtr<ID3D11SamplerState> BasePass::createSamplerState(
-	const D3D11_FILTER filter,
-	const D3D11_TEXTURE_ADDRESS_MODE addressMode)
+ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const D3D11_FILTER filter,
+														const D3D11_TEXTURE_ADDRESS_MODE addressMode)
 {
 	D3D11_SAMPLER_DESC desc = {};
 	desc.Filter = filter;

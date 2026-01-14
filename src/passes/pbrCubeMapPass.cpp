@@ -1,138 +1,30 @@
 #include "pbrCubeMapPass.hpp"
 
-#include <iostream>
-#include "glm/gtc/matrix_transform.hpp"
-
 #include "texture.hpp"
 
+#include "RTVCollector.hpp"
 #include "appConfig.hpp"
+#include "shaderManager.hpp"
 
 static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
-};
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}};
 
-auto cubeData = new float[]
-{
+auto cubeData = new float[]{
 	// +X face
-	1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	,
+	1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
 	// -X face
-	-1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	,
+	-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
+	1.0f,
 	// +Y face
-	-1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	,
+	-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
 	// -Y face
-	-1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	,
+	-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
+	1.0f,
 	// +Z face
-	-1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	,
+	-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
 	// -Z face
-	1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, -1.0f
-	, 1.0f
-	, -1.0f
-	, -1.0f
-};
+	1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+	-1.0f};
 
 struct alignas(16) CubeMapConstantBufferData
 {
@@ -157,13 +49,12 @@ struct alignas(16) PrefilteredMapConstantBufferData
 };
 
 
-CubeMapPass::CubeMapPass(
-	ComPtr<ID3D11Device> device
-	, ComPtr<ID3D11DeviceContext> context
-	, const std::string& hdrImagePath)
-	: BasePass(device, context)
-	, m_hdrImagePath(hdrImagePath)
+CubeMapPass::CubeMapPass(ComPtr<ID3D11Device> device,
+						 ComPtr<ID3D11DeviceContext> context,
+						 const std::string& hdrImagePath)
+	: BasePass(device, context), m_hdrImagePath(hdrImagePath)
 {
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device, true);
 
 	m_shaderManager->LoadVertexShader("cubemapVS", L"../../src/shaders/cubemap.hlsl", "VS");
@@ -207,12 +98,8 @@ CubeMapPass::CubeMapPass(
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(
-			inputLayoutDesc,
-			1,
-			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferPointer(),
-			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferSize(),
-			&m_inputLayout
-			);
+			inputLayoutDesc, 1, m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferPointer(),
+			m_shaderManager->getVertexShaderBlob("cubemapVS")->GetBufferSize(), &m_inputLayout);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -271,8 +158,6 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 	unbindRenderTargets(1);
 	unbindShaderResources(0, 2);
 	endDebugEvent();
-
-
 }
 
 ComPtr<ID3D11ShaderResourceView> CubeMapPass::getBackgroundSRV()
@@ -418,8 +303,7 @@ void CubeMapPass::createCubeMapResources()
 	uint32_t gx = (sideSize + 7) / 8;
 	uint32_t gy = (sideSize + 7) / 8;
 	m_context->Dispatch(gx, gy, 6);
-
-
+	m_rtvCollector->addRTV("CUBEMAP::cubemap", m_CubeMapSRV.Get());
 }
 
 void CubeMapPass::createBackgroundResources()
@@ -465,6 +349,7 @@ void CubeMapPass::createBackgroundResources()
 	{
 		throw std::runtime_error("Failed to create background shader resource view.");
 	}
+	m_rtvCollector->addRTV("CUBEMAP::background", m_backgroundSRV.Get());
 }
 
 void CubeMapPass::createIrradianceMap()
@@ -516,6 +401,7 @@ void CubeMapPass::createIrradianceMap()
 			throw std::runtime_error("Failed to create irradiance shader resource view.");
 		}
 	}
+	m_rtvCollector->addRTV("CUBEMAP::irradiance", m_irradianceSRV.Get());
 
 	// Create constant buffer for irradiance generation with correct structure
 	ComPtr<ID3D11Buffer> irradianceConstantBuffer;
@@ -563,7 +449,6 @@ void CubeMapPass::createIrradianceMap()
 	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 	m_context->CSSetSamplers(0, 1, &nullSampler);
 	endDebugEvent();
-
 }
 
 void CubeMapPass::createPrefilteredMap()
@@ -610,6 +495,7 @@ void CubeMapPass::createPrefilteredMap()
 			throw std::runtime_error("Failed to create prefiltered shader resource view.");
 		}
 	}
+	m_rtvCollector->addRTV("CUBEMAP::prefiltered", m_prefilteredSRV.Get());
 
 	// Create constant buffer for prefiltered map generation
 	ComPtr<ID3D11Buffer> prefilteredConstantBuffer;
@@ -683,7 +569,6 @@ void CubeMapPass::createPrefilteredMap()
 		m_context->CSSetSamplers(0, 1, &nullSampler);
 	}
 	endDebugEvent();
-
 }
 
 void CubeMapPass::createBRDFLut()
@@ -729,6 +614,7 @@ void CubeMapPass::createBRDFLut()
 			throw std::runtime_error("Failed to create BRDF LUT shader resource view.");
 		}
 	}
+	m_rtvCollector->addRTV("CUBEMAP::BRDF", m_brdfLutSRV.Get());
 
 	// Create unordered access view for BRDF LUT
 	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};

@@ -1,11 +1,13 @@
 #include "uiManager.hpp"
 
 #include <commdlg.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <windows.h>
-#include <glm/gtc/type_ptr.hpp>
 
+#include "imgui.h"
 #define IM_VEC2_CLASS_EXTRA
 #include "ImGuizmo.h"
 #include "imgui_impl_dx11.h"
@@ -15,7 +17,7 @@
 #include "inputEventsHandler.hpp"
 #include "passes/GBuffer.hpp"
 
-#include  "baker.hpp"
+#include "baker.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "primitive.hpp"
@@ -35,13 +37,11 @@ static glm::ivec3 gSnapRotate = {15, 15, 15};
 static glm::ivec3 gSnapScale = {1, 1, 1};
 
 UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
-	: m_commandManager(std::make_unique<CommandManager>())
-	, m_hwnd(hwnd)
-	, m_mousePos{}
-	, m_scene(nullptr)
+	: m_commandManager(std::make_unique<CommandManager>()), m_hwnd(hwnd), m_mousePos{}, m_scene(nullptr)
 {
 	m_device = device;
 	m_context = deviceContext;
+	m_rtvCollector = std::make_unique<RTVCollector>();
 	ImGui_ImplWin32_EnableDpiAwareness();
 	const float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
 
@@ -49,23 +49,27 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 	ImGui::CreateContext();
 	m_io = &ImGui::GetIO();
 	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-	m_io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;	 // Enable Gamepad Controls
+	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;	 // Enable Docking
+	m_io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;	 // Enable Multi-Viewport / Platform Windows
 
 	ImGui::StyleColorsDark();
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.ScaleAllSizes(main_scale);
-	// Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+	// Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting
+	// Style + calling this again)
 	style.FontScaleDpi = main_scale;
-	// Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+	// Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for
+	// documentation purpose)
 	m_io->ConfigDpiScaleFonts = true;
-	// [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+	// [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale
+	// fonts but _NOT_ scale sizes/padding for now.
 	m_io->ConfigDpiScaleViewports = true;
 	// [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
-	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular
+	// ones.
 	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		style.WindowRounding = 0.0f;
@@ -89,8 +93,8 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		flipDesc.Flags = 0;
 
-		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates
-		                                             , int desc_templates_count);
+		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates,
+													 int desc_templates_count);
 		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
 	}
 	m_isMouseInViewport = false;
@@ -103,11 +107,10 @@ UIManager::~UIManager()
 	ImGui::DestroyContext();
 }
 
-void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv
-                     , const GBuffer& gbuffer
-                     , Scene* scene
-                     , const glm::mat4& view
-                     , const glm::mat4& projection)
+void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
+					 Scene* scene,
+					 const glm::mat4& view,
+					 const glm::mat4& projection)
 {
 	m_view = view;
 	m_projection = projection;
@@ -130,6 +133,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv
 	showInvisibleDockWindow();
 	showSceneSettings();
 	showViewport(srv);
+	showPassesWindow();
 	drawSceneGraph();
 	showProperties();
 	showMaterialBrowser();
@@ -146,7 +150,6 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
-
 }
 
 uint32_t* UIManager::getMousePos()
@@ -177,14 +180,12 @@ void UIManager::showSceneSettings() const
 	if (AppConfig::getShowBVH())
 	{
 		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
-		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20
-		                 , AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
+		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20,
+						 AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
 	}
 
-	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)",
-	                   1000.0f / m_io->Framerate, m_io->Framerate);
+	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 	ImGui::End();
-
 }
 
 void UIManager::showMainMenuBar()
@@ -380,15 +381,9 @@ void UIManager::showMainMenuBar()
 
 void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
-	constexpr ImGuiWindowFlags windowFlags =
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoScrollWithMouse |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoBringToFrontOnFocus |
-		ImGuiWindowFlags_NoNav |
+	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNav |
 		ImGuiWindowFlags_NoBackground;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -416,8 +411,8 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	}
 
 	const ImTextureRef tex = srv.Get();
-	const auto mousePos = ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x
-	                             , m_io->MousePos.y - ImGui::GetWindowPos().y);
+	const auto mousePos =
+		ImVec2(m_io->MousePos.x - ImGui::GetWindowPos().x, m_io->MousePos.y - ImGui::GetWindowPos().y);
 	m_mousePos[0] = static_cast<uint32_t>(mousePos.x);
 	m_mousePos[1] = static_cast<uint32_t>(mousePos.y);
 
@@ -469,7 +464,8 @@ void UIManager::showChWSnappingOptions()
 		ImGui::SameLine();
 		ImGui::SliderInt("##SnapTranslate", &gSnapTranslate[0], 0, 100);
 		ImGui::Text("[R]");
-		ImGui::SameLine();;
+		ImGui::SameLine();
+		;
 		ImGui::SliderInt("##SnapRotate", &gSnapRotate[0], 1, 180);
 		ImGui::Text("[S]");
 		ImGui::SameLine();
@@ -509,8 +505,7 @@ void UIManager::showChWImportProgress(std::shared_ptr<ImportProgress> progress)
 void UIManager::showInvisibleDockWindow()
 {
 	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
 		ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -537,7 +532,7 @@ void UIManager::showMaterialBrowser() const
 	const ImVec2 contentRegion = ImGui::GetContentRegionAvail();
 	constexpr float maxItemSize = 100.0f;
 	const int itemsPerRow = static_cast<int>(floor(contentRegion.x / (maxItemSize + ImGui::GetStyle().ItemSpacing.x)));
-	const float itemSize = (contentRegion.x - (itemsPerRow) * ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
+	const float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
 	for (int i = 0; i < materialNames.size(); i++)
 	{
 		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
@@ -621,8 +616,8 @@ void UIManager::processGizmo()
 		currentSnapValue = glm::vec3(0.0f);
 		break;
 	}
-	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, nullptr
-	                     , gUseSnap ? &currentSnapValue[0] : nullptr);
+	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, nullptr,
+						 gUseSnap ? &currentSnapValue[0] : nullptr);
 	if (ImGuizmo::IsUsing())
 	{
 		m_isMouseInViewport = false;
@@ -642,8 +637,8 @@ void UIManager::processGizmo()
 			localMatrix = newWorldMatrix;
 		}
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation
-		                                      , matrixScale);
+		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation,
+											  matrixScale);
 		activeNode->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
 		activeNode->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
 		activeNode->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
@@ -695,8 +690,8 @@ void UIManager::processNodeDeletion()
 void UIManager::processUndoRedo() const
 {
 	// We put a merge fence when mouse is released
-	const bool isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(
-		ImGuiMouseButton_Right);
+	const bool isMouseReleased =
+		ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right);
 	if (isMouseReleased)
 	{
 		m_commandManager->setMergeFence();
@@ -749,8 +744,8 @@ void UIManager::drawSceneGraph()
 				SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
 				if (draggedNode && draggedNode->parent)
 				{
-					auto reparentSceneNode = std::make_unique<
-						Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
+					auto reparentSceneNode =
+						std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
 					m_commandManager->commitCommand(std::move(reparentSceneNode));
 				}
 			}
@@ -888,6 +883,55 @@ const char* UIManager::getNodeIcon(SceneNode* node)
 	return "[D]"; // Default document icon
 }
 
+void UIManager::showPassesWindow()
+{
+	ImGui::Begin("Passes");
+	auto& rtvMap = m_rtvCollector->getRTVMap();
+
+	static std::vector<std::string> rtvNameStrings;
+	static std::vector<const char*> rtvNames;
+	static size_t lastMapSize = 0;
+
+	// Only rebuild when map size changes
+	if (rtvMap.size() != lastMapSize)
+	{
+		rtvNameStrings.clear();
+		rtvNames.clear();
+		rtvNameStrings.reserve(rtvMap.size());
+		rtvNames.reserve(rtvMap.size());
+		for (const auto& name : rtvMap | std::views::keys)
+		{
+			rtvNameStrings.push_back(name);
+		}
+		for (const auto& name : rtvNameStrings)
+		{
+			rtvNames.push_back(name.c_str());
+		}
+		lastMapSize = rtvMap.size();
+	}
+
+	static int currentItemIndex = 0;
+	if (rtvNames.empty())
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (currentItemIndex >= static_cast<int>(rtvNames.size()))
+		currentItemIndex = 0;
+
+	ImGui::Combo("RTVList", &currentItemIndex, rtvNames.data(), static_cast<int>(rtvNames.size()));
+
+	const ImTextureRef tex = rtvMap[rtvNameStrings[currentItemIndex]];
+	constexpr auto uv0 = ImVec2(0, 0);
+	constexpr auto uv1 = ImVec2(1, 1);
+	ImVec2 size = ImGui::GetContentRegionAvail();
+	float aspectRatio = AppConfig::getAspectRatio();
+	size.x = size.y * aspectRatio;
+	ImGui::Image(tex, size, uv0, uv1);
+	ImGui::End();
+}
+
 void UIManager::showProperties() const
 {
 	ImGui::Begin("Properties");
@@ -942,9 +986,10 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 
 		// Save previous material index
 		const int previousMaterialIndex = currentMaterialIndex;
-		if (ImGui::BeginCombo("Material", currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size()
-		                      ? materialNames[currentMaterialIndex].c_str()
-		                      : "Select Material"))
+		if (ImGui::BeginCombo("Material",
+							  currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size()
+								  ? materialNames[currentMaterialIndex].c_str()
+								  : "Select Material"))
 		{
 			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
@@ -954,10 +999,8 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{
-							m_commandManager.get()
-							, m_scene
-							, primitive};
+						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene,
+																					primitive};
 						const std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
 						primitive->material = selectedMaterial;
 					}
@@ -983,10 +1026,7 @@ void UIManager::showLightProperties(Light* light) const
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
-	ImGui::Combo(
-		"Type",
-		reinterpret_cast<int*>(&light->type),
-		"Point Light\0Directional Light\0Spot Light\0");
+	ImGui::Combo("Type", reinterpret_cast<int*>(&light->type), "Point Light\0Directional Light\0Spot Light\0");
 	ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f);
 	ImGui::ColorEdit3("Color", &light->color[0]);

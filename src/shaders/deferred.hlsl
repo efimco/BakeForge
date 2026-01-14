@@ -5,7 +5,7 @@ Texture2D tAlbedo : register(t0);
 Texture2D tMetallicRoughness : register(t1);
 Texture2D tNormal : register(t2);
 Texture2D tFragPos : register(t3);
-Texture2D<uint> tObjectID : register(t4);
+Texture2D tObjectID : register(t4);
 Texture2D tDepth : register(t5);
 
 struct Light
@@ -31,7 +31,7 @@ struct GBuffer
 	float roughness;
 	float3 normal;
 	float3 fragPos;
-	uint objectID;
+	float objectID;
 };
 
 cbuffer CB : register(b0)
@@ -208,9 +208,9 @@ float3 applyPointLight(Light light, float3 V, float3 F0, GBuffer gbuffer)
 	return result;
 }
 
-float3 outline(uint3 DTid, uint objectID)
+float3 outline(uint3 DTid, float objectID)
 {
-	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0 
+	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0
 		return float3(0.0, 0.0, 0.0);
 	float3 outlineColor = float3(0.65, 0.25, 0.0);
 	int thickness = 1;
@@ -224,7 +224,7 @@ float3 outline(uint3 DTid, uint objectID)
 			for (int x = -thickness; x <= thickness; x++)
 			{
 				if (x == 0 && y == 0) continue;
-				uint neighborID = tObjectID.Load(int3(DTid.xy + int2(x, y), 0));
+				float neighborID = tObjectID.Load(int3(DTid.xy + int2(x, y), 0));
 				if (neighborID != objectID)
 				{
 					isEdge = true;

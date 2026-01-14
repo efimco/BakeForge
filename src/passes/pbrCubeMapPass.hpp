@@ -1,18 +1,18 @@
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include <d3d11_4.h>
-#include <wrl.h>
 #include <glm/glm.hpp>
+#include <wrl.h>
 
 #include "basePass.hpp"
 #include "texture.hpp"
-#include "shaderManager.hpp"
 
 using namespace Microsoft::WRL;
 
+class RTVCollector;
 
 class CubeMapPass : public BasePass
 {
@@ -38,6 +38,7 @@ private:
 
 	std::string m_hdrImagePath;
 	std::unique_ptr<Texture> m_hdriTexture;
+	std::unique_ptr<RTVCollector> m_rtvCollector;
 
 	ComPtr<ID3D11Buffer> m_backgroundConstantBuffer;
 	ComPtr<ID3D11Buffer> m_equirectToCubemapConstantBuffer;

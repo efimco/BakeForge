@@ -3,8 +3,8 @@
 #include <memory>
 
 #include <d3d11_4.h>
-#include <wrl.h>
 #include <glm/glm.hpp>
+#include <wrl.h>
 
 #include "basePass.hpp"
 
@@ -12,6 +12,7 @@ class Camera;
 class ShaderManager;
 class Primitive;
 class Scene;
+class RTVCollector;
 
 using namespace Microsoft::WRL;
 
@@ -29,6 +30,8 @@ public:
 
 private:
 	void update(const glm::mat4& view, const glm::mat4& projection, Primitive* prim) const;
+
+	std::unique_ptr<RTVCollector> m_rtvCollector;
 
 	ComPtr<ID3D11Texture2D> t_depth;
 
