@@ -10,7 +10,6 @@
 #include "ImGuizmo.h"
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
-#include "imgui_internal.h"
 
 #include "appConfig.hpp"
 #include "inputEventsHandler.hpp"
@@ -49,7 +48,6 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	m_io = &ImGui::GetIO();
-	static_cast<void*>(m_io);
 	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 	m_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
