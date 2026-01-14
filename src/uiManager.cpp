@@ -211,11 +211,12 @@ void UIManager::showMainMenuBar()
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
 			{
 				const std::string filepath = openFileDialog(FileType::MODEL);
-				if (filepath.empty())
-					return;
-				m_scene->importModel(filepath, m_device);
-				std::cout << "Import model triggered from menu\n";
-				m_importProgress = m_scene->getImportProgress();
+				if (!filepath.empty())
+				{
+					m_scene->importModel(filepath, m_device);
+					std::cout << "Import model triggered from menu\n";
+					m_importProgress = m_scene->getImportProgress();
+				}
 			}
 			if (ImGui::MenuItem("Export...", "Ctrl+E"))
 			{ /* TODO: Export */

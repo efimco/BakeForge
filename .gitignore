@@ -3,6 +3,7 @@
 build/
 .vscode/
 .vs/
+.zed/
 .idea/
 
 # Large assets (use Git LFS or download separately)

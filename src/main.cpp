@@ -3,8 +3,6 @@
 #endif
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include <iostream>
-
 #include <windows.h>
 #include "renderer.hpp"
 #include "window.hpp"
@@ -36,6 +34,12 @@ using namespace Microsoft::WRL;
 
 int WINAPI wWinMain(const HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
+#ifdef _DEBUG
+	AllocConsole();
+	FILE* pCout;
+	freopen_s(&pCout, "CONOUT$", "w", stdout);
+	freopen_s(&pCout, "CONOUT$", "w", stderr);
+#endif
 
 	// Ensure high-DPI awareness without a manifest, before any window is created
 	SetHighDpiAwarenessAtRuntime();

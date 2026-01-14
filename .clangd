@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - -IC:/Users/lants/Desktop/junkyard/TimeToDX/thirdparty/Include
+    - -IC:/Users/lants/Desktop/junkyard/TimeToDX/thirdparty/Include/ImGui
+    - -IC:/Users/lants/Desktop/junkyard/TimeToDX/src
+    - -IC:/Users/lants/Desktop/junkyard/TimeToDX/src/passes
+    - -DNOMINMAX
+    - -std=c++20
+    - -xc++
