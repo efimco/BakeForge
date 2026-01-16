@@ -3,10 +3,12 @@
 #include <dxgiformat.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <winbase.h>
 
 #include "appConfig.hpp"
 
 #include "GBufferTextures.hpp"
+#include "basePass.hpp"
 #include "material.hpp"
 #include "primitive.hpp"
 #include "rtvCollector.hpp"
@@ -51,18 +53,7 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 												 &m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
-
-	D3D11_BUFFER_DESC constantBufferDesc;
-	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
-	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	constantBufferDesc.StructureByteStride = 0;
-	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	constantBufferDesc.MiscFlags = 0;
-	{
-		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &m_constantbuffer);
-		assert(SUCCEEDED(hr));
-	}
+	m_constantbuffer = createConstantBuffer(sizeof(ConstantBufferData));
 }
 
 void GBuffer::draw(const glm::mat4& view,
@@ -165,183 +156,32 @@ void GBuffer::createOrResize()
 	}
 
 	// albedo
-	D3D11_TEXTURE2D_DESC albedoDesc = {};
-	albedoDesc.ArraySize = 1;
-	albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	albedoDesc.CPUAccessFlags = 0;
-	albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	albedoDesc.Height = AppConfig::getViewportHeight();
-	albedoDesc.Width = AppConfig::getViewportWidth();
-	albedoDesc.MipLevels = 1;
-	albedoDesc.MiscFlags = 0;
-	albedoDesc.SampleDesc.Count = 1;
-	albedoDesc.SampleDesc.Quality = 0;
-	albedoDesc.Usage = D3D11_USAGE_DEFAULT;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC albedoSRVDesc;
-	albedoSRVDesc.Format = albedoDesc.Format;
-	albedoSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	albedoSRVDesc.Texture2D.MostDetailedMip = 0;
-	albedoSRVDesc.Texture2D.MipLevels = albedoDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&albedoDesc, nullptr, &t_albedo);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Albedo Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(t_albedo.Get(), nullptr, &rtv_albedo);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Albedo RTV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_albedo.Get(), &albedoSRVDesc, &srv_albedo);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Albedo SRV: " << hr << std::endl;
-	}
+	t_albedo = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	srv_albedo = createShaderResourceView(t_albedo.Get(), SRVPreset::Texture2D);
+	rtv_albedo = createRenderTargetView(t_albedo.Get(), RTVPreset::Texture2D);
 
 	// metallicRoughness
-	D3D11_TEXTURE2D_DESC metallicRoughnessDesc;
-	metallicRoughnessDesc.ArraySize = 1;
-	metallicRoughnessDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	metallicRoughnessDesc.CPUAccessFlags = 0;
-	metallicRoughnessDesc.Format = DXGI_FORMAT_R16G16_UNORM;
-	metallicRoughnessDesc.Height = AppConfig::getViewportHeight();
-	metallicRoughnessDesc.Width = AppConfig::getViewportWidth();
-	metallicRoughnessDesc.MipLevels = 1;
-	metallicRoughnessDesc.MiscFlags = 0;
-	metallicRoughnessDesc.SampleDesc.Count = 1;
-	metallicRoughnessDesc.SampleDesc.Quality = 0;
-	metallicRoughnessDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC metallicRoughnessSRVDesc = {};
-	metallicRoughnessSRVDesc.Format = metallicRoughnessDesc.Format;
-	metallicRoughnessSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	metallicRoughnessSRVDesc.Texture2D.MostDetailedMip = 0;
-	metallicRoughnessSRVDesc.Texture2D.MipLevels = metallicRoughnessDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&metallicRoughnessDesc, nullptr, &t_metallicRoughness);
-		if (FAILED(hr))
-			std::cerr << "Error Creating MetallicRoughness Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(t_metallicRoughness.Get(), nullptr, &rtv_metallicRoughness);
-		if (FAILED(hr))
-			std::cerr << "Error Creating MetallicRoughness RTV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_metallicRoughness.Get(), &metallicRoughnessSRVDesc,
-														&srv_metallicRoughness);
-		if (FAILED(hr))
-			std::cerr << "Error Creating MetallicRoughness SRV: " << hr << std::endl;
-	}
-
+	t_metallicRoughness = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R16G16_UNORM);
+	srv_metallicRoughness = createShaderResourceView(t_metallicRoughness.Get(), SRVPreset::Texture2D);
+	rtv_metallicRoughness = createRenderTargetView(t_metallicRoughness.Get(), RTVPreset::Texture2D);
 
 	// normal
-	D3D11_TEXTURE2D_DESC normalDesc;
-	normalDesc.ArraySize = 1;
-	normalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	normalDesc.CPUAccessFlags = 0;
-	normalDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
-	normalDesc.Height = AppConfig::getViewportHeight();
-	normalDesc.Width = AppConfig::getViewportWidth();
-	normalDesc.MipLevels = 1;
-	normalDesc.MiscFlags = 0;
-	normalDesc.SampleDesc.Count = 1;
-	normalDesc.SampleDesc.Quality = 0;
-	normalDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC normalSRVDesc;
-	normalSRVDesc.Format = normalDesc.Format;
-	normalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	normalSRVDesc.Texture2D.MostDetailedMip = 0;
-	normalSRVDesc.Texture2D.MipLevels = normalDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&normalDesc, nullptr, &t_normal);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Normal Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(t_normal.Get(), nullptr, &rtv_normal);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Normal RTV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_normal.Get(), &normalSRVDesc, &srv_normal);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Normal SRV: " << hr << std::endl;
-	}
+	t_normal = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R10G10B10A2_UNORM);
+	srv_normal = createShaderResourceView(t_normal.Get(), SRVPreset::Texture2D);
+	rtv_normal = createRenderTargetView(t_normal.Get(), RTVPreset::Texture2D);
 
 	// position
-	D3D11_TEXTURE2D_DESC positionDesc;
-	positionDesc.ArraySize = 1;
-	positionDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	positionDesc.CPUAccessFlags = 0;
-	positionDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	positionDesc.Height = AppConfig::getViewportHeight();
-	positionDesc.Width = AppConfig::getViewportWidth();
-	positionDesc.MipLevels = 1;
-	positionDesc.MiscFlags = 0;
-	positionDesc.SampleDesc.Count = 1;
-	positionDesc.SampleDesc.Quality = 0;
-	positionDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC positionSRVDesc;
-	positionSRVDesc.Format = positionDesc.Format;
-	positionSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	positionSRVDesc.Texture2D.MostDetailedMip = 0;
-	positionSRVDesc.Texture2D.MipLevels = positionDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&positionDesc, nullptr, &t_position);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Position Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(t_position.Get(), nullptr, &rtv_position);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Position RTV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_position.Get(), &positionSRVDesc, &srv_position);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Position SRV: " << hr << std::endl;
-	}
+	t_position = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R16G16B16A16_FLOAT);
+	srv_position = createShaderResourceView(t_position.Get(), SRVPreset::Texture2D);
+	rtv_position = createRenderTargetView(t_position.Get(), RTVPreset::Texture2D);
 
 	// objectID
-	D3D11_TEXTURE2D_DESC objectIDDesc;
-	objectIDDesc.ArraySize = 1;
-	objectIDDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	objectIDDesc.CPUAccessFlags = 0;
-	objectIDDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	objectIDDesc.Height = AppConfig::getViewportHeight();
-	objectIDDesc.Width = AppConfig::getViewportWidth();
-	objectIDDesc.MipLevels = 1;
-	objectIDDesc.MiscFlags = 0;
-	objectIDDesc.SampleDesc.Count = 1;
-	objectIDDesc.SampleDesc.Quality = 0;
-	objectIDDesc.Usage = D3D11_USAGE_DEFAULT;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC objectIDSRVDesc;
-	objectIDSRVDesc.Format = objectIDDesc.Format;
-	objectIDSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	objectIDSRVDesc.Texture2D.MostDetailedMip = 0;
-	objectIDSRVDesc.Texture2D.MipLevels = objectIDDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&objectIDDesc, nullptr, &t_objectID);
-		assert(SUCCEEDED(hr));
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(t_objectID.Get(), nullptr, &rtv_objectID);
-		assert(SUCCEEDED(hr));
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_objectID.Get(), &objectIDSRVDesc, &srv_objectID);
-		assert(SUCCEEDED(hr));
-	}
+	t_objectID = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R32_FLOAT);
+	srv_objectID = createShaderResourceView(t_objectID.Get(), SRVPreset::Texture2D);
+	rtv_objectID = createRenderTargetView(t_objectID.Get(), RTVPreset::Texture2D);
 
 	// rtv assignment
 	m_rtvs[0] = rtv_albedo.Get();

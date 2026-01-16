@@ -1627,7 +1627,7 @@ namespace IMGUIZMO_NAMESPACE
 
       if (gContext.mbUsing && (gContext.GetCurrentID() == gContext.mEditingID) && IsTranslateType(type))
       {
-         ImU32 translationLineColor = GetColorU32(TRANSLATION_LINE);
+         //ImU32 translationLineColor = GetColorU32(TRANSLATION_LINE);
 
          ImVec2 sourcePosOnScreen = worldToPos(gContext.mMatrixOrigin, gContext.mViewProjection);
          ImVec2 destinationPosOnScreen = worldToPos(gContext.mModel.v.position, gContext.mViewProjection);

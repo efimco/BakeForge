@@ -14,8 +14,8 @@ static bool g_buildBVHOnImport = true;
 
 GLTFModel::GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene* scene)
 	: m_device(device)
-	, m_scene(scene)
 	, m_deferredContext(nullptr)
+	, m_scene(scene)
 	, m_progress(nullptr)
 {
 	const tinygltf::Model model = readGlb(path);

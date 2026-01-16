@@ -1,7 +1,6 @@
 #include "ZPrePass.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
 #include "appConfig.hpp"
 
@@ -43,17 +42,7 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 		assert(SUCCEEDED(hr));
 	};
 
-	D3D11_BUFFER_DESC constantBufferDesc = {};
-	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
-	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	constantBufferDesc.StructureByteStride = 0;
-	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	constantBufferDesc.MiscFlags = 0;
-	{
-		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &m_constantbuffer);
-		assert(SUCCEEDED(hr));
-	}
+	m_constantbuffer = createConstantBuffer(sizeof(ConstantBufferData));
 
 	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 }
@@ -126,47 +115,10 @@ void ZPrePass::createOrResize()
 		srv_depth.Reset();
 	}
 
-	// depth
-	D3D11_TEXTURE2D_DESC depthDesc;
-	depthDesc.ArraySize = 1;
-	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-	depthDesc.CPUAccessFlags = 0;
-	depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	depthDesc.Height = AppConfig::getViewportHeight();
-	depthDesc.Width = AppConfig::getViewportWidth();
-	depthDesc.MipLevels = 1;
-	depthDesc.MiscFlags = 0;
-	depthDesc.SampleDesc.Count = 1;
-	depthDesc.SampleDesc.Quality = 0;
-	depthDesc.Usage = D3D11_USAGE_DEFAULT;
+	t_depth = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R24G8_TYPELESS);
+	dsv = createDepthStencilView(t_depth.Get(), DSVPreset::Texture2D);
+	srv_depth = createShaderResourceView(t_depth.Get(), SRVPreset::Texture2D);
 
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Flags = 0;
-	dsvDesc.Texture2D.MipSlice = 0;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc;
-	depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	depthSRVDesc.Texture2D.MostDetailedMip = 0;
-	depthSRVDesc.Texture2D.MipLevels = depthDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&depthDesc, nullptr, &t_depth);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthStencil Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateDepthStencilView(t_depth.Get(), &dsvDesc, &dsv);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthStencil DSV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(t_depth.Get(), &depthSRVDesc, &srv_depth);
-		if (FAILED(hr))
-			std::cerr << "Error Creating DepthStencil SRV: " << hr << std::endl;
-	}
 	m_rtvCollector->addRTV("ZPrePass::depth", srv_depth.Get());
 }
 

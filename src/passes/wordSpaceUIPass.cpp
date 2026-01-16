@@ -1,7 +1,7 @@
 #include "wordSpaceUIPass.hpp"
-#include <iostream>
 #include <memory>
 #include "appConfig.hpp"
+#include "basePass.hpp"
 #include "light.hpp"
 #include "rtvCollector.hpp"
 #include "scene.hpp"
@@ -42,17 +42,17 @@ WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	m_shaderManager->LoadVertexShader("wordSpaceUIVS", L"../../src/shaders/wordSpaceUI.hlsl", "VS");
 	createOrResize();
 	createQuad();
-	createLightsBuffer();
+	m_lightsBuffer = createStructuredBuffer(sizeof(LightData), MAX_LIGHTS, SBPreset::CpuWrite);
+	m_lightsSRV = createShaderResourceView(m_lightsBuffer.Get(), SRVPreset::StructuredBuffer);
 	createInputLayout();
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
 	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
-	createConstantBuffer();
+	m_constantBuffer = createConstantBuffer(sizeof(ConstantBufferData));
 }
 
 void WorldSpaceUIPass::createOrResize()
 {
-
 	if (m_texture != nullptr)
 	{
 		m_texture.Reset();
@@ -60,40 +60,9 @@ void WorldSpaceUIPass::createOrResize()
 		m_srv.Reset();
 	}
 
-	D3D11_TEXTURE2D_DESC texDesc = {};
-	texDesc.ArraySize = 1;
-	texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	texDesc.Height = AppConfig::getViewportHeight();
-	texDesc.Width = AppConfig::getViewportWidth();
-	texDesc.MipLevels = 1;
-	texDesc.MiscFlags = 0;
-	texDesc.SampleDesc.Count = 1;
-	texDesc.SampleDesc.Quality = 0;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc.Format = texDesc.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-
-	{
-		HRESULT hr = m_device->CreateTexture2D(&texDesc, nullptr, &m_texture);
-		if (FAILED(hr))
-			std::cerr << "Error Creating WSUI Texture: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateRenderTargetView(m_texture.Get(), nullptr, &m_rtv);
-		if (FAILED(hr))
-			std::cerr << "Error Creating WSUI RTV: " << hr << std::endl;
-	}
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, &m_srv);
-		if (FAILED(hr))
-			std::cerr << "Error Creating WSUI SRV: " << hr << std::endl;
-	}
+	m_texture = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
+	m_rtv = createRenderTargetView(m_texture.Get(), RTVPreset::Texture2D);
 	m_rtvCollector->addRTV("WSUI::wsuiTextrue", m_srv.Get());
 }
 
@@ -107,21 +76,6 @@ void WorldSpaceUIPass::createInputLayout()
 }
 
 
-void WorldSpaceUIPass::createConstantBuffer()
-{
-	D3D11_BUFFER_DESC constantBufferDesc;
-	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
-	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	constantBufferDesc.StructureByteStride = 0;
-	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	constantBufferDesc.MiscFlags = 0;
-	{
-		HRESULT hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, &m_constantBuffer);
-		assert(SUCCEEDED(hr));
-	}
-}
-
 void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::mat4& projection, Scene* scene)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -129,7 +83,6 @@ void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::ma
 	assert(SUCCEEDED(hr));
 
 	ConstantBufferData* dataPtr = (ConstantBufferData*)mappedResource.pData;
-	glm::mat4 model = glm::mat4(1.0f);
 	glm::mat4 vp = projection * view;
 	dataPtr->viewProjection = glm::transpose(vp);
 	dataPtr->view = glm::transpose(view);
@@ -139,35 +92,6 @@ void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::ma
 	dataPtr->screenSize = screenSize;
 
 	m_context->Unmap(m_constantBuffer.Get(), 0);
-}
-
-void WorldSpaceUIPass::createLightsBuffer()
-{
-	D3D11_BUFFER_DESC lightsBufferDesc = {};
-	lightsBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	lightsBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	lightsBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	lightsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	lightsBufferDesc.ByteWidth = sizeof(LightData) * MAX_LIGHTS; // Allocate space for up to 100 lights
-	lightsBufferDesc.StructureByteStride = sizeof(LightData);
-
-	{
-		HRESULT hr = m_device->CreateBuffer(&lightsBufferDesc, nullptr, &m_lightsBuffer);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Lights Buffer: " << hr << std::endl;
-	}
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = MAX_LIGHTS; // Match the buffer size
-
-	{
-		HRESULT hr = m_device->CreateShaderResourceView(m_lightsBuffer.Get(), &srvDesc, &m_lightsSRV);
-		if (FAILED(hr))
-			std::cerr << "Error Creating Lights SRV: " << hr << std::endl;
-	}
 }
 
 void WorldSpaceUIPass::updateLights(Scene* scene)
@@ -197,24 +121,10 @@ void WorldSpaceUIPass::createQuad()
 		{{1.f, 1.f}, {1.f, 0.f}},
 		{{1.f, -1.f}, {1.f, 1.f}},
 	};
-
 	uint16_t idx[6] = {0, 1, 2, 0, 2, 3};
 
-	D3D11_BUFFER_DESC vbd = {};
-	vbd.ByteWidth = sizeof(verts);
-	vbd.Usage = D3D11_USAGE_IMMUTABLE;
-	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-	D3D11_SUBRESOURCE_DATA vinit = {verts};
-	m_device->CreateBuffer(&vbd, &vinit, m_vertexBuffer.GetAddressOf());
-
-	D3D11_BUFFER_DESC ibd = {};
-	ibd.ByteWidth = sizeof(idx);
-	ibd.Usage = D3D11_USAGE_IMMUTABLE;
-	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-
-	D3D11_SUBRESOURCE_DATA iinit = {idx};
-	m_device->CreateBuffer(&ibd, &iinit, m_indexBuffer.GetAddressOf());
+	m_vertexBuffer = createVertexBuffer(sizeof(verts));
+	m_indexBuffer = createIndexBuffer(sizeof(idx));
 }
 
 void WorldSpaceUIPass::draw(const glm::mat4& view,

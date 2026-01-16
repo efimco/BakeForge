@@ -1,3 +1,5 @@
+#include <memory>
+#include "previewGenerator.hpp"
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "renderer.hpp"
 
@@ -19,6 +21,7 @@
 #include "passes/deferedPass.hpp"
 #include "passes/objectPicker.hpp"
 #include "passes/pbrCubeMapPass.hpp"
+#include "passes/previewGenerator.hpp"
 #include "passes/wordSpaceUIPass.hpp"
 
 
@@ -65,6 +68,8 @@ Renderer::Renderer(const HWND& hwnd)
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
 												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
+	constexpr uint32_t PREVIEW_SIZE = 512;
+	m_previewGenerator = std::make_unique<PreviewGenerator>(PREVIEW_SIZE, PREVIEW_SIZE, m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
@@ -199,16 +204,17 @@ void Renderer::resize()
 		depthBufferDesc.CPUAccessFlags = 0;
 		depthBufferDesc.MiscFlags = 0;
 
-		HRESULT hr = m_device->getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &m_depthStencilBuffer);
+		const HRESULT hr = m_device->getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &m_depthStencilBuffer);
 		assert(SUCCEEDED(hr));
-
+	}
+	{
 		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
 		depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-		hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilViewDesc,
-														   &m_depthStencilView);
+		const HRESULT hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilViewDesc,
+																		 &m_depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
 

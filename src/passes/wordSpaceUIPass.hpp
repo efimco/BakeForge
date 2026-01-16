@@ -38,7 +38,6 @@ private:
 	void createQuad();
 
 	ComPtr<ID3D11Buffer> m_lightsBuffer;
-	void createLightsBuffer();
 
 	ComPtr<ID3D11ShaderResourceView> m_lightsSRV;
 	void updateLights(Scene* scene);
@@ -48,6 +47,5 @@ private:
 
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-	void createConstantBuffer();
 	void updateConstantBuffer(const glm::mat4& view, const glm::mat4& projection, Scene* scene);
 };

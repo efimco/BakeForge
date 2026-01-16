@@ -9,10 +9,11 @@ AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
 BinPackParameters: false
-BraceWrapping: 
+BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
   AfterControlStatement: true
@@ -32,21 +33,21 @@ BraceWrapping:
 BreakBeforeBraces: Custom
 BreakConstructorInitializers: BeforeComma
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit: 120
+ColumnLimit: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-IncludeCategories: 
-  - Regex: '^<.*'
+IncludeCategories:
+  - Regex: "^<.*"
     Priority: 1
   - Regex: '^".*'
     Priority: 2
-  - Regex: '.*'
+  - Regex: ".*"
     Priority: 3
-IncludeIsMainRegex: '([-_](test|unittest))?$'
+IncludeIsMainRegex: "([-_](test|unittest))?$"
 IndentCaseBlocks: true
 IndentWidth: 4
 InsertNewlineAtEOF: true
-MacroBlockBegin: ''
-MacroBlockEnd: ''
+MacroBlockBegin: ""
+MacroBlockEnd: ""
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: All
 PointerAlignment: Left

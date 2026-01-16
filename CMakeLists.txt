@@ -61,3 +61,8 @@ set_target_properties(TimeToDX PROPERTIES
     WIN32_EXECUTABLE TRUE
     VS_DEBUGGER_WORKING_DIRECTORY "$(TARGET_FILE_DIR:TimeToDX)"
 )
+
+# Suppress warnings for third-party includes
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(TimeToDX PRIVATE -Wno-ignored-attributes)
+endif()

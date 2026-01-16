@@ -2,8 +2,8 @@
 
 #include "texture.hpp"
 
-#include "RTVCollector.hpp"
 #include "appConfig.hpp"
+#include "rtvCollector.hpp"
 #include "shaderManager.hpp"
 
 static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {

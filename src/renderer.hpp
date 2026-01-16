@@ -22,6 +22,7 @@ class DeferredPass;
 class CubeMapPass;
 class DebugBVHPass;
 class WorldSpaceUIPass;
+class PreviewGenerator;
 
 using namespace Microsoft::WRL;
 
@@ -58,7 +59,7 @@ private:
 	std::unique_ptr<UIManager> m_uiManager;
 	std::unique_ptr<Camera> m_camera;
 
-	//passes
+	// passes
 	std::unique_ptr<ObjectPicker> m_objectPicker;
 	std::unique_ptr<GBuffer> m_gBuffer;
 	std::unique_ptr<ZPrePass> m_zPrePass;
@@ -67,5 +68,7 @@ private:
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
 	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
 	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
+	std::unique_ptr<PreviewGenerator> m_previewGenerator;
+
 	RENDERDOC_API_1_1_2* m_rdocAPI = nullptr;
 };

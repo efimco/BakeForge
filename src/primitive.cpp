@@ -181,22 +181,3 @@ void Primitive::setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> shar
 {
 	m_sharedData = sharedData;
 }
-
-static bool saveBVH(const Bvh& bvh, const std::string& file_name)
-{
-	std::ofstream out(file_name, std::ofstream::binary);
-	if (!out)
-		return false;
-	StdOutputStream stream(out);
-	bvh.serialize(stream);
-	return true;
-}
-
-static std::optional<Bvh> loadBVH(const std::string& file_name)
-{
-	std::ifstream in(file_name, std::ofstream::binary);
-	if (!in)
-		return std::nullopt;
-	StdInputStream stream(in);
-	return std::make_optional(Bvh::deserialize(stream));
-}

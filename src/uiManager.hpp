@@ -57,7 +57,6 @@ private:
 	std::unique_ptr<RTVCollector> m_rtvCollector;
 	const HWND& m_hwnd;
 	ImGuiIO* m_io;
-	ImFont* m_iconFont = nullptr;
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	Scene* m_scene;

@@ -77,7 +77,7 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_PAINT:
 	{
 		PAINTSTRUCT paintStruct = {};
-		HDC hdc = BeginPaint(hwnd, &paintStruct);
+		BeginPaint(hwnd, &paintStruct);
 		EndPaint(hwnd, &paintStruct);
 		break;
 	}
