@@ -68,8 +68,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
 												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
-	constexpr uint32_t PREVIEW_SIZE = 512;
-	m_previewGenerator = std::make_unique<PreviewGenerator>(PREVIEW_SIZE, PREVIEW_SIZE, m_device->getDevice(), m_device->getContext());
+	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
@@ -132,6 +131,10 @@ void Renderer::draw()
 						 m_gBuffer->getGBufferTextures(), m_zPrePass->getDepthSRV(), m_cubeMapPass->getBackgroundSRV(),
 						 m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
 						 m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
+
+
+	m_previewGenerator->generatePreview(m_scene.get());
+
 
 	// Debug BVH visualization (draws on top of deferred output)
 	m_debugBVHPass->setEnabled(AppConfig::getShowBVH());

@@ -1,5 +1,5 @@
-#pragma once
 
+#pragma once
 #include <memory>
 #include <string>
 
@@ -60,6 +60,7 @@ private:
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	Scene* m_scene;
+	std::shared_ptr<Material> m_selectedMaterial = nullptr;
 	void showSceneSettings() const;
 	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
@@ -67,7 +68,7 @@ private:
 	static void showChWViewportOptions();
 	static void showChWImportProgress(std::shared_ptr<ImportProgress> progress);
 	static void showInvisibleDockWindow();
-	void showMaterialBrowser() const;
+	void showMaterialBrowser();
 
 	void processInputEvents() const;
 	void processGizmo();
@@ -76,7 +77,7 @@ private:
 	void processUndoRedo() const;
 
 	void drawSceneGraph();
-	void handleNodeSelection(SceneNode* node) const;
+	void handleNodeSelection(SceneNode* node);
 	void handleNodeDragDrop(SceneNode* node);
 	void drawNode(SceneNode* node);
 	void showPassesWindow();

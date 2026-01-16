@@ -1,10 +1,7 @@
 #include "camera.hpp"
 
-#include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
-
-#include "appConfig.hpp"
 #include "inputEventsHandler.hpp"
 #include "primitive.hpp"
 

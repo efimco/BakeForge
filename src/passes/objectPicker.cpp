@@ -64,16 +64,7 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, con
 	}
 	if (InputEvents::isMouseClicked(MouseButtons::LEFT_BUTTON) && InputEvents::getMouseInViewport())
 	{
-		bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
 		std::cout << "Picked ID: " << readBackID << std::endl;
-		if (readBackID == 0)
-		{
-			scene->clearSelectedNodes();
-		}
-		else
-		{
-			scene->setActiveNode(scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID))),
-								 isShiftPressed);
-		}
+		scene->setReadBackID(readBackID);
 	}
 }

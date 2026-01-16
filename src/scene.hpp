@@ -74,9 +74,10 @@ public:
 	Camera* getActiveCamera() const;
 
 	void deleteNode(SceneNode* node);
-	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode
-	                           , SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
+	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode, SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
 
+	void setReadBackID(float readBackID);
+	float getReadBackID();
 
 	void buildSceneBVH();
 	void markSceneBVHDirty();
@@ -97,6 +98,7 @@ private:
 	void addCamera(Camera* camera);
 	void addBaker(Baker* baker);
 	void addBakerNode(BakerNode* node);
+	float m_readBackID;
 	SceneUnorderedMap<Primitive*> m_primitives;
 	SceneUnorderedMap<Light*> m_lights;
 	SceneUnorderedMap<Camera*> m_cameras;
@@ -107,7 +109,7 @@ private:
 	StringUnorderedMap<uint32_t> m_nodeNames;
 
 	std::unique_ptr<Bvh> m_sceneBVH;
-	std::vector<BBox> m_primBboxes;  // World-space bboxes for each primitive
+	std::vector<BBox> m_primBboxes;	 // World-space bboxes for each primitive
 	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
 
 	bool m_isImporting = false;

@@ -37,8 +37,8 @@ public:
 	void resize();
 
 private:
-	std::unique_ptr<Scene> m_scene;
 	std::chrono::system_clock::time_point m_prevTime;
+	std::unique_ptr<Scene> m_scene;
 	std::chrono::duration<double> m_deltaTime;
 	ComPtr<ID3D11Buffer> m_constantbuffer;
 

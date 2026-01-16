@@ -1,6 +1,7 @@
 #include "scene.hpp"
 
 #include <chrono>
+#include <consoleapi.h>
 #include <iostream>
 
 #include "baker.hpp"
@@ -358,9 +359,7 @@ void Scene::deleteNode(SceneNode* node)
 }
 
 SceneNode* Scene::adoptClonedNode(
-	std::unique_ptr<SceneNode>&& clonedNode
-	, SceneNodeHandle preferredHandle
-	)
+	std::unique_ptr<SceneNode>&& clonedNode, SceneNodeHandle preferredHandle)
 {
 	if (!preferredHandle.isValid())
 	{
@@ -389,6 +388,16 @@ SceneNode* Scene::adoptClonedNode(
 	}
 	setActiveNode(nodeClone);
 	return nodeClone;
+}
+
+void Scene::setReadBackID(float readBackID)
+{
+	m_readBackID = readBackID;
+}
+
+float Scene::getReadBackID()
+{
+	return m_readBackID;
 }
 
 Camera* Scene::getActiveCamera() const
@@ -426,7 +435,7 @@ void Scene::buildSceneBVH()
 	const auto endTime = std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 	std::cout << "Built scene BVH with " << m_sceneBVH->nodes.size() << " nodes for " << primCount << " primitives in "
-		<< duration << " ms." << std::endl;
+			  << duration << " ms." << std::endl;
 }
 
 void Scene::markSceneBVHDirty()
@@ -521,7 +530,6 @@ std::shared_ptr<ImportProgress> Scene::getImportProgress() const
 
 void Scene::saveScene(std::string_view filepath)
 {
-
 }
 
 void Scene::loadScene(std::string_view filepath)

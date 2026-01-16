@@ -1,6 +1,7 @@
 #include "uiManager.hpp"
 
 #include <commdlg.h>
+#include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <memory>
@@ -20,8 +21,10 @@
 #include "baker.hpp"
 #include "camera.hpp"
 #include "light.hpp"
+#include "material.hpp"
 #include "primitive.hpp"
 #include "scene.hpp"
+#include "texture.hpp"
 
 #include "commands/commandManager.hpp"
 #include "commands/nodeCommand.hpp"
@@ -524,7 +527,7 @@ void UIManager::showInvisibleDockWindow()
 	ImGui::End();
 }
 
-void UIManager::showMaterialBrowser() const
+void UIManager::showMaterialBrowser()
 {
 	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 	ImGui::Begin("Material Browser", nullptr, windowFlags);
@@ -535,9 +538,13 @@ void UIManager::showMaterialBrowser() const
 	const float itemSize = (contentRegion.x - (itemsPerRow)*ImGui::GetStyle().ItemSpacing.x * 2) / itemsPerRow;
 	for (int i = 0; i < materialNames.size(); i++)
 	{
-		if (ImGui::ImageButton(materialNames[i].c_str(), nullptr, ImVec2(itemSize, itemSize)))
+		const auto mat = m_scene->getMaterial(materialNames[i]);
+		const ImTextureRef previewTexture = mat->preview.srv_preview.Get();
+		if (ImGui::ImageButton(materialNames[i].c_str(), previewTexture, ImVec2(itemSize, itemSize)))
 		{
-			// Material selected
+			m_scene->setActiveNode(nullptr);
+			m_selectedMaterial = mat;
+			m_scene->setReadBackID(0);
 		}
 		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
 		{
@@ -755,11 +762,24 @@ void UIManager::drawSceneGraph()
 	ImGui::End();
 }
 
-void UIManager::handleNodeSelection(SceneNode* node) const
+void UIManager::handleNodeSelection(SceneNode* node)
 {
+	bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
+	float readBackID = m_scene->getReadBackID();
+	if (readBackID == 0)
+	{
+		m_scene->clearSelectedNodes();
+	}
+	else
+	{
+		m_scene->setActiveNode(m_scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID))), isShiftPressed);
+		m_selectedMaterial = nullptr;
+		return;
+	}
 	if (ImGui::IsItemClicked())
 	{
 		const bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
+		m_selectedMaterial = nullptr;
 		m_scene->setActiveNode(node, addToSelection);
 	}
 }
@@ -935,6 +955,12 @@ void UIManager::showPassesWindow()
 void UIManager::showProperties() const
 {
 	ImGui::Begin("Properties");
+	if (m_selectedMaterial)
+	{
+		showMaterialProperties(m_selectedMaterial);
+		ImGui::End();
+		return;
+	}
 	if (m_scene->getActiveNode())
 	{
 		if (dynamic_cast<Primitive*>(m_scene->getActiveNode()))
@@ -1017,7 +1043,19 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 
 void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 {
-	return;
+	ImGui::Text("Name: %s", material->name.c_str());
+	ImGui::Text("Albedo: ");
+	ImGui::SameLine();
+	ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
+	ImGui::ColorEdit4("Albedo color: ", glm::value_ptr(material->albedoColor));
+	ImGui::Text("MetallicRougness: ");
+	ImGui::SameLine();
+	ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
+	ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Roughness", &material->roughnessValue, 0.01f, 0.04f, 1.0f);
+	ImGui::Text("Normal: ");
+	ImGui::SameLine();
+	ImGui::Image(material->normal->srv.Get(), ImVec2(128, 128));
 }
 
 void UIManager::showLightProperties(Light* light) const

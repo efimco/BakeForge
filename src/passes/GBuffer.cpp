@@ -62,6 +62,14 @@ void GBuffer::draw(const glm::mat4& view,
 				   Scene* scene,
 				   ComPtr<ID3D11DepthStencilView> dsv)
 {
+	D3D11_VIEWPORT viewport = {};
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	viewport.Width = AppConfig::getViewportWidth();
+	viewport.Height = AppConfig::getViewportHeight();
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	m_context->RSSetViewports(1, &viewport);
 
 	beginDebugEvent(L"GBuffer Pass");
 	if (AppConfig::getNeedsResize())
@@ -126,7 +134,7 @@ void GBuffer::update(const glm::mat4& view,
 		const auto cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
 		// Use inverse-transpose of the model matrix (upper-left 3x3) for correct normal transformation
-		cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
+		cbData->inverseTransposedModel = glm::inverse(model);
 		cbData->model = glm::transpose(model);
 		cbData->objectID = objectID;
 		cbData->cameraPosition = cameraPosition;
