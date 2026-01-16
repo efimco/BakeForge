@@ -14,7 +14,6 @@
 #include "shaderManager.hpp"
 #include "uiManager.hpp"
 
-#include "passes/DebugBVHPass.hpp"
 #include "passes/FSQuad.hpp"
 #include "passes/GBuffer.hpp"
 #include "passes/ZPrePass.hpp"
@@ -67,7 +66,6 @@ Renderer::Renderer(const HWND& hwnd)
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
 												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
-	m_debugBVHPass = std::make_unique<DebugBVHPass>(m_device->getDevice(), m_device->getContext());
 	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
@@ -100,10 +98,6 @@ void Renderer::draw()
 
 	// --- CPU Updates ---
 	m_scene->updateAsyncImport();
-	if (m_scene->isSceneBVHDirty())
-	{
-		m_scene->buildSceneBVH();
-	}
 	const std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
@@ -134,13 +128,6 @@ void Renderer::draw()
 
 
 	m_previewGenerator->generatePreview(m_scene.get());
-
-
-	// Debug BVH visualization (draws on top of deferred output)
-	m_debugBVHPass->setEnabled(AppConfig::getShowBVH());
-	m_debugBVHPass->setShowPrimitiveBVH(AppConfig::getShowPrimitiveBVH());
-	m_debugBVHPass->setMaxDepth(AppConfig::getBVHMaxDepth());
-	m_debugBVHPass->draw(m_view, m_projection, m_scene.get(), m_deferredPass->getFinalRTV(), m_zPrePass->getDSV());
 
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 

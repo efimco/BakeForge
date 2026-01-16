@@ -1,13 +1,6 @@
 #include "primitive.hpp"
 
-#include <fstream>
-#include <iostream>
-
 #include "assert.h"
-
-using PrecomputedTri = bvh::v2::PrecomputedTri<Scalar>;
-using StdOutputStream = bvh::v2::StdOutputStream;
-using StdInputStream = bvh::v2::StdInputStream;
 
 Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
 	: SceneNode(nodeName)
@@ -64,86 +57,6 @@ const ComPtr<ID3D11Buffer>& Primitive::getIndexBuffer() const
 const ComPtr<ID3D11Buffer>& Primitive::getVertexBuffer() const
 {
 	return m_sharedData->vertexBuffer;
-}
-
-void Primitive::buildBVH() const
-{
-	if (m_sharedData->vertexData.empty())
-	{
-		return;
-	}
-	m_sharedData->triangles.reserve(m_sharedData->indexData.size() / 3);
-	m_sharedData->bbox = std::make_unique<BBox>();
-
-	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
-	{
-		if (i + 2 < m_sharedData->indexData.size())
-		{
-			Tri tri;
-			tri.p0 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i]].position);
-			tri.p1 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i + 1]].position);
-			tri.p2 = Vec3(m_sharedData->vertexData[m_sharedData->indexData[i + 2]].position);
-			m_sharedData->triangles.push_back(tri);
-
-			m_sharedData->bbox->extend(tri.p0);
-			m_sharedData->bbox->extend(tri.p1);
-			m_sharedData->bbox->extend(tri.p2);
-		}
-	}
-	m_sharedData->bboxes.resize(m_sharedData->triangles.size());
-	m_sharedData->centers.resize(m_sharedData->triangles.size());
-	for (size_t i = 0; i < m_sharedData->triangles.size(); ++i)
-	{
-		m_sharedData->bboxes[i] = m_sharedData->triangles[i].get_bbox();
-		m_sharedData->centers[i] = m_sharedData->triangles[i].get_center();
-	}
-	m_sharedData->bvh = std::make_unique<Bvh>(
-		bvh::v2::DefaultBuilder<Node>::build(m_sharedData->bboxes, m_sharedData->centers));
-	std::printf("Built BVH with %zu nodes for %zu triangles.\n", m_sharedData->bvh->nodes.size()
-	            , m_sharedData->triangles.size());
-}
-
-const Bvh* Primitive::getBVH() const
-{
-	return m_sharedData->bvh.get();
-}
-
-BBox Primitive::getWorldBBox(const glm::mat4& worldMatrix) const
-{
-	if (m_sharedData->vertexData.empty() || !m_sharedData->bbox)
-	{
-		return BBox::make_empty();
-	}
-
-	BBox worldBBox = BBox::make_empty();
-
-	// Transform all 8 corners of the local AABB to get a conservative world AABB
-	Vec3 localMin = m_sharedData->bbox->min;
-	Vec3 localMax = m_sharedData->bbox->max;
-
-	// All 8 corners of the local bbox
-	glm::vec4 corners[8] = {glm::vec4(localMin[0], localMin[1], localMin[2], 1.0f)
-	                        , glm::vec4(localMax[0], localMin[1], localMin[2], 1.0f)
-	                        , glm::vec4(localMin[0], localMax[1], localMin[2], 1.0f)
-	                        , glm::vec4(localMax[0], localMax[1], localMin[2], 1.0f)
-	                        , glm::vec4(localMin[0], localMin[1], localMax[2], 1.0f)
-	                        , glm::vec4(localMax[0], localMin[1], localMax[2], 1.0f)
-	                        , glm::vec4(localMin[0], localMax[1], localMax[2], 1.0f)
-	                        , glm::vec4(localMax[0], localMax[1], localMax[2], 1.0f)
-	                        ,};
-
-	for (auto corner : corners)
-	{
-		glm::vec4 worldCorner = worldMatrix * corner;
-		worldBBox.extend(Vec3(worldCorner.x, worldCorner.y, worldCorner.z));
-	}
-
-	return worldBBox;
-}
-
-const BBox* Primitive::getLocalBBox() const
-{
-	return m_sharedData->bbox.get();
 }
 
 void Primitive::copyFrom(const SceneNode& node)

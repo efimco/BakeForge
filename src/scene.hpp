@@ -8,9 +8,6 @@
 #include <unordered_map>
 #include <wrl.h>
 
-#include <bvh/v2/bvh.h>
-#include <bvh/v2/thread_pool.h>
-
 #include "gltfImporter.hpp"
 #include "sceneNode.hpp"
 #include "sceneNodeHandle.hpp"
@@ -24,11 +21,6 @@ class Camera;
 class Baker;
 class BakerNode;
 
-using Scalar = float;
-using Vec3 = bvh::v2::Vec<Scalar, 3>;
-using BBox = bvh::v2::BBox<Scalar, 3>;
-using Node = bvh::v2::Node<Scalar, 3>;
-using Bvh = bvh::v2::Bvh<Node>;
 using namespace Microsoft::WRL;
 
 class Scene : public SceneNode
@@ -79,11 +71,7 @@ public:
 	void setReadBackID(float readBackID);
 	float getReadBackID();
 
-	void buildSceneBVH();
-	void markSceneBVHDirty();
-	bool isSceneBVHDirty() const;
 	void validateName(SceneNode* node);
-	const Bvh* getSceneBVH() const;
 
 	void importModel(const std::string& filepath, ComPtr<ID3D11Device> device);
 	void updateAsyncImport(); // called each frame
@@ -108,16 +96,11 @@ private:
 	StringUnorderedMap<std::shared_ptr<Material>> m_materials; // path + actual material
 	StringUnorderedMap<uint32_t> m_nodeNames;
 
-	std::unique_ptr<Bvh> m_sceneBVH;
-	std::vector<BBox> m_primBboxes;	 // World-space bboxes for each primitive
-	std::vector<Vec3> m_primCenters; // Centers of each primitive bbox
 
 	bool m_isImporting = false;
 	std::future<AsyncImportResult> m_importFuture;
 	std::shared_ptr<ImportProgress> m_importProgress;
 	ComPtr<ID3D11Device> m_importDevice;
-
-	std::unique_ptr<bvh::v2::ThreadPool> m_threadPool;
 
 	std::unordered_map<SceneNode*, bool> m_selectedNodes;
 
@@ -125,5 +108,4 @@ private:
 	SceneNode* m_activeNode = nullptr;
 
 	bool m_lightsAreDirty = false;
-	bool m_sceneBVHDirty = true;
 };

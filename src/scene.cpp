@@ -1,6 +1,5 @@
 #include "scene.hpp"
 
-#include <chrono>
 #include <consoleapi.h>
 #include <iostream>
 
@@ -327,7 +326,6 @@ void Scene::deleteNode(SceneNode* node)
 	if (dynamic_cast<Primitive*>(node))
 	{
 		m_primitives.erase(nodeHandle);
-		markSceneBVHDirty();
 	}
 	if (dynamic_cast<Light*>(node))
 	{
@@ -375,7 +373,6 @@ SceneNode* Scene::adoptClonedNode(
 	if (auto prim = dynamic_cast<Primitive*>(nodeClone))
 	{
 		m_primitives.emplace(preferredHandle, prim);
-		markSceneBVHDirty();
 	}
 	if (auto light = dynamic_cast<Light*>(nodeClone))
 	{
@@ -405,49 +402,6 @@ Camera* Scene::getActiveCamera() const
 	return m_activeCamera;
 }
 
-void Scene::buildSceneBVH()
-{
-	if (m_primitives.empty())
-	{
-		m_sceneBVH = nullptr;
-		std::cout << "No primitives in the scene to build BVH." << std::endl;
-		m_sceneBVHDirty = false;
-		return;
-	}
-	const auto startTime = std::chrono::high_resolution_clock::now();
-
-	const size_t primCount = m_primitives.size();
-	m_primBboxes.resize(primCount);
-	m_primCenters.resize(primCount);
-
-	int32_t i = 0;
-	for (const auto& [handle, prim] : m_primitives)
-	{
-		glm::mat4 worldMatrix = prim->getWorldMatrix();
-		m_primBboxes[i] = prim->getWorldBBox(worldMatrix);
-		m_primCenters[i] = m_primBboxes[i].get_center();
-		++i;
-	}
-
-	m_sceneBVH = std::make_unique<Bvh>(
-		bvh::v2::DefaultBuilder<Node>::build(*m_threadPool.get(), m_primBboxes, m_primCenters));
-	m_sceneBVHDirty = false;
-	const auto endTime = std::chrono::high_resolution_clock::now();
-	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-	std::cout << "Built scene BVH with " << m_sceneBVH->nodes.size() << " nodes for " << primCount << " primitives in "
-			  << duration << " ms." << std::endl;
-}
-
-void Scene::markSceneBVHDirty()
-{
-	m_sceneBVHDirty = true;
-}
-
-bool Scene::isSceneBVHDirty() const
-{
-	return m_sceneBVHDirty;
-}
-
 
 void Scene::validateName(SceneNode* node)
 {
@@ -462,11 +416,6 @@ void Scene::validateName(SceneNode* node)
 	{
 		getNameCounter(node->name) = 0;
 	}
-}
-
-const Bvh* Scene::getSceneBVH() const
-{
-	return m_sceneBVH.get();
 }
 
 void Scene::importModel(const std::string& filepath, ComPtr<ID3D11Device> device)

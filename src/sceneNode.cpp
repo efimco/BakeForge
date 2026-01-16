@@ -25,7 +25,7 @@ SceneNode::~SceneNode() = default;
 
 void SceneNode::onCommitTransaction(Scene& scene)
 {
-	scene.markSceneBVHDirty();
+	return;
 }
 
 void SceneNode::copyFrom(const SceneNode& node)
@@ -103,10 +103,10 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 
 	child->parent = nullptr;
 	const auto it = std::ranges::find_if(children,
-	                                     [child](const std::unique_ptr<SceneNode>& ptr)
-	                                     {
-		                                     return ptr.get() == child;
-	                                     });
+										 [child](const std::unique_ptr<SceneNode>& ptr)
+										 {
+											 return ptr.get() == child;
+										 });
 	if (it == children.end())
 	{
 		std::cerr << "Error: Child not found in parent's children list." << std::endl;

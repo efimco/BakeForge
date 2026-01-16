@@ -10,7 +10,6 @@
 #include "scene.hpp"
 #include "texture.hpp"
 
-static bool g_buildBVHOnImport = true;
 
 GLTFModel::GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene* scene)
 	: m_device(device)
@@ -29,12 +28,10 @@ GLTFModel::~GLTFModel()
 
 
 std::future<AsyncImportResult> GLTFModel::importModelAsync(
-	const std::string& path
-	, ComPtr<ID3D11Device> device
-	, std::shared_ptr<ImportProgress> progress)
+	const std::string& path, ComPtr<ID3D11Device> device, std::shared_ptr<ImportProgress> progress)
 {
 	return std::async(std::launch::async, [path, device, progress]() -> AsyncImportResult
-	{
+					  {
 		AsyncImportResult result;
 		result.progress = progress;
 		try
@@ -76,14 +73,11 @@ std::future<AsyncImportResult> GLTFModel::importModelAsync(
 			progress->message = e.what();
 		}
 
-		return result;
-	});
+		return result; });
 }
 
 void GLTFModel::finalizeAsyncImport(
-	AsyncImportResult&& importResult
-	, ComPtr<ID3D11DeviceContext> immediateContext
-	, Scene* scene)
+	AsyncImportResult&& importResult, ComPtr<ID3D11DeviceContext> immediateContext, Scene* scene)
 {
 	if (importResult.commandList)
 	{
@@ -104,14 +98,9 @@ void GLTFModel::finalizeAsyncImport(
 	{
 		scene->addMaterial(std::move(mat));
 	}
-
-	scene->markSceneBVHDirty();
 }
 
-GLTFModel::GLTFModel(const std::string& path
-                     , ComPtr<ID3D11Device> device
-                     , ComPtr<ID3D11DeviceContext> deferredContext
-                     , std::shared_ptr<ImportProgress> progress)
+GLTFModel::GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deferredContext, std::shared_ptr<ImportProgress> progress)
 	: m_device(device)
 	, m_deferredContext(deferredContext)
 	, m_scene(nullptr)
@@ -213,8 +202,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
-			if (g_buildBVHOnImport)
-				primitive->buildBVH();
 			if (m_scene)
 			{
 				m_scene->addChild(std::move(primitive));
@@ -308,8 +295,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]),
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]),
 				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]),
-				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3])
-				);
+				static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3]));
 		}
 
 		mat->roughnessValue = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
@@ -341,10 +327,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 	}
 }
 
-void GLTFModel::processPosAttribute(const tinygltf::Model& model
-                                    , const tinygltf::Mesh& mesh
-                                    , const tinygltf::Primitive& primitive
-                                    , std::vector<Position>& verticies)
+void GLTFModel::processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Position>& verticies)
 {
 	if (!primitive.attributes.contains("POSITION"))
 	{
@@ -376,10 +359,7 @@ void GLTFModel::processPosAttribute(const tinygltf::Model& model
 	}
 }
 
-void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model
-                                         , const tinygltf::Mesh& mesh
-                                         , const tinygltf::Primitive& primitive
-                                         , std::vector<TexCoords>& texCoords)
+void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<TexCoords>& texCoords)
 {
 	if (!primitive.attributes.contains("TEXCOORD_0"))
 	{
@@ -409,10 +389,7 @@ void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model
 	}
 }
 
-void GLTFModel::processIndexAttrib(const tinygltf::Model& model
-                                   , const tinygltf::Mesh& mesh
-                                   , const tinygltf::Primitive& primitive
-                                   , std::vector<uint32_t>& indicies)
+void GLTFModel::processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies)
 {
 	if (primitive.indices < 0)
 	{
@@ -443,10 +420,7 @@ void GLTFModel::processIndexAttrib(const tinygltf::Model& model
 	}
 }
 
-void GLTFModel::processNormalsAttribute(const tinygltf::Model& model
-                                        , const tinygltf::Mesh& mesh
-                                        , const tinygltf::Primitive& primitive
-                                        , std::vector<Normals>& normals)
+void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals)
 {
 	if (!primitive.attributes.contains("NORMAL"))
 	{
@@ -495,16 +469,16 @@ Transform GLTFModel::getTransformFromNode(const size_t meshIndex, const tinygltf
 	if (node.translation.size() != 0)
 	{
 		transform.position = glm::vec3(node.translation[0], node.translation[1],
-		                               node.translation[2]);
+									   node.translation[2]);
 	}
 
 	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 	if (node.rotation.size() != 0)
 	{
 		const glm::quat quatRot(static_cast<float>(node.rotation[3]),
-		                        static_cast<float>(node.rotation[0]),
-		                        static_cast<float>(node.rotation[1]),
-		                        static_cast<float>(node.rotation[2]));
+								static_cast<float>(node.rotation[0]),
+								static_cast<float>(node.rotation[1]),
+								static_cast<float>(node.rotation[2]));
 		transform.rotation = glm::eulerAngles(quatRot);
 	}
 

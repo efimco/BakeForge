@@ -655,7 +655,6 @@ void UIManager::processGizmo()
 		}
 		if (dynamic_cast<Primitive*>(activeNode))
 		{
-			m_scene->markSceneBVHDirty();
 		}
 		if (dynamic_cast<Light*>(activeNode))
 		{
@@ -685,7 +684,6 @@ void UIManager::processNodeDeletion()
 		m_commandManager->commitCommand(std::move(removeSceneNode));
 		if (isPrimitive)
 		{
-			m_scene->markSceneBVHDirty();
 		}
 		if (isLight)
 		{

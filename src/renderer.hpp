@@ -20,7 +20,6 @@ class ZPrePass;
 class FSQuad;
 class DeferredPass;
 class CubeMapPass;
-class DebugBVHPass;
 class WorldSpaceUIPass;
 class PreviewGenerator;
 
@@ -66,7 +65,6 @@ private:
 	std::unique_ptr<FSQuad> m_fsquad;
 	std::unique_ptr<DeferredPass> m_deferredPass;
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
-	std::unique_ptr<DebugBVHPass> m_debugBVHPass;
 	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
 	std::unique_ptr<PreviewGenerator> m_previewGenerator;
 
