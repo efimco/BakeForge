@@ -1,7 +1,6 @@
-#include <memory>
-#include "previewGenerator.hpp"
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "renderer.hpp"
+#include <memory>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include <iostream>
 
@@ -65,7 +64,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
 	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
-												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
+		"..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);

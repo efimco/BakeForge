@@ -50,8 +50,8 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
-	viewport.Width = AppConfig::getViewportWidth();
-	viewport.Height = AppConfig::getViewportHeight();
+	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
+	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	m_context->RSSetViewports(1, &viewport);

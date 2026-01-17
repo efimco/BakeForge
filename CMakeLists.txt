@@ -59,7 +59,7 @@ target_include_directories(TimeToDX
 )
 set_target_properties(TimeToDX PROPERTIES
     WIN32_EXECUTABLE TRUE
-    VS_DEBUGGER_WORKING_DIRECTORY "$(TARGET_FILE_DIR:TimeToDX)"
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 # Suppress warnings for third-party includes

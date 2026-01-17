@@ -1,6 +1,7 @@
 #include "primitive.hpp"
 
 #include "assert.h"
+#include "primitiveData.hpp"
 
 Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
 	: SceneNode(nodeName)
@@ -90,7 +91,24 @@ std::unique_ptr<SceneNode> Primitive::clone() const
 	return primitive;
 }
 
-void Primitive::setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData)
+void Primitive::fillTriangles()
 {
-	m_sharedData = sharedData;
+
+	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
+	{
+		uint32_t& i0 = m_sharedData->indexData[i];
+		uint32_t& i1 = m_sharedData->indexData[i + 1];
+		uint32_t& i2 = m_sharedData->indexData[i + 2];
+
+		InterleavedData& v0 = m_sharedData->vertexData[i0];
+		InterleavedData& v1 = m_sharedData->vertexData[i1];
+		InterleavedData& v2 = m_sharedData->vertexData[i2];
+
+		Triangle tri(v0, v1, v2);
+		tri.center = (glm::vec3(v0.position) + glm::vec3(v1.position) + glm::vec3(v2.position)) / 3.0f;
+		tri.normal = glm::normalize(glm::vec3(v0.normal.x, v0.normal.y, v0.normal.z) +
+									glm::vec3(v1.normal.x, v1.normal.y, v1.normal.z) +
+									glm::vec3(v2.normal.x, v2.normal.y, v2.normal.z));
+		m_sharedData->triangles.push_back(tri);
+	}
 }

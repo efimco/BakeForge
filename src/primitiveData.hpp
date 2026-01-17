@@ -1,27 +1,23 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <bvh/v2/vec.h>
-
-using Vec3 = bvh::v2::Vec<float, 3>;
+#include <glm/glm.hpp>
 
 struct Position
 {
 	float x, y, z;
 
-	explicit operator Vec3() const
-	{
-		return Vec3{x, y, z};
-	}
 
 	Position() = default;
-
 	Position(const float x_, const float y_, const float z_)
 		: x(x_)
 		, y(y_)
-		, z(z_)
+		, z(z_) {};
+
+	operator glm::vec3() const
 	{
-	};
+		return glm::vec3(x, y, z);
+	}
 };
 
 struct TexCoords
@@ -32,38 +28,42 @@ struct TexCoords
 
 	TexCoords(const float u_, const float v_)
 		: u(u_)
-		, v(v_)
+		, v(v_) {};
+};
+
+struct Normal
+{
+	float x, y, z;
+	Normal() = default;
+
+	Normal(const float nx_, const float ny_, float nz_) : x(nx_)
+														, y(ny_)
+														, z(nz_) {};
+	operator glm::vec3() const
 	{
-	};
+		return glm::vec3(x, y, z);
+	}
 };
 
-struct Normals
-{
-	float nx, ny, nz;
-	Normals() = default;
-
-	Normals(const float nx_, const float ny_, float nz_);;
-};
-
-inline Normals::Normals(const float nx_, const float ny_, const float nz_)
-	: nx(nx_)
-	, ny(ny_)
-	, nz(nz_)
-{
-}
 
 struct InterleavedData
 {
 	Position position;
 	TexCoords texCoords;
-	Normals normals;
+	Normal normal;
 	InterleavedData() = default;
 
-	InterleavedData(const Position position_, const TexCoords texCoords_, const Normals normals_)
+	InterleavedData(const Position position_, const TexCoords texCoords_, const Normal normals_)
 		: position(position_)
 		, texCoords(texCoords_)
-		, normals(normals_)
-	{
-	};
+		, normal(normals_) {};
+};
 
+struct Triangle
+{
+	using Vertex = InterleavedData;
+
+	Vertex v0, v1, v2;
+	glm::vec3 normal;
+	glm::vec3 center;
 };

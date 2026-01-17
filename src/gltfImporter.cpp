@@ -177,7 +177,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 		{
 			std::vector<Position> posBuffer;
 			std::vector<TexCoords> texCoordsBuffer;
-			std::vector<Normals> normalBuffer;
+			std::vector<Normal> normalBuffer;
 			std::vector<uint32_t> indices;
 
 			processPosAttribute(model, mesh, gltfPrimitive, posBuffer);
@@ -191,14 +191,17 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 				InterleavedData interData{};
 				interData.position = posBuffer[i];
 				interData.texCoords = i < texCoordsBuffer.size() ? texCoordsBuffer[i] : TexCoords(0, 0);
-				interData.normals = i < normalBuffer.size() ? normalBuffer[i] : Normals(0, 1, 0);
+				interData.normal = i < normalBuffer.size() ? normalBuffer[i] : Normal(0, 1, 0);
 				vertexData.push_back(interData);
 			}
 			size_t meshIndex = &mesh - &model.meshes[0];
 			Transform transform = getTransformFromNode(meshIndex, model);
 			auto primitive = std::make_unique<Primitive>(m_device);
+
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
+			primitive->fillTriangles();
+
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
@@ -420,7 +423,10 @@ void GLTFModel::processIndexAttrib(const tinygltf::Model& model, const tinygltf:
 	}
 }
 
-void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals)
+void GLTFModel::processNormalsAttribute(const tinygltf::Model& model,
+										const tinygltf::Mesh& mesh,
+										const tinygltf::Primitive& primitive,
+										std::vector<Normal>& normals)
 {
 	if (!primitive.attributes.contains("NORMAL"))
 	{
@@ -438,15 +444,15 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model, const tiny
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
-		Normals normal(-INFINITY, -INFINITY, -INFINITY);
+		Normal normal(-INFINITY, -INFINITY, -INFINITY);
 		for (int j = 0; j < components; j++)
 		{
 			if (j == 0)
-				normal.nx = floatPtr[i * components + j];
+				normal.x = floatPtr[i * components + j];
 			else if (j == 1)
-				normal.ny = floatPtr[i * components + j];
+				normal.y = floatPtr[i * components + j];
 			else if (j == 2)
-				normal.nz = floatPtr[i * components + j];
+				normal.z = floatPtr[i * components + j];
 		}
 		normals.push_back(normal);
 	}

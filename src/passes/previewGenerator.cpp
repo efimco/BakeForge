@@ -17,11 +17,11 @@
 
 using namespace Microsoft::WRL;
 
-struct Vertex
+struct SphereVertex
 {
 	Position pos;
 	TexCoords texCoords;
-	Normals normals;
+	Normal normal;
 };
 
 struct alignas(16) PreviewGenCBj
@@ -36,7 +36,7 @@ static constexpr int SPHERE_RINGS = 32;
 static constexpr uint32_t SPHERE_VERTEX_COUNT = (SPHERE_RINGS + 1) * (SPHERE_SEGMENTS + 1);
 static constexpr uint32_t SPHERE_INDEX_COUNT = SPHERE_RINGS * SPHERE_SEGMENTS * 6;
 
-static Vertex GeneratedSphereVertices[SPHERE_VERTEX_COUNT];
+static SphereVertex GeneratedSphereVertices[SPHERE_VERTEX_COUNT];
 static uint32_t GeneratedSphereIndices[SPHERE_INDEX_COUNT];
 
 
@@ -110,7 +110,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		m_context->RSSetState(m_rasterizerState.Get());
 		m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-		const uint32_t stride = sizeof(Vertex);
+		const uint32_t stride = sizeof(SphereVertex);
 		const uint32_t offset = 0;
 		const float clearColor[4] = {0.2f, 0.2f, 0.2f, 0.2f};
 		m_context->ClearRenderTargetView(mat->preview.rtv_preview.Get(), clearColor);
@@ -181,7 +181,7 @@ void PreviewGenerator::InitializeSphere()
 			GeneratedSphereVertices[index].texCoords = {static_cast<float>(seg) / static_cast<float>(SPHERE_SEGMENTS),
 														static_cast<float>(ring) / static_cast<float>(SPHERE_RINGS)};
 			// For a unit sphere centered at origin, the normal is the same as the position
-			GeneratedSphereVertices[index].normals = {x, y, z};
+			GeneratedSphereVertices[index].normal = {x, y, z};
 		}
 	}
 

@@ -100,7 +100,7 @@ private:
 	static void processNormalsAttribute(const tinygltf::Model& model,
 										const tinygltf::Mesh& mesh,
 										const tinygltf::Primitive& primitive,
-										std::vector<Normals>& normals);
+										std::vector<Normal>& normal);
 
 	static Transform getTransformFromNode(size_t meshIndex, const tinygltf::Model& model);
 	ComPtr<ID3D11Device> m_device;

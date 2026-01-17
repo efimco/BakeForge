@@ -1,0 +1,32 @@
+[
+	{
+		"label": "CMake: Configure",
+		"command": "cmake --preset main",
+		"working_directory": "${workspace_root}",
+		"use_new_terminal": false
+	},
+	{
+		"label": "CMake: Build Debug",
+		"command": "cmake --build --preset main-debug",
+		"working_directory": "${workspace_root}",
+		"use_new_terminal": false
+	},
+	{
+		"label": "CMake: Build Release",
+		"command": "cmake --build --preset main-release",
+		"working_directory": "${workspace_root}",
+		"use_new_terminal": false
+	},
+	{
+		"label": "CMake: Clean",
+		"command": "cmake --build build --target clean",
+		"working_directory": "${workspace_root}",
+		"use_new_terminal": false
+	},
+	{
+		"label": "Open Solution",
+		"command": "start build/TimeToDX.sln",
+		"working_directory": "${workspace_root}",
+		"use_new_terminal": false
+	}
+]

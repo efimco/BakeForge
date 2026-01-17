@@ -5,16 +5,17 @@
 #include <d3d11_4.h>
 #include <wrl.h>
 
-#include "primitiveData.hpp"
 #include "sceneNode.hpp"
-
 struct Material;
 
 using namespace Microsoft::WRL;
 
+struct Triangle;
+struct InterleavedData;
 
 struct SharedPrimitiveData
 {
+	std::vector<Triangle> triangles;
 	std::vector<InterleavedData> vertexData;
 	std::vector<uint32_t> indexData;
 	ComPtr<ID3D11Buffer> indexBuffer;
@@ -33,6 +34,7 @@ public:
 
 	void setVertexData(std::vector<InterleavedData>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
+	void fillTriangles();
 
 	const std::vector<uint32_t>& getIndexData() const;
 	const ComPtr<ID3D11Buffer>& getIndexBuffer() const;
@@ -41,7 +43,6 @@ public:
 	void copyFrom(const SceneNode& node) override;
 	bool differsFrom(const SceneNode& node) const override;
 	std::unique_ptr<SceneNode> clone() const override;
-	void setSharedPrimitiveData(std::shared_ptr<SharedPrimitiveData> sharedData);
 
 	std::shared_ptr<Material> material;
 
