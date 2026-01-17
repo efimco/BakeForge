@@ -1,8 +1,7 @@
 #include "window.hpp"
 
-#include <iostream>
-#include "imgui.h"
 #include "appConfig.hpp"
+#include "imgui.h"
 
 Window::Window(HINSTANCE hInstance)
 	: m_hWindow(NULL)
@@ -28,8 +27,7 @@ Window::Window(HINSTANCE hInstance)
 		nullptr,
 		nullptr,
 		hInstance,
-		nullptr
-		);
+		nullptr);
 
 	if (m_hWindow != nullptr)
 	{
@@ -52,44 +50,44 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	switch (uMsg)
 	{
 	case WM_DESTROY:
-	{
-		PostQuitMessage(0);
-		return 0;
-	}
+		{
+			PostQuitMessage(0);
+			return 0;
+		}
 	case WM_SIZE:
-	{
-		const int width = LOWORD(lParam);
-		const int height = HIWORD(lParam);
-		if (wParam == SIZE_MINIMIZED)
 		{
-			AppConfig::setWindowMinimized(true);
+			const int width = LOWORD(lParam);
+			const int height = HIWORD(lParam);
+			if (wParam == SIZE_MINIMIZED)
+			{
+				AppConfig::setWindowMinimized(true);
+			}
+			else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
+			{
+				AppConfig::setWindowMinimized(false);
+				AppConfig::setWindowHeight(height);
+				AppConfig::setWindowWidth(width);
+				AppConfig::setNeedsResize(true);
+			}
+			break;
 		}
-		else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
-		{
-			AppConfig::setWindowMinimized(false);
-			AppConfig::setWindowHeight(height);
-			AppConfig::setWindowWidth(width);
-			AppConfig::setNeedsResize(true);
-		}
-		break;
-	}
 
 	case WM_PAINT:
-	{
-		PAINTSTRUCT paintStruct = {};
-		BeginPaint(hwnd, &paintStruct);
-		EndPaint(hwnd, &paintStruct);
-		break;
-	}
-	case WM_CLOSE:
-	{
-		if (MessageBoxW(hwnd, L"Really quit?", L"My application", MB_OKCANCEL) == IDOK)
 		{
-			DestroyWindow(hwnd);
+			PAINTSTRUCT paintStruct = {};
+			BeginPaint(hwnd, &paintStruct);
+			EndPaint(hwnd, &paintStruct);
+			break;
 		}
-		return 0;
-	}
-	default: ;
+	case WM_CLOSE:
+		{
+			if (MessageBoxW(hwnd, L"Really quit?", L"My application", MB_OKCANCEL) == IDOK)
+			{
+				DestroyWindow(hwnd);
+			}
+			return 0;
+		}
+	default:;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

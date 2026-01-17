@@ -56,8 +56,7 @@ bool Light::differsFrom(const SceneNode& node) const
 	{
 		if (const auto lightNode = dynamic_cast<const Light*>(&node))
 		{
-			return
-				intensity != lightNode->intensity ||
+			return intensity != lightNode->intensity ||
 				color != lightNode->color ||
 				direction != lightNode->direction ||
 				attenuation != lightNode->attenuation ||

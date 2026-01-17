@@ -1,7 +1,5 @@
 #include "inputEventsHandler.hpp"
 
-#include <iostream>
-
 static bool isMouseInViewport = false;
 static bool isLMouseClicked = false;
 static bool isMMouseClicked = false;

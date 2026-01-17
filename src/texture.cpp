@@ -62,7 +62,7 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 		device->GetImmediateContext(&context);
 	}
 	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(),
-	                           image.width * image.component, 0);
+							   image.width * image.component, 0);
 
 	// Create Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

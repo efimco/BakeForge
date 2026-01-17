@@ -1,22 +1,24 @@
 #pragma once
 enum MouseButtons
 {
-	LEFT_BUTTON, MIDDLE_BUTTON, RIGHT_BUTTON
+	LEFT_BUTTON,
+	MIDDLE_BUTTON,
+	RIGHT_BUTTON
 };
 
 enum class KeyButtons
 {
-	KEY_W
-	, KEY_A
-	, KEY_S
-	, KEY_D
-	, KEY_Q
-	, KEY_E
-	, KEY_F
-	, KEY_LSHIFT
-	, KEY_UNKNOWNs
-	, KEY_F12
-	, KEY_F11
+	KEY_W,
+	KEY_A,
+	KEY_S,
+	KEY_D,
+	KEY_Q,
+	KEY_E,
+	KEY_F,
+	KEY_LSHIFT,
+	KEY_UNKNOWNs,
+	KEY_F12,
+	KEY_F11
 };
 
 namespace InputEvents
@@ -33,4 +35,4 @@ namespace InputEvents
 	void getMouseDelta(float& deltaX, float& deltaY);
 	float getMouseWheel();
 	float setMouseWheel(float wheel);
-}
+} // namespace InputEvents

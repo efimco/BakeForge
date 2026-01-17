@@ -16,9 +16,9 @@ ShaderManager::ShaderManager(ComPtr<ID3D11Device> device)
 	m_device = device;
 }
 
-bool ShaderManager::LoadVertexShader(const std::string& name
-                                     , const std::wstring& filename
-                                     , const std::string& entryPoint)
+bool ShaderManager::LoadVertexShader(const std::string& name,
+									 const std::wstring& filename,
+									 const std::string& entryPoint)
 {
 	if (m_vertexShaders.contains(name))
 	{
@@ -43,9 +43,7 @@ bool ShaderManager::LoadVertexShader(const std::string& name
 	return false;
 }
 
-bool ShaderManager::LoadPixelShader(const std::string& name
-                                    , const std::wstring& filename
-                                    , const std::string& entryPoint)
+bool ShaderManager::LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
 {
 	if (m_pixelShaders.contains(name))
 	{
@@ -71,9 +69,7 @@ bool ShaderManager::LoadPixelShader(const std::string& name
 	return false;
 }
 
-bool ShaderManager::LoadComputeShader(const std::string& name
-                                      , const std::wstring& filename
-                                      , const std::string& entryPoint)
+bool ShaderManager::LoadComputeShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint)
 {
 	if (m_computeShaders.contains(name))
 	{
@@ -225,15 +221,14 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 		flags,
 		0,
 		&shaderBlob,
-		&errorBlob
-		);
+		&errorBlob);
 
 	if (FAILED(hr))
 	{
 		if (errorBlob)
 		{
 			std::cout << "Shader compilation error:\n"
-				<< static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
+					  << static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
 		}
 		return false;
 	}
@@ -244,8 +239,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 			shaderBlob->GetBufferPointer(),
 			shaderBlob->GetBufferSize(),
 			nullptr,
-			&info.vertexShader
-			);
+			&info.vertexShader);
 	}
 	else if (shaderType == PIXEL)
 	{
@@ -253,8 +247,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 			shaderBlob->GetBufferPointer(),
 			shaderBlob->GetBufferSize(),
 			nullptr,
-			&info.pixelShader
-			);
+			&info.pixelShader);
 	}
 	else if (shaderType == COMPUTE)
 	{
@@ -262,8 +255,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 			shaderBlob->GetBufferPointer(),
 			shaderBlob->GetBufferSize(),
 			nullptr,
-			&info.computeShader
-			);
+			&info.computeShader);
 	}
 
 	if (SUCCEEDED(hr))

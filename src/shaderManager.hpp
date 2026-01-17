@@ -12,7 +12,9 @@ using namespace Microsoft::WRL;
 
 enum ShaderType
 {
-	COMPUTE, VERTEX, PIXEL
+	COMPUTE,
+	VERTEX,
+	PIXEL
 };
 
 class ShaderManager

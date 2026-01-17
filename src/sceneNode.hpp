@@ -17,7 +17,7 @@ public:
 	std::string name;
 	std::list<std::unique_ptr<SceneNode>> children;
 	SceneNode* parent = nullptr;
-bool movable = true;
+	bool movable = true;
 
 	explicit SceneNode(std::string_view nodeName = "SceneNode");
 	SceneNode(const SceneNode&) = delete;

@@ -10,9 +10,6 @@
 #include "imgui.h"
 #include "rtvCollector.hpp"
 
-#undef min
-#undef max
-
 class Scene;
 class SceneNode;
 class Camera;
