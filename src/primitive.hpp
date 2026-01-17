@@ -1,5 +1,7 @@
 #pragma once
 
+#include <d3d11.h>
+#include <d3d11shader.h>
 #include <vector>
 
 #include <d3d11_4.h>
@@ -11,15 +13,17 @@ struct Material;
 using namespace Microsoft::WRL;
 
 struct Triangle;
-struct InterleavedData;
+struct Vertex;
 
 struct SharedPrimitiveData
 {
 	std::vector<Triangle> triangles;
-	std::vector<InterleavedData> vertexData;
+	std::vector<Vertex> vertexData;
 	std::vector<uint32_t> indexData;
 	ComPtr<ID3D11Buffer> indexBuffer;
 	ComPtr<ID3D11Buffer> vertexBuffer;
+	ComPtr<ID3D11Buffer> structuredBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_structuredBuffer;
 };
 
 class Primitive : public SceneNode
@@ -32,9 +36,11 @@ public:
 	Primitive& operator=(const Primitive&) = delete;
 	Primitive& operator=(Primitive&&) = delete;
 
-	void setVertexData(std::vector<InterleavedData>&& vertexData) const;
+	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
 	void fillTriangles();
+
+	ComPtr<ID3D11ShaderResourceView> getTrianglesStructuredBufferSRV();
 
 	const std::vector<uint32_t>& getIndexData() const;
 	const ComPtr<ID3D11Buffer>& getIndexBuffer() const;

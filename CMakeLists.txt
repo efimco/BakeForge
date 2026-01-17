@@ -8,61 +8,65 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_definitions(-DNOMINMAX)
 
 file(GLOB SOURCE_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
 
 
 file(GLOB_RECURSE INCLUDES
-    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/*.cpp"
 )
 
 file(GLOB SHADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl")
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl")
 
 set_source_files_properties(${SHADERS}
-    PROPERTIES VS_TOOL_OVERRIDE "None")
+				PROPERTIES VS_TOOL_OVERRIDE "None")
 file(GLOB PASSES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.hpp")
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.hpp")
 
 file(GLOB CONTENT_RESOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/res/*.*")
+				"${CMAKE_CURRENT_SOURCE_DIR}/res/*.*")
 
 file(GLOB COMMANDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.hpp")
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.hpp")
+
+if(MSVC)
+	add_compile_options(/MP)
+	# Faster debug info format
+	add_compile_options("$<$<CONFIG:Debug>:/Z7>")
+endif()
 
 source_group(TREE "${CMAKE_SOURCE_DIR}" FILES
-    ${PASSES}
-    ${SHADERS}
-    ${COMMANDS}
-    ${SOURCE_FILES}
-    ${INCLUDES}
-    ${CONTENT_RESOURCES})
+				${PASSES}
+				${COMMANDS}
+				${SOURCE_FILES}
+				${INCLUDES}
+				${CONTENT_RESOURCES})
 
 add_executable(TimeToDX
-    ${SOURCE_FILES} ${INCLUDES}
-    ${SHADERS} ${PASSES}
-    ${COMMANDS} ${CONTENT_RESOURCES})
+				${SOURCE_FILES} ${INCLUDES} ${PASSES}
+				${COMMANDS} ${CONTENT_RESOURCES})
 
 target_link_libraries(TimeToDX
-    d3d11
-    dxgi
-    d3dcompiler
+				d3d11
+				dxgi
+				d3dcompiler
 )
 target_include_directories(TimeToDX
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/passes
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
+				PRIVATE
+				${CMAKE_CURRENT_SOURCE_DIR}/src/
+				${CMAKE_CURRENT_SOURCE_DIR}/src/passes
+				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
+				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
 )
 set_target_properties(TimeToDX PROPERTIES
-    WIN32_EXECUTABLE TRUE
-    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+				WIN32_EXECUTABLE TRUE
+				VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 # Suppress warnings for third-party includes
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(TimeToDX PRIVATE -Wno-ignored-attributes)
+	target_compile_options(TimeToDX PRIVATE -Wno-ignored-attributes)
 endif()

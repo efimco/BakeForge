@@ -20,7 +20,7 @@ struct Light
 	float intensity;
 	float3 color;
 	float3 direction;
-	float padding1; 
+	float padding1;
 	float2 spotParams;
 	float2 padding2;
 	float3 attenuations;
@@ -49,7 +49,7 @@ struct VS_OUT
 struct PS_OUT
 {
 	float4 color : SV_TARGET0;
-	uint objectID : SV_TARGET1;
+	float objectID : SV_TARGET1;
 };
 
 
@@ -72,7 +72,7 @@ PS_OUT PS(VS_OUT input)
 {
 	PS_OUT output;
 	float4 iconColor = lightIcon.Sample(samplerState, input.uv);
-	output.objectID = lights[input.iid].objectID;
+	output.objectID = float(lights[input.iid].objectID);
 	if (iconColor.a < 0.1f)
 	{
 		discard;

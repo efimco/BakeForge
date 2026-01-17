@@ -20,6 +20,7 @@
 #include "passes/objectPicker.hpp"
 #include "passes/pbrCubeMapPass.hpp"
 #include "passes/previewGenerator.hpp"
+#include "passes/rayTracePass.hpp"
 #include "passes/wordSpaceUIPass.hpp"
 
 
@@ -67,6 +68,8 @@ Renderer::Renderer(const HWND& hwnd)
 												  "..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
 	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
+	m_rayTracePass = std::make_unique<RayTracePass>(m_device->getDevice(), m_device->getContext());
+
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
 }
@@ -92,6 +95,7 @@ void Renderer::draw()
 		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
 		m_cubeMapPass->createOrResize();
+		m_rayTracePass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
 
@@ -135,6 +139,8 @@ void Renderer::draw()
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
+
+	m_rayTracePass->draw(m_scene.get());
 
 	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());

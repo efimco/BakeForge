@@ -46,14 +46,14 @@ struct Normal
 };
 
 
-struct InterleavedData
+struct Vertex
 {
 	Position position;
 	TexCoords texCoords;
 	Normal normal;
-	InterleavedData() = default;
+	Vertex() = default;
 
-	InterleavedData(const Position position_, const TexCoords texCoords_, const Normal normals_)
+	Vertex(const Position position_, const TexCoords texCoords_, const Normal normals_)
 		: position(position_)
 		, texCoords(texCoords_)
 		, normal(normals_) {};
@@ -61,9 +61,9 @@ struct InterleavedData
 
 struct Triangle
 {
-	using Vertex = InterleavedData;
-
-	Vertex v0, v1, v2;
+	Triangle(const Position p0, const Position p1, const Position p2)
+		: v0(p0), v1(p1), v2(p2) {};
+	Position v0, v1, v2;
 	glm::vec3 normal;
 	glm::vec3 center;
 };

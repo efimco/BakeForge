@@ -1,5 +1,7 @@
 #include "wordSpaceUIPass.hpp"
+
 #include <memory>
+
 #include "appConfig.hpp"
 #include "basePass.hpp"
 #include "light.hpp"

@@ -65,7 +65,7 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 	m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
-	static const UINT stride = sizeof(InterleavedData);
+	static const UINT stride = sizeof(Vertex);
 	static const UINT offset = 0;
 
 	for (auto& [handle, prim] : scene->getPrimitives())

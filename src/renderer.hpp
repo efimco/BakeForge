@@ -22,6 +22,7 @@ class DeferredPass;
 class CubeMapPass;
 class WorldSpaceUIPass;
 class PreviewGenerator;
+class RayTracePass;
 
 using namespace Microsoft::WRL;
 
@@ -67,6 +68,7 @@ private:
 	std::unique_ptr<CubeMapPass> m_cubeMapPass;
 	std::unique_ptr<WorldSpaceUIPass> m_worldSpaceUIPass;
 	std::unique_ptr<PreviewGenerator> m_previewGenerator;
+	std::unique_ptr<RayTracePass> m_rayTracePass;
 
 	RENDERDOC_API_1_1_2* m_rdocAPI = nullptr;
 };

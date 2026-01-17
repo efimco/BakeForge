@@ -184,11 +184,11 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			processTexCoordAttribute(model, mesh, gltfPrimitive, texCoordsBuffer);
 			processIndexAttrib(model, mesh, gltfPrimitive, indices);
 			processNormalsAttribute(model, mesh, gltfPrimitive, normalBuffer);
-			std::vector<InterleavedData> vertexData;
+			std::vector<Vertex> vertexData;
 			const auto numVert = posBuffer.size();
 			for (int i = 0; i < numVert; i++)
 			{
-				InterleavedData interData{};
+				Vertex interData{};
 				interData.position = posBuffer[i];
 				interData.texCoords = i < texCoordsBuffer.size() ? texCoordsBuffer[i] : TexCoords(0, 0);
 				interData.normal = i < normalBuffer.size() ? normalBuffer[i] : Normal(0, 1, 0);
