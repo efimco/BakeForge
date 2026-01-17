@@ -17,13 +17,14 @@ struct Vertex;
 
 struct SharedPrimitiveData
 {
-	std::vector<Triangle> triangles;
 	std::vector<Vertex> vertexData;
 	std::vector<uint32_t> indexData;
 	ComPtr<ID3D11Buffer> indexBuffer;
 	ComPtr<ID3D11Buffer> vertexBuffer;
-	ComPtr<ID3D11Buffer> structuredBuffer;
-	ComPtr<ID3D11ShaderResourceView> srv_structuredBuffer;
+	ComPtr<ID3D11Buffer> indexStructuredBuffer;
+	ComPtr<ID3D11Buffer> vertexStructuredBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_indexStructuredBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_vertexStructuredBuffer;
 };
 
 class Primitive : public SceneNode
@@ -38,13 +39,13 @@ public:
 
 	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
-	void fillTriangles();
-
-	ComPtr<ID3D11ShaderResourceView> getTrianglesStructuredBufferSRV();
 
 	const std::vector<uint32_t>& getIndexData() const;
-	const ComPtr<ID3D11Buffer>& getIndexBuffer() const;
-	const ComPtr<ID3D11Buffer>& getVertexBuffer() const;
+	ComPtr<ID3D11Buffer> getIndexBuffer() const;
+	ComPtr<ID3D11Buffer> getVertexBuffer() const;
+	ComPtr<ID3D11ShaderResourceView> getVertexStructuredBufferSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getIndexStructuredBufferSRV() const;
+
 
 	void copyFrom(const SceneNode& node) override;
 	bool differsFrom(const SceneNode& node) const override;

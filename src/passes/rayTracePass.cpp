@@ -10,10 +10,22 @@
 struct alignas(16) RayTraceConstantBuffer
 {
 	glm::uvec2 demensions;
-	glm::vec2 padding;
-	glm::vec3 cameraPosition;
-	float padding2;
+	glm::vec2 padding = glm::vec2(0, 0);
+
+	glm::vec3 camPosition;
+	float padding2 = 0;
+
+	glm::vec3 camForward;
+	float padding3 = 0;
+
+	glm::vec3 camRight;
+	float padding4 = 0;
+
+	glm::vec3 camUp;
+
+	float cameraFOV;
 };
+
 
 RayTracePass::RayTracePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
@@ -46,20 +58,21 @@ void RayTracePass::draw(Scene* scene)
 
 	if (scene->getPrimitiveCount() == 0)
 		return;
-	if (!scene->getActiveNode())
-		return;
-	auto prim = dynamic_cast<Primitive*>(scene->getActiveNode());
-	if (!prim)
-		return;
-	auto trianglesBufferSRV = prim->getTrianglesStructuredBufferSRV();
-	m_context->CSSetShader(m_shaderManager->getComputeShader("rayTrace"), nullptr, 0);
-	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
-	m_context->CSSetShaderResources(0, 1, trianglesBufferSRV.GetAddressOf());
-	m_context->CSSetUnorderedAccessViews(0, 1, m_uav.GetAddressOf(), nullptr);
-	m_context->Dispatch(AppConfig::getViewportWidth() / 8, AppConfig::getViewportHeight() / 8, 1);
-	m_context->CSSetShader(nullptr, nullptr, 0);
-	unbindShaderResources(0, 1);
-	unbindComputeUAVs(0, 1);
+
+	for (const auto& [handle, prim] : scene->getPrimitives())
+	{
+		auto vertexBufferSRV = prim->getVertexStructuredBufferSRV();
+		auto indexBufferSRV = prim->getIndexStructuredBufferSRV();
+		ID3D11ShaderResourceView* srvs[] = {vertexBufferSRV.Get(), indexBufferSRV.Get()};
+		m_context->CSSetShader(m_shaderManager->getComputeShader("rayTrace"), nullptr, 0);
+		m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+		m_context->CSSetShaderResources(0, 2, srvs);
+		m_context->CSSetUnorderedAccessViews(0, 1, m_uav.GetAddressOf(), nullptr);
+		m_context->Dispatch(AppConfig::getViewportWidth() / 16, AppConfig::getViewportHeight() / 16, 1);
+		m_context->CSSetShader(nullptr, nullptr, 0);
+		unbindShaderResources(0, 2);
+		unbindComputeUAVs(0, 1);
+	}
 }
 
 void RayTracePass::update(Scene* scene)
@@ -69,9 +82,13 @@ void RayTracePass::update(Scene* scene)
 	{
 		RayTraceConstantBuffer* constantBuffer = static_cast<RayTraceConstantBuffer*>(mappedResource.pData);
 		constantBuffer->demensions = glm::uvec2(AppConfig::getViewportWidth(), AppConfig::getViewportHeight());
-		constantBuffer->padding = glm::vec2(0.0f);
-		constantBuffer->cameraPosition = scene->getActiveCamera()->transform.position;
-		constantBuffer->padding2 = 0.0f;
+
+		constantBuffer->camPosition = scene->getActiveCamera()->transform.position;
+		constantBuffer->cameraFOV = scene->getActiveCamera()->fov;
+		constantBuffer->camForward = scene->getActiveCamera()->front;
+		constantBuffer->camRight = scene->getActiveCamera()->right;
+		constantBuffer->camUp = scene->getActiveCamera()->up;
+
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }

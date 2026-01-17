@@ -200,7 +200,6 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
-			primitive->fillTriangles();
 
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.16.0)
 project(TimeToDX VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -13,14 +13,9 @@ file(GLOB SOURCE_FILES
 
 
 file(GLOB_RECURSE INCLUDES
-				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui/*.cpp"
 )
 
-file(GLOB SHADERS
-				"${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl")
-
-set_source_files_properties(${SHADERS}
-				PROPERTIES VS_TOOL_OVERRIDE "None")
 file(GLOB PASSES
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.cpp"
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.hpp")
@@ -38,21 +33,18 @@ if(MSVC)
 	add_compile_options("$<$<CONFIG:Debug>:/Z7>")
 endif()
 
-source_group(TREE "${CMAKE_SOURCE_DIR}" FILES
-				${PASSES}
-				${COMMANDS}
-				${SOURCE_FILES}
-				${INCLUDES}
-				${CONTENT_RESOURCES})
+add_library(ThirdParty STATIC ${INCLUDES})
 
 add_executable(TimeToDX
-				${SOURCE_FILES} ${INCLUDES} ${PASSES}
-				${COMMANDS} ${CONTENT_RESOURCES})
+				${SOURCE_FILES}
+				${PASSES}
+				${COMMANDS})
 
 target_link_libraries(TimeToDX
 				d3d11
 				dxgi
 				d3dcompiler
+				ThirdParty
 )
 target_include_directories(TimeToDX
 				PRIVATE
@@ -65,8 +57,3 @@ set_target_properties(TimeToDX PROPERTIES
 				WIN32_EXECUTABLE TRUE
 				VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
-
-# Suppress warnings for third-party includes
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	target_compile_options(TimeToDX PRIVATE -Wno-ignored-attributes)
-endif()

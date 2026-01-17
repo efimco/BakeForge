@@ -57,7 +57,6 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene->addChild(std::move(pointLight));
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
-	// m_scene->buildSceneBVH();
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());

@@ -1,17 +1,47 @@
+#include "constants.hlsl"
+
+
+struct Vertex
+{
+	float3 position;
+	float3 normal;
+	float2 uv;
+};
+
+StructuredBuffer<Vertex> gVertices : register(t0);
+StructuredBuffer<uint3> gIndices : register(t1);
+
+
 cbuffer cb : register(b0)
 {
 	uint2 demensions;
 	float2 padding;
-	float3 cameraPosition;
+
+	float3 camPosition;
 	float padding2;
+
+	float3 camForward;
+	float padding3;
+
+	float3 camRight;
+	float padding4;
+
+	float3 camUp;
+
+	float camFOV;
 }
 
 struct Tri
 {
 	float3 v0, v1, v2;
 	float3 normal;
-	float3 center;
 };
+
+float deg2Rad(float deg)
+{
+	float rad = deg * (PI / 180.0f);
+	return rad;
+}
 
 StructuredBuffer<Tri> tris : register(t0);
 
@@ -21,6 +51,8 @@ struct Ray
 	float3 dir;
 };
 
+
+// Möller–Trumbore intersection algorithm
 bool IntersectTri(Ray ray, Tri tri, out float t)
 {
 		t = 0.0f;
@@ -53,24 +85,69 @@ bool IntersectTri(Ray ray, Tri tri, out float t)
 
 RWTexture2D<float4> outputColor : register(u0);
 
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void CS(uint2 tid : SV_DispatchThreadID)
 {
-	float2 uv = (float2(tid) + 0.5f) / demensions;
-	float3 color = float3(0.0f, 0.0f, 0.0f);
+	if (tid.x >= demensions.x || tid.y >= demensions.y)
+	    return;
+
+	float aspect = float(demensions.x) / float(demensions.y);
+
+	float2 ndc = (float2(tid) + 0.5f) / float2(demensions);
+    ndc = ndc * 2.0f - 1.0f;
+    ndc.x *= aspect;
+
+	float fov = deg2Rad(camFOV);
+
+	float2 film = ndc * tan(fov * 0.5f);
+
 
 	Ray ray;
-	ray.origin = cameraPosition;
-	ray.dir = normalize(float3(uv.x * 2.0f - 1.0f, uv.y * 2.0f - 1.0f, -1.0f));
+	ray.origin = camPosition;
 
-	for (int i = 0; i < tris.Length; i++)
+	//we start with camForward, then move right by film.x in the camRight direction and up by film.y in the camUp direction.
+	ray.dir = normalize(camForward + film.x * camRight + film.y * camUp);
+
+
+	float bestT = 1e30f;
+    float3 bestN = 0.0f;
+
+    uint triCount = gIndices.Length;
+
+    // [loop]
+	for (int i = 0; i < triCount; i++)
 	{
-		Tri tri = tris[i];
+
+		uint3 idx = gIndices[i];
+
+		Tri tri;
+		tri.v0 = gVertices[idx.x].position;
+		tri.v1 = gVertices[idx.y].position;
+		tri.v2 = gVertices[idx.z].position;
+
+		tri.normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+
 		float t;
 		if (IntersectTri(ray, tri, t))
 		{
-			color += tri.normal * t;
+  			if (t < bestT)
+            {
+                bestT = t;
+                bestN = tri.normal;
+            }
 		}
 	}
+
+	float3 color = float3(0,0,0);
+
+ 	if (bestT < 1e29f)
+    {
+        // simple visualization: normal -> color
+        color = 0.5f * (bestN + 1.0f);
+
+        // optional: distance fade
+        // color *= 1.0f / (1.0f + 0.1f * bestT);
+    }
+
 	outputColor[tid] = float4(color, 1.0f);
 }

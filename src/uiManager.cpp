@@ -544,7 +544,6 @@ void UIManager::showMaterialBrowser()
 		{
 			m_scene->setActiveNode(nullptr);
 			m_selectedMaterial = mat;
-			m_scene->setReadBackID(0);
 		}
 		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
 		{
@@ -764,21 +763,23 @@ void UIManager::handleNodeSelection(SceneNode* node)
 {
 	bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
 	float readBackID = m_scene->getReadBackID();
-	if (readBackID == 0)
+	if (ImGui::IsItemClicked())
+	{
+		m_scene->setActiveNode(node, isShiftPressed);
+		m_selectedMaterial = nullptr;
+		m_scene->setReadBackID(-1.0f);
+	}
+	else if (readBackID == 0)
 	{
 		m_scene->clearSelectedNodes();
 	}
-	else
+	else if (readBackID > 0)
 	{
-		m_scene->setActiveNode(m_scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID))), isShiftPressed);
+		auto* selectedNode = m_scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID)));
+		if (!selectedNode)
+			return;
+		m_scene->setActiveNode(selectedNode, isShiftPressed);
 		m_selectedMaterial = nullptr;
-		return;
-	}
-	if (ImGui::IsItemClicked())
-	{
-		const bool addToSelection = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
-		m_selectedMaterial = nullptr;
-		m_scene->setActiveNode(node, addToSelection);
 	}
 }
 
@@ -959,7 +960,7 @@ void UIManager::showProperties() const
 		ImGui::End();
 		return;
 	}
-	if (m_scene->getActiveNode())
+	else if (m_scene->getActiveNode())
 	{
 		if (dynamic_cast<Primitive*>(m_scene->getActiveNode()))
 		{
