@@ -13,7 +13,6 @@
 #include <tiny_gltf.h>
 #include <wrl.h>
 
-#include "primitive.hpp"
 #include "primitiveData.hpp"
 
 using namespace Microsoft::WRL;

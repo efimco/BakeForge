@@ -16,6 +16,7 @@
 #include "passes/FSQuad.hpp"
 #include "passes/GBuffer.hpp"
 #include "passes/ZPrePass.hpp"
+#include "passes/bvhDebugPass.hpp"
 #include "passes/deferedPass.hpp"
 #include "passes/objectPicker.hpp"
 #include "passes/pbrCubeMapPass.hpp"
@@ -68,6 +69,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_device->getDevice(), m_device->getContext());
+	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_device->getDevice(), m_device->getContext());
 
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
@@ -95,6 +97,7 @@ void Renderer::draw()
 		m_fsquad->createOrResize();
 		m_cubeMapPass->createOrResize();
 		m_rayTracePass->createOrResize();
+		m_bvhDebugPass->createOrResize();
 		AppConfig::setNeedsResize(false);
 	}
 
@@ -131,6 +134,7 @@ void Renderer::draw()
 
 	m_previewGenerator->generatePreview(m_scene.get());
 
+	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
@@ -207,8 +211,8 @@ void Renderer::resize()
 		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-		const HRESULT hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilViewDesc,
-																		 &m_depthStencilView);
+		const HRESULT hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(),
+																		 &depthStencilViewDesc, &m_depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
 

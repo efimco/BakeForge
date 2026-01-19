@@ -29,7 +29,7 @@ private:
 	void processPanning();
 	void processOrbit();
 
-	void focusOn(Primitive* primitive);
+	// void focusOn(Primitive* primitive);
 
 	void onCommitTransaction(Scene& scene) override;
 	void copyFrom(const SceneNode& node) override;

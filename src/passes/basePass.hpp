@@ -101,6 +101,7 @@ protected:
 	ComPtr<ID3D11DepthStencilState> createDSState(bool depthEnable,
 												  D3D11_DEPTH_WRITE_MASK writeMask,
 												  D3D11_COMPARISON_FUNC depthFunc) const;
+	ComPtr<ID3D11DepthStencilView> createDSView(ID3D11Texture2D* texture, DXGI_FORMAT format);
 
 	ComPtr<ID3D11SamplerState> createSamplerState(SamplerPreset preset);
 	ComPtr<ID3D11SamplerState> createSamplerState(D3D11_FILTER filter,

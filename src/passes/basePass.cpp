@@ -103,6 +103,18 @@ ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const SamplerPreset pres
 	}
 }
 
+ComPtr<ID3D11DepthStencilView> BasePass::createDSView(ID3D11Texture2D* texture, DXGI_FORMAT format)
+{
+	D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+	desc.Format = format;
+	desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	desc.Texture2D.MipSlice = 0;
+
+	ComPtr<ID3D11DepthStencilView> view;
+	m_device->CreateDepthStencilView(texture, &desc, &view);
+	return view;
+}
+
 ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const D3D11_FILTER filter,
 														const D3D11_TEXTURE_ADDRESS_MODE addressMode)
 {

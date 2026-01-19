@@ -3,6 +3,8 @@
 #include <d3d11shader.h>
 
 #include "assert.h"
+
+#include "bvhBuilder.hpp"
 #include "primitiveData.hpp"
 
 Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
@@ -104,6 +106,55 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
 	assert(SUCCEEDED(hr));
 }
 
+void Primitive::fillTriangles()
+{
+	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
+	{
+		Triangle tri;
+		tri.v0 = m_sharedData->vertexData[m_sharedData->indexData[i]].position;
+		tri.v1 = m_sharedData->vertexData[m_sharedData->indexData[i + 1]].position;
+		tri.v2 = m_sharedData->vertexData[m_sharedData->indexData[i + 2]].position;
+		tri.normal = glm::normalize(glm::cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+		m_sharedData->triangles.push_back(tri);
+	}
+
+	for (uint32_t i = 0; i < m_sharedData->triangles.size(); i++)
+	{
+		m_sharedData->triangleIndices.push_back(i);
+	}
+
+	D3D11_BUFFER_DESC trisBufferDesc = {};
+	trisBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	trisBufferDesc.ByteWidth = static_cast<UINT>(m_sharedData->triangles.size() * sizeof(Triangle));
+	trisBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	trisBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	trisBufferDesc.StructureByteStride = sizeof(Triangle);
+
+	D3D11_SUBRESOURCE_DATA trisInitData = {};
+	trisInitData.pSysMem = m_sharedData->triangles.data();
+
+	HRESULT hr = m_device->CreateBuffer(&trisBufferDesc, &trisInitData, &m_sharedData->trisBuffer);
+	assert(SUCCEEDED(hr));
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = static_cast<UINT>(m_sharedData->triangles.size());
+
+	hr = m_device->CreateShaderResourceView(m_sharedData->trisBuffer.Get(), &srvDesc, &m_sharedData->srv_trisBuffer);
+	assert(SUCCEEDED(hr));
+
+	buildBVH();
+}
+
+void Primitive::buildBVH()
+{
+	BVH::BVHBuilder builder(m_sharedData->triangles, m_sharedData->triangleIndices);
+	m_sharedData->bvhNodes = builder.BuildBVH();
+}
+
+
 const std::vector<uint32_t>& Primitive::getIndexData() const
 {
 	return m_sharedData->indexData;
@@ -128,6 +179,12 @@ ComPtr<ID3D11ShaderResourceView> Primitive::getIndexStructuredBufferSRV() const
 {
 	return m_sharedData->srv_indexStructuredBuffer;
 }
+
+std::vector<BVH::Node>& Primitive::getBVHNodes() const
+{
+	return m_sharedData->bvhNodes;
+}
+
 
 void Primitive::copyFrom(const SceneNode& node)
 {

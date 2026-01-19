@@ -7,11 +7,12 @@
 #include <d3d11_4.h>
 #include <wrl.h>
 
+#include "bvhNode.hpp"
 #include "sceneNode.hpp"
-struct Material;
 
 using namespace Microsoft::WRL;
 
+struct Material;
 struct Triangle;
 struct Vertex;
 
@@ -19,12 +20,19 @@ struct SharedPrimitiveData
 {
 	std::vector<Vertex> vertexData;
 	std::vector<uint32_t> indexData;
+	std::vector<Triangle> triangles;
+	std::vector<uint32_t> triangleIndices;
+	std::vector<BVH::Node> bvhNodes;
+
 	ComPtr<ID3D11Buffer> indexBuffer;
 	ComPtr<ID3D11Buffer> vertexBuffer;
+	ComPtr<ID3D11Buffer> trisBuffer;
 	ComPtr<ID3D11Buffer> indexStructuredBuffer;
 	ComPtr<ID3D11Buffer> vertexStructuredBuffer;
+
 	ComPtr<ID3D11ShaderResourceView> srv_indexStructuredBuffer;
 	ComPtr<ID3D11ShaderResourceView> srv_vertexStructuredBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_trisBuffer;
 };
 
 class Primitive : public SceneNode
@@ -39,6 +47,7 @@ public:
 
 	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
+	void fillTriangles();
 
 	const std::vector<uint32_t>& getIndexData() const;
 	ComPtr<ID3D11Buffer> getIndexBuffer() const;
@@ -46,6 +55,7 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getVertexStructuredBufferSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getIndexStructuredBufferSRV() const;
 
+	std::vector<BVH::Node>& getBVHNodes() const;
 
 	void copyFrom(const SceneNode& node) override;
 	bool differsFrom(const SceneNode& node) const override;
@@ -54,6 +64,7 @@ public:
 	std::shared_ptr<Material> material;
 
 private:
+	void buildBVH();
 	std::shared_ptr<SharedPrimitiveData> m_sharedData;
 	ComPtr<ID3D11Device> m_device;
 };

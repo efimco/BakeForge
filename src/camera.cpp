@@ -3,7 +3,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include "inputEventsHandler.hpp"
-#include "primitive.hpp"
+// #include "primitive.hpp"
 
 static constexpr float YAW = 0.0f;
 static constexpr float PITCH = 0.0f;
@@ -27,14 +27,14 @@ Camera::Camera(const glm::vec3 pos, const std::string_view nodeName)
 
 void Camera::processMovementControls(SceneNode* activeNode)
 {
-	if (activeNode)
-	{
-		const auto prim = dynamic_cast<Primitive*>(activeNode);
-		if (prim && InputEvents::isKeyDown(KeyButtons::KEY_F))
-		{
-			// focusOn(prim);
-		}
-	}
+	// if (activeNode)
+	// {
+	// 	const auto prim = dynamic_cast<Primitive*>(activeNode);
+	// 	if (prim && InputEvents::isKeyDown(KeyButtons::KEY_F))
+	// 	{
+	// 		// focusOn(prim);
+	// 	}
+	// }
 
 	if (!InputEvents::getMouseInViewport())
 		return;

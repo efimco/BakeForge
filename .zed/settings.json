@@ -1,44 +1,34 @@
 {
-	"tab_size": 4,
-	"hard_tabs": true,
-	"format_on_save": "on",
-	"formatter": "language_server",
-	"languages": {
-		"C++": {
-			"tab_size": 4,
-			"hard_tabs": true,
-			"format_on_save": "on",
-			"formatter": "language_server"
-		},
-		"C": {
-			"tab_size": 4,
-			"hard_tabs": true,
-			"format_on_save": "on",
-			"formatter": "language_server"
-		},
-		"HLSL": {
-			"tab_size": 4,
-			"hard_tabs": true
-		}
-	},
-	"lsp": {
-		"clangd": {
-			"binary": {
-				"arguments": [
-					"--background-index",
-					"--clang-tidy",
-					"--header-insertion=iwyu",
-					"--completion-style=detailed",
-					"--function-arg-placeholders=true"
-				]
-			}
-		}
-	},
-	"file_scan_exclusions": [
-		"**/.git",
-		"**/build",
-		"**/out",
-		"**/.vs",
-		"**/.cache"
-	]
+  "languages": {
+    "C++": {
+      "tab_size": 4,
+      "hard_tabs": true,
+      "format_on_save": "on",
+      "formatter": "language_server",
+    },
+    "C": {
+      "tab_size": 4,
+      "hard_tabs": true,
+      "format_on_save": "on",
+      "formatter": "language_server",
+    },
+    "HLSL": {
+      "tab_size": 4,
+      "hard_tabs": true,
+    },
+  },
+  "lsp": {
+    "clangd": {
+      "binary": {
+        "arguments": [
+          "--background-index",
+          "--clang-tidy",
+          "--header-insertion=iwyu",
+          "--completion-style=detailed",
+          "--function-arg-placeholders=true",
+        ],
+      },
+    },
+  },
+  "file_scan_exclusions": ["**/.git", "**/build", "**/out", "**/.vs", "**/.cache"],
 }

@@ -200,6 +200,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
+			primitive->fillTriangles();
 
 			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
@@ -383,9 +384,9 @@ void GLTFModel::processTexCoordAttribute(const tinygltf::Model& model, const tin
 		for (int j = 0; j < components; j++)
 		{
 			if (j == 0)
-				texCoord.u = posFloatPtr[i * components + j];
+				texCoord.x = posFloatPtr[i * components + j];
 			else if (j == 1)
-				texCoord.v = posFloatPtr[i * components + j];
+				texCoord.y = posFloatPtr[i * components + j];
 		}
 		texCoords.push_back(texCoord);
 	}

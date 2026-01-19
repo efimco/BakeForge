@@ -3,6 +3,7 @@
 #include "appConfig.hpp"
 #include "basePass.hpp"
 #include "camera.hpp"
+#include "primitive.hpp"
 #include "rtvCollector.hpp"
 #include "scene.hpp"
 #include "shaderManager.hpp"
@@ -27,7 +28,8 @@ struct alignas(16) RayTraceConstantBuffer
 };
 
 
-RayTracePass::RayTracePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
+RayTracePass::RayTracePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_shaderManager->LoadComputeShader("rayTrace", L"..\\..\\src\\shaders\\rayTrace.hlsl");
@@ -44,8 +46,7 @@ void RayTracePass::createOrResize()
 	}
 
 	m_texture = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(),
-								DXGI_FORMAT_R8G8B8A8_UNORM,
-								D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+								DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 	m_uav = createUnorderedAccessView(m_texture.Get(), UAVPreset::Texture2D);
 	m_rtvCollector->addRTV("RayTrace", m_srv.Get());
@@ -54,6 +55,7 @@ void RayTracePass::createOrResize()
 
 void RayTracePass::draw(Scene* scene)
 {
+	beginDebugEvent(L"RayTrace");
 	update(scene);
 
 	if (scene->getPrimitiveCount() == 0)
@@ -73,6 +75,7 @@ void RayTracePass::draw(Scene* scene)
 		unbindShaderResources(0, 2);
 		unbindComputeUAVs(0, 1);
 	}
+	endDebugEvent();
 }
 
 void RayTracePass::update(Scene* scene)
