@@ -18,18 +18,30 @@ static const D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
 };
 
 
-static const std::vector<Position> s_vertices = {
-	{-1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, 1.0f}, {-1.0f, 1.0f, -1.0f}, {-1.0f, 1.0f, 1.0f},
-	{1.0f, -1.0f, -1.0f},  {1.0f, -1.0f, 1.0f},	 {1.0f, 1.0f, -1.0f},  {1.0f, 1.0f, 1.0f},
-};
-//// clang-format off
-static const std::vector<uint32_t> s_indices = {
-	0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 0, 4, 1, 1, 5, 5, 2, 6, 3, 3, 7, 7, 0, 2, 4, 4, 6, 6, 1, 3, 5, 5, 7, 7,
-};
+static const auto cubeData = new float[]{
+	// +X face
+	1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
+	// -X face
+	-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
+	1.0f,
+	// +Y face
+	-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
+	// -Y face
+	-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
+	1.0f,
+	// +Z face
+	-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+	// -Z face
+	1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+	-1.0f};
 
 struct alignas(16) BVHCB
 {
 	glm::mat4 viewProj;
+	int minDepth;
+	int maxDepth;
+	int showLeafsOnly;
+	int padding;
 };
 
 BVHDebugPass::BVHDebugPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
@@ -43,12 +55,11 @@ BVHDebugPass::BVHDebugPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_blendState = createBlendState(BlendPreset::AlphaBlend);
-	m_depthStencilState = createDSState(DepthStencilPreset::WriteDepth);
+	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
 
 	m_constantBuffer = createConstantBuffer(sizeof(BVHCB));
 
-	m_vertexBuffer = createVertexBuffer(static_cast<uint32_t>(sizeof(Position) * s_vertices.size()), s_vertices.data());
-	m_indexBuffer = createIndexBuffer(static_cast<uint32_t>(sizeof(uint32_t) * s_indices.size()), s_indices.data());
+	m_vertexBuffer = createVertexBuffer(static_cast<uint32_t>(sizeof(float) * 36 * 3), cubeData);
 
 	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), 4096, SBPreset::CpuWrite);
 	m_bvhNodesSrv = createShaderResourceView(m_bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
@@ -62,14 +73,13 @@ BVHDebugPass::BVHDebugPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 	assert(SUCCEEDED(hr));
 }
 
-uint32_t stride = sizeof(Position);
+uint32_t stride = sizeof(float) * 3;
 uint32_t offset = 0;
 
 void BVHDebugPass::draw(Scene* scene, const glm::mat4& view, const glm::mat4& proj)
 {
 
 	beginDebugEvent(L"DebugBVH");
-	update(view, proj);
 	// CRITICAL: Clear first!
 	float clearColor[4] = {0.1f, 0.1f, 0.1f, 1.0f}; // Dark gray to see if it's working
 	m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
@@ -77,27 +87,28 @@ void BVHDebugPass::draw(Scene* scene, const glm::mat4& view, const glm::mat4& pr
 
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-	m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_context->VSSetShader(m_shaderManager->getVertexShader("debugBVH"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("debugBVH"), nullptr, 0);
 	m_context->RSSetState(m_rasterizerState.Get());
-	m_context->OMSetBlendState(m_blendState.Get(), nullptr, 0xFFFFFFFF);
+	float blendFactor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+	m_context->OMSetBlendState(m_blendState.Get(), blendFactor, 0xFFFFFFFF);
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
 	m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
+		const glm::mat4 mvp = glm::transpose(proj * view * prim->getWorldMatrix());
+		update(mvp);
 		updateBvhNodesBuffer(prim);
 		m_context->VSSetShaderResources(0, 1, m_bvhNodesSrv.GetAddressOf());
 
 		uint32_t numNodes = static_cast<uint32_t>(prim->getBVHNodes().size());
-		m_context->DrawIndexedInstanced(static_cast<uint32_t>(s_indices.size()), // index count per instance
-										numNodes,								 // instance count
-										0,										 // start index location
-										0,										 // base vertex location
-										0);										 // start instance location
+		m_context->DrawInstanced(36,	   // index count per instance
+								 numNodes, // instance count
+								 0,		   // base vertex location
+								 0);	   // start instance location
 	}
 	unbindRenderTargets(1);
 	unbindShaderResources(0, 1);
@@ -110,15 +121,17 @@ void BVHDebugPass::draw(Scene* scene, const glm::mat4& view, const glm::mat4& pr
 	endDebugEvent();
 }
 
-void BVHDebugPass::update(const glm::mat4& view, const glm::mat4& proj)
+void BVHDebugPass::update(const glm::mat4& matrix)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		auto* cb = static_cast<BVHCB*>(mappedResource.pData); // Removed const qualifier to allow assignment
-		const glm::mat4 viewProj = glm::transpose(proj * view);
-		cb->viewProj = viewProj;
+		cb->viewProj = matrix;
+		cb->maxDepth = AppConfig::getMaxBVHDepth();
+		cb->minDepth = AppConfig::getMinBVHDepth();
+		cb->showLeafsOnly = AppConfig::getShowLeavsOnly() ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }

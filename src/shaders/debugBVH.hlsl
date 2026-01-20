@@ -1,6 +1,10 @@
 cbuffer CB : register(b0)
 {
 	matrix viewProjection;
+	uint minDepth;
+	uint maxDepth;
+	uint showLeafsOnly;
+	uint padding;
 };
 
 struct BBox
@@ -25,7 +29,7 @@ struct VSInput
 struct PSInput
 {
 	float4 position : SV_POSITION;
-	float3 color : COLOR;
+	float4 color : COLOR;
 };
 
 struct PSOutput
@@ -39,23 +43,40 @@ PSInput VS(VSInput input)
 
 	BVHNode node = nodes[input.instanceID];
 
-	float3 center = (node.bbox.min + node.bbox.max) * 0.5;
+	 if (input.instanceID < minDepth || input.instanceID > maxDepth)
+	        output.position = float4(0, 0, 0, 0); // Degenerate
+    else if (showLeafsOnly && node.numTris == 0)
+    {
+    	output.position = float4(0, 0, 0, 0);
+    }
+    else
+    {
+   	float3 center = (node.bbox.min + node.bbox.max) * 0.5;
 	float3 extent = (node.bbox.max - node.bbox.min) * 0.5;
 	float3 worldPos = center + input.position * extent;
-
-
-
 	output.position = mul(float4(worldPos, 1.0), viewProjection);
+    }
 
-	// Color based on depth (optional visualization)
-	float depth = float(input.instanceID) / 10.0;
-	output.color = float3(1.0, 1.0 - depth, 1.0 - depth);
+
+
+	// Better color scheme based on node properties
+    bool isLeaf = node.numTris > 0;
+
+    if (isLeaf) {
+        // Leaf nodes = green
+        output.color = float4(0.0, 1.0, 0.0, 0.3);
+    } else {
+        // Internal nodes = color by depth
+        float depth = float(input.instanceID) / 100.0; // Adjust divisor
+        float3 heatmap = lerp(float3(0.0, 0.0, 1.0), float3(1.0, 0.0, 0.0), depth);
+        output.color = float4(heatmap, 0.2);
+    }
 	return output;
 }
 
 PSOutput PS(PSInput input) : SV_TARGET
 {
 	PSOutput output;
-	output.color = float4(input.color, 0.3); // Semi-transparent
+	output.color = input.color; // Semi-transparent
 	return output;
 }

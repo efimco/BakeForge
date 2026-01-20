@@ -1,5 +1,4 @@
 #include "appConfig.hpp"
-
 static int windowWidth = 2;
 static int windowHeight = 2;
 static int viewportWidth = 2;
@@ -19,6 +18,10 @@ static float blurAmount = 0.5f;
 static float backgroundIntensity = 1.0f;
 static bool drawWSUI = true;
 static bool captureNextFrame = false;
+static int maxBVHDepth = 1;
+static int minBVHDepth = 0;
+static bool showLeafsOnly = false;
+
 
 bool& AppConfig::getNeedsResize()
 {
@@ -100,19 +103,19 @@ bool& AppConfig::getRegeneratePrefilteredMap()
 	return regeneratePrefilteredMap;
 }
 
-bool& AppConfig::getShowBVH()
+bool& AppConfig::getShowLeavsOnly()
 {
-	return showBVH;
+	return showLeafsOnly;
 }
 
-bool& AppConfig::getShowPrimitiveBVH()
+int& AppConfig::getMaxBVHDepth()
 {
-	return showPrimitiveBVH;
+	return maxBVHDepth;
 }
 
-int& AppConfig::getBVHMaxDepth()
+int& AppConfig::getMinBVHDepth()
 {
-	return bvhMaxDepth;
+	return minBVHDepth;
 }
 
 void AppConfig::setDeltaTime(const double value)

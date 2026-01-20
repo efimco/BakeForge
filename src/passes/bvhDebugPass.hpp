@@ -17,7 +17,7 @@ public:
 	void createOrResize();
 
 private:
-	void update(const glm::mat4& view, const glm::mat4& proj);
+	void update(const glm::mat4& matrix);
 	void updateBvhNodesBuffer(Primitive* prim);
 
 	std::unique_ptr<RTVCollector> m_rtvCollector;
@@ -25,7 +25,6 @@ private:
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11Buffer> m_indexBuffer;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 

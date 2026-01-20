@@ -40,7 +40,10 @@ static glm::ivec3 gSnapRotate = {15, 15, 15};
 static glm::ivec3 gSnapScale = {1, 1, 1};
 
 UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
-	: m_commandManager(std::make_unique<CommandManager>()), m_hwnd(hwnd), m_mousePos{}, m_scene(nullptr)
+	: m_commandManager(std::make_unique<CommandManager>())
+	, m_hwnd(hwnd)
+	, m_mousePos{}
+	, m_scene(nullptr)
 {
 	m_device = device;
 	m_context = deviceContext;
@@ -179,13 +182,10 @@ void UIManager::showSceneSettings() const
 
 	// Debug BVH visualization
 	ImGui::TextWrapped("Debug Visualization");
-	ImGui::Checkbox("Show BVH", &AppConfig::getShowBVH());
-	if (AppConfig::getShowBVH())
-	{
-		ImGui::Checkbox("Show Primitive BVH (triangles)", &AppConfig::getShowPrimitiveBVH());
-		ImGui::SliderInt("BVH Max Depth", &AppConfig::getBVHMaxDepth(), -1, 20,
-						 AppConfig::getBVHMaxDepth() < 0 ? "All" : "%d");
-	}
+	ImGui::Checkbox("Show Leafs only", &AppConfig::getShowLeavsOnly());
+	ImGui::SliderInt("BVH Max Depth", &AppConfig::getMaxBVHDepth(), 0, 5000, "%d");
+	ImGui::SliderInt("BVH Min Depth", &AppConfig::getMinBVHDepth(), 0, AppConfig::getMaxBVHDepth(), "%d");
+
 
 	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 	ImGui::End();
@@ -384,10 +384,9 @@ void UIManager::showMainMenuBar()
 
 void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 {
-	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
-		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNav |
-		ImGuiWindowFlags_NoBackground;
+	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBackground;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);

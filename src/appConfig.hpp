@@ -1,4 +1,5 @@
 #pragma once
+
 namespace AppConfig
 {
 	bool& getNeedsResize();
@@ -20,9 +21,9 @@ namespace AppConfig
 	bool& getRegeneratePrefilteredMap();
 
 	// Debug BVH visualization
-	bool& getShowBVH();
-	bool& getShowPrimitiveBVH();
-	int& getBVHMaxDepth();
+	bool& getShowLeavsOnly();
+	int& getMaxBVHDepth();
+	int& getMinBVHDepth();
 
 	void setDeltaTime(double value);
 	double getDeltaTime();
