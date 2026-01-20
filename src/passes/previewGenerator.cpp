@@ -47,8 +47,7 @@ static constexpr D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] = {
 
 constexpr uint32_t PREVIEW_SIZE = 512;
 
-PreviewGenerator::PreviewGenerator(ComPtr<ID3D11Device> device,
-								   ComPtr<ID3D11DeviceContext> context)
+PreviewGenerator::PreviewGenerator(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
@@ -59,7 +58,8 @@ PreviewGenerator::PreviewGenerator(ComPtr<ID3D11Device> device,
 	m_samplerState = createSamplerState(SamplerPreset::LinearWrap);
 
 	// Create depth buffer
-	m_depthTexture = createTexture2D(PREVIEW_SIZE, PREVIEW_SIZE, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL);
+	m_depthTexture =
+		createTexture2D(PREVIEW_SIZE, PREVIEW_SIZE, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL);
 	m_depthStencilView = createDepthStencilView(m_depthTexture.Get(), DSVPreset::Texture2D);
 	// m_rtvCollector->addRTV("PreviewGenerator", m_shaderResourceView.Get());
 
@@ -120,6 +120,27 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 
+		m_context->PSSetShaderResources(0, 3, mat->getSRVs());
+		m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+		m_context->VSSetShader(m_shaderManager->getVertexShader("previewGenerator"), nullptr, 0);
+		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+		m_context->PSSetShader(m_shaderManager->getPixelShader("previewGenerator"), nullptr, 0);
+		m_context->OMSetRenderTargets(1, mat->preview.rtv_preview.GetAddressOf(), m_depthStencilView.Get());
+
+		m_context->DrawIndexed(SPHERE_INDEX_COUNT, 0, 0);
+		unbindRenderTargets(1);
+		unbindShaderResources(0, 3);
+
+		mat->needsPreviewUpdate = false;
+	}
+}
+
+void PreviewGenerator::update()
+{
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+	{
 		// Generate front view matrix (camera looking at origin from front)
 		glm::vec3 eyePos = glm::vec3(0.0f, 0.0f, 3.0f);
 		glm::vec3 targetPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -130,32 +151,14 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		float aspectRatio = static_cast<float>(PREVIEW_SIZE) / static_cast<float>(PREVIEW_SIZE);
 		glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 1.0f, 100.0f);
 
-
-		m_context->PSSetShaderResources(0, 3, mat->getSRVs());
-		m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
-
-
-		D3D11_MAPPED_SUBRESOURCE mapped = {};
-
-		if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
-		{
-			glm::mat4 model = glm::mat4(1.0f);
-			glm::mat4 modelViewProjection = glm::transpose(projectionMatrix * viewMatrix * model);
-			glm::mat4 inverseTransposedModel = glm::inverse(glm::transpose(model));
-			auto* data = static_cast<PreviewGenCBj*>(mapped.pData);
-			data->modelViewProjection = modelViewProjection;
-			data->inverseTransposedModel = inverseTransposedModel;
-			data->model = model;
-			m_context->Unmap(m_constantBuffer.Get(), 0);
-		}
-
-		m_context->VSSetShader(m_shaderManager->getVertexShader("previewGenerator"), nullptr, 0);
-		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
-		m_context->PSSetShader(m_shaderManager->getPixelShader("previewGenerator"), nullptr, 0);
-		m_context->OMSetRenderTargets(1, mat->preview.rtv_preview.GetAddressOf(), m_depthStencilView.Get());
-
-		m_context->DrawIndexed(SPHERE_INDEX_COUNT, 0, 0);
-		mat->needsPreviewUpdate = false;
+		glm::mat4 model = glm::mat4(1.0f);
+		glm::mat4 modelViewProjection = glm::transpose(projectionMatrix * viewMatrix * model);
+		glm::mat4 inverseTransposedModel = glm::inverse(glm::transpose(model));
+		auto* data = static_cast<PreviewGenCBj*>(mapped.pData);
+		data->modelViewProjection = modelViewProjection;
+		data->inverseTransposedModel = inverseTransposedModel;
+		data->model = model;
+		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }
 

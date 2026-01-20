@@ -34,8 +34,8 @@ StructuredBuffer<Light> lights : register(t1);
 
 struct VS_IN
 {
-	float3 position : POSITION;
-	float2 uv : TEXCOORD0;
+	float2 position : POSITION;
+	float2 uv : TEXCOORD;
 	uint iid : SV_INSTANCEID;
 };
 
@@ -59,7 +59,7 @@ VS_OUT VS(VS_IN input)
 	float4 clipPos = mul(float4(lightPos, 1.0f), viewProjection);
 	float aspectRatio = screenSize.x / screenSize.y;
 	float2 ndcPixelSize = sizeInPixels / screenSize * 2.0f;
-	float2 offset = input.position.xy * ndcPixelSize * clipPos.w;
+	float2 offset = input.position * ndcPixelSize * clipPos.w;
 
 	VS_OUT output;
 	output.position = clipPos + float4(offset, 0.0f, 0.0f);

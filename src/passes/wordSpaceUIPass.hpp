@@ -35,7 +35,6 @@ private:
 
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
-	void createQuad();
 
 	ComPtr<ID3D11Buffer> m_lightsBuffer;
 

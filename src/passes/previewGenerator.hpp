@@ -16,8 +16,7 @@ struct Material;
 class PreviewGenerator : public BasePass
 {
 public:
-	explicit PreviewGenerator(ComPtr<ID3D11Device> device,
-							  ComPtr<ID3D11DeviceContext> context);
+	explicit PreviewGenerator(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~PreviewGenerator() = default;
 
 	void generatePreview(Scene* scene);
@@ -25,6 +24,7 @@ public:
 private:
 	static void InitializeSphere();
 	void createMatPreviewResources(Material* material);
+	void update();
 
 	ComPtr<ID3D11Texture2D> m_depthTexture;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
