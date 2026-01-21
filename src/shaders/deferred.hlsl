@@ -38,7 +38,7 @@ cbuffer CB : register(b0)
 {
 	float IBLrotationY;
 	float IBLintensity;
-	int selectedID;
+	float selectedID;
 	float backgroundIntensity;
 	float3 cameraPosition;
 	int drawWSUI;

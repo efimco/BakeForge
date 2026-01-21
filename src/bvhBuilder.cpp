@@ -11,17 +11,19 @@ BVHBuilder::BVHBuilder(const std::vector<Triangle>& triangles,
 {
 }
 
-void BVHBuilder::SplitNode(uint32_t nodeIndex)
+void BVHBuilder::SplitNode(uint32_t nodeIndex, uint32_t depth)
 {
+	nodes[nodeIndex].depth = depth;
+
 	if (nodes[nodeIndex].numTris <= 2)
 		return;
 
 	glm::vec3 extent = nodes[nodeIndex].bbox.max - nodes[nodeIndex].bbox.min;
 
 	int splitAxis = 0; // split along x
-	if (extent.y > extent.x)
+	if (extent.y > extent[splitAxis])
 		splitAxis = 1; // split along y
-	else if (extent.z > extent[splitAxis])
+	if (extent.z > extent[splitAxis])
 		splitAxis = 2; // split along z
 
 	// center of the split axis
@@ -44,10 +46,10 @@ void BVHBuilder::SplitNode(uint32_t nodeIndex)
 
 	uint32_t leftIndex = ++nodesUsed;
 	uint32_t rightIndex = ++nodesUsed;
-	Node lNode;
-	Node rNode;
-	nodes.push_back(std::move(lNode));
-	nodes.push_back(std::move(rNode));
+	Node lNode{};
+	Node rNode{};
+	nodes.push_back(lNode);
+	nodes.push_back(rNode);
 	nodes[nodeIndex].leftChild = leftIndex;
 
 	nodes[leftIndex].firstTriIndex = nodes[nodeIndex].firstTriIndex;
@@ -61,8 +63,8 @@ void BVHBuilder::SplitNode(uint32_t nodeIndex)
 	UpdateBounds(leftIndex);
 	UpdateBounds(rightIndex);
 
-	SplitNode(leftIndex);
-	SplitNode(rightIndex);
+	SplitNode(leftIndex, depth + 1);
+	SplitNode(rightIndex, depth + 1);
 }
 
 void BVHBuilder::UpdateBounds(uint32_t index)
@@ -86,16 +88,17 @@ void BVHBuilder::UpdateBounds(uint32_t index)
 
 std::vector<Node> BVHBuilder::BuildBVH()
 {
-	Node rootNode;
+	Node rootNode{};
 	rootNode.firstTriIndex = 0;
 	rootNode.numTris = static_cast<uint32_t>(tris.size());
 
 	if (rootNode.numTris == 0)
 		return nodes;
 
-	nodes.push_back(std::move(rootNode));
+	nodes.push_back(rootNode);
 	nodesUsed = 0;
 	UpdateBounds(nodesUsed);
-	SplitNode(nodesUsed);
+	SplitNode(nodesUsed, 0);
 	return nodes;
 }
+

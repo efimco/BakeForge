@@ -8,9 +8,36 @@ struct Vertex
 	float2 uv;
 };
 
-StructuredBuffer<Vertex> gVertices : register(t0);
-StructuredBuffer<uint3> gIndices : register(t1);
+struct Tri
+{
+	float3 v0;
+	float pad0;
+	float3 v1;
+	float pad1;
+	float3 v2;
+	float pad2;
+	float3 normal;
+	float pad3;
+};
 
+struct BBox
+{
+	float3 min;
+	float pad0;
+	float3 max;
+	float pad1;
+};
+
+struct BVHNode
+{
+	BBox bbox;
+	uint leftChild, firstTriIndex, numTris;
+	uint depth;
+};
+
+StructuredBuffer<Tri> gTris : register(t0);
+StructuredBuffer<uint> gTrisIndices : register(t1);
+StructuredBuffer<BVHNode> gNodes : register(t2);
 
 cbuffer cb : register(b0)
 {
@@ -27,23 +54,18 @@ cbuffer cb : register(b0)
 	float padding4;
 
 	float3 camUp;
-
 	float camFOV;
+
+	float4x4 worldMatrix;
+	float4x4 worldMatrixInv;
 }
 
-struct Tri
-{
-	float3 v0, v1, v2;
-	float3 normal;
-};
 
 float deg2Rad(float deg)
 {
 	float rad = deg * (PI / 180.0f);
 	return rad;
 }
-
-StructuredBuffer<Tri> tris : register(t0);
 
 struct Ray
 {
@@ -83,71 +105,126 @@ bool IntersectTri(Ray ray, Tri tri, out float t)
 		return false;
 }
 
+bool IntersectBox(Ray ray, BBox box)
+{
+	// Slab method for ray-AABB intersection
+	float3 invDir = 1.0f / ray.dir;
+	float3 t0 = (box.min - ray.origin) * invDir;
+	float3 t1 = (box.max - ray.origin) * invDir;
+
+	// Swap t0 and t1 if invDir is negative
+	float3 tmin = min(t0, t1);
+	float3 tmax = max(t0, t1);
+
+	// Find the largest tmin and smallest tmax
+	float tNear = max(max(tmin.x, tmin.y), tmin.z);
+	float tFar = min(min(tmax.x, tmax.y), tmax.z);
+
+	// Ray intersects box if tNear <= tFar and tFar >= 0
+	return tNear <= tFar && tFar >= 0.0f;
+}
+
+
+bool IsLeaf(BVHNode node)
+{
+	if(node.numTris != 0)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+#define MAX_STACK_SIZE 64
+
+void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
+{
+	uint stack[MAX_STACK_SIZE];
+	int stackPtr = 0;
+	stack[stackPtr++] = 0; // Start with root node
+
+	while (stackPtr > 0)
+	{
+		uint nodeIdx = stack[--stackPtr];
+		BVHNode node = gNodes[nodeIdx];
+
+		if (!IntersectBox(ray, node.bbox))
+			continue;
+
+		if (IsLeaf(node))
+		{
+			for (uint i = 0; i < node.numTris; i++)
+			{
+				float t = 0;
+				Tri tri = gTris[gTrisIndices[node.firstTriIndex + i]];
+				if (IntersectTri(ray, tri, t))
+				{
+					if (t < bestT)
+					{
+						bestT = t;
+						bestN = tri.normal;
+					}
+				}
+			}
+		}
+		else
+		{
+			// Push children onto stack
+			if (stackPtr < MAX_STACK_SIZE - 1)
+			{
+				stack[stackPtr++] = node.leftChild;
+				stack[stackPtr++] = node.leftChild + 1;
+			}
+		}
+	}
+}
+
+
 RWTexture2D<float4> outputColor : register(u0);
 
 [numthreads(16, 16, 1)]
 void CS(uint2 tid : SV_DispatchThreadID)
 {
 	if (tid.x >= demensions.x || tid.y >= demensions.y)
-	    return;
+		return;
 
 	float aspect = float(demensions.x) / float(demensions.y);
 
 	float2 ndc = (float2(tid) + 0.5f) / float2(demensions);
-    ndc = ndc * 2.0f - 1.0f;
-    ndc.x *= aspect;
+	ndc = ndc * 2.0f - 1.0f;
+	ndc.x *= aspect;
 
 	float fov = deg2Rad(camFOV);
 
 	float2 film = ndc * tan(fov * 0.5f);
 
+	// World space ray
+	Ray rayWorld;
+	rayWorld.origin = camPosition;
+	rayWorld.dir = normalize(camForward + film.x * camRight + film.y * camUp);
 
+	// Transform ray to object space
 	Ray ray;
-	ray.origin = camPosition;
-
-	//we start with camForward, then move right by film.x in the camRight direction and up by film.y in the camUp direction.
-	ray.dir = normalize(camForward + film.x * camRight + film.y * camUp);
-
+	ray.origin = mul(float4(rayWorld.origin, 1.0f), worldMatrixInv).xyz;
+	ray.dir = normalize(mul(float4(rayWorld.dir, 0.0f), worldMatrixInv).xyz);
 
 	float bestT = 1e30f;
-    float3 bestN = 0.0f;
-
-    uint triCount = gIndices.Length;
-
-    // [loop]
-	for (int i = 0; i < triCount; i++)
-	{
-
-		uint3 idx = gIndices[i];
-
-		Tri tri;
-		tri.v0 = gVertices[idx.x].position;
-		tri.v1 = gVertices[idx.y].position;
-		tri.v2 = gVertices[idx.z].position;
-
-		tri.normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
-
-		float t;
-		if (IntersectTri(ray, tri, t))
-		{
-  			if (t < bestT)
-            {
-                bestT = t;
-                bestN = tri.normal;
-            }
-		}
-	}
-
+	float3 bestN = 0.0f;
+	TraverseBVH(ray, bestT, bestN);
 	float3 color = float3(0,0,0);
 
- 	if (bestT < 1e29f)
-    {
-        // simple visualization: normal -> color
-        color = 0.5f * (bestN + 1.0f);
+	if (bestT < 1e29f)
+	{
+		// Transform normal back to world space
+		bestN = normalize(mul(float4(bestN, 0.0f), transpose(worldMatrixInv)).xyz);
+		// simple visualization: normal -> color
+		color = 0.5f * (bestN + 1.0f);
 
-        // optional: distance fade
-        // color *= 1.0f / (1.0f + 0.1f * bestT);
-    }
+		// optional: distance fade
+		// color *= 1.0f / (1.0f + 0.1f * bestT);
+	}
 
 	outputColor[tid] = float4(color, 1.0f);
 }

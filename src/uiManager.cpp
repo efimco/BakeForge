@@ -183,7 +183,7 @@ void UIManager::showSceneSettings() const
 	// Debug BVH visualization
 	ImGui::TextWrapped("Debug Visualization");
 	ImGui::Checkbox("Show Leafs only", &AppConfig::getShowLeavsOnly());
-	ImGui::SliderInt("BVH Max Depth", &AppConfig::getMaxBVHDepth(), 0, 5000, "%d");
+	ImGui::SliderInt("BVH Max Depth", &AppConfig::getMaxBVHDepth(), 0, 64, "%d");
 	ImGui::SliderInt("BVH Min Depth", &AppConfig::getMinBVHDepth(), 0, AppConfig::getMaxBVHDepth(), "%d");
 
 

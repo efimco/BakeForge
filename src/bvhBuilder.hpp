@@ -17,7 +17,7 @@ namespace BVH
 		const std::vector<Triangle>& tris;
 		std::vector<uint32_t>& trisIndex;
 
-		void SplitNode(uint32_t nodeIndex);
+		void SplitNode(uint32_t nodeIndex, uint32_t depth);
 		void UpdateBounds(uint32_t index);
 	};
 } // namespace BVH

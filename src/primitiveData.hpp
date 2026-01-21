@@ -23,8 +23,14 @@ struct Vertex
 
 struct Triangle
 {
-	Position v0, v1, v2;
+	Position v0;
+	float pad0;
+	Position v1;
+	float pad1;
+	Position v2;
+	float pad2;
 	Normal normal;
+	float pad3;
 	Position Center() const
 	{
 		return (v0 + v1 + v2) / 3.0f;
