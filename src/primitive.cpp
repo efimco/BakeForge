@@ -36,29 +36,6 @@ void Primitive::setVertexData(std::vector<Vertex>&& vertexData) const
 
 	HRESULT hr = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &m_sharedData->vertexBuffer);
 	assert(SUCCEEDED(hr));
-
-	D3D11_BUFFER_DESC vertexStructuredBufferDesc = {};
-	vertexStructuredBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	vertexStructuredBufferDesc.ByteWidth = static_cast<UINT>(numVerts * sizeof(Vertex));
-	vertexStructuredBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	vertexStructuredBufferDesc.CPUAccessFlags = 0;
-	vertexStructuredBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	vertexStructuredBufferDesc.StructureByteStride = sizeof(Vertex);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC vertexStructuredBufferSRVDesc = {};
-	vertexStructuredBufferSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	vertexStructuredBufferSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	vertexStructuredBufferSRVDesc.Buffer.FirstElement = 0;
-	vertexStructuredBufferSRVDesc.Buffer.NumElements = static_cast<UINT>(numVerts);
-
-
-	hr = m_device->CreateBuffer(&vertexStructuredBufferDesc, &vertexSubresourceData,
-								&m_sharedData->vertexStructuredBuffer);
-	assert(SUCCEEDED(hr));
-
-	hr = m_device->CreateShaderResourceView(m_sharedData->vertexStructuredBuffer.Get(), &vertexStructuredBufferSRVDesc,
-											&m_sharedData->srv_vertexStructuredBuffer);
-	assert(SUCCEEDED(hr));
 }
 
 void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
@@ -73,40 +50,6 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
 	D3D11_SUBRESOURCE_DATA indexInitData = {};
 	indexInitData.pSysMem = m_sharedData->indexData.data();
 	HRESULT hr = m_device->CreateBuffer(&indexBufferDesc, &indexInitData, &m_sharedData->indexBuffer);
-	assert(SUCCEEDED(hr));
-
-
-	std::vector<glm::uvec3> indexStructuredData;
-
-	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
-	{
-		indexStructuredData.push_back(
-			glm::uvec3(m_sharedData->indexData[i], m_sharedData->indexData[i + 1], m_sharedData->indexData[i + 2]));
-	}
-
-	D3D11_BUFFER_DESC indexStructuredBufferDesc = {};
-	indexStructuredBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	indexStructuredBufferDesc.ByteWidth = static_cast<UINT>(indexStructuredData.size() * sizeof(glm::uvec3));
-	indexStructuredBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	indexStructuredBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	indexStructuredBufferDesc.StructureByteStride = sizeof(glm::uvec3);
-	indexStructuredBufferDesc.CPUAccessFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA indexStructuredInitData = {};
-	indexStructuredInitData.pSysMem = indexStructuredData.data();
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = static_cast<UINT>(indexStructuredData.size());
-
-	hr = m_device->CreateBuffer(&indexStructuredBufferDesc, &indexStructuredInitData,
-								&m_sharedData->indexStructuredBuffer);
-	assert(SUCCEEDED(hr));
-
-	hr = m_device->CreateShaderResourceView(m_sharedData->indexStructuredBuffer.Get(), &srvDesc,
-											&m_sharedData->srv_indexStructuredBuffer);
 	assert(SUCCEEDED(hr));
 }
 
@@ -127,8 +70,7 @@ void Primitive::fillTriangles()
 		m_sharedData->triangleIndices.push_back(i);
 	}
 
-	// Build BVH BEFORE creating GPU buffers - BVH builder reorders triangleIndices
-	buildBVH();
+	buildBVH(); // Build BVH BEFORE creating GPU buffers - BVH builder reorders triangleIndices
 
 	{
 		D3D11_BUFFER_DESC trisBufferDesc = {};
@@ -150,8 +92,7 @@ void Primitive::fillTriangles()
 		srvDesc.Buffer.FirstElement = 0;
 		srvDesc.Buffer.NumElements = static_cast<UINT>(m_sharedData->triangles.size());
 
-		hr =
-			m_device->CreateShaderResourceView(m_sharedData->trisBuffer.Get(), &srvDesc, &m_sharedData->srv_trisBuffer);
+		hr = m_device->CreateShaderResourceView(m_sharedData->trisBuffer.Get(), &srvDesc, &m_sharedData->srv_trisBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -177,7 +118,7 @@ void Primitive::fillTriangles()
 		srvDesc.Buffer.NumElements = static_cast<UINT>(m_sharedData->triangleIndices.size());
 
 		hr = m_device->CreateShaderResourceView(m_sharedData->trisIndicesBuffer.Get(), &srvDesc,
-												&m_sharedData->srv_trisIndicesBuffer);
+			&m_sharedData->srv_trisIndicesBuffer);
 		assert(SUCCEEDED(hr));
 	}
 }
@@ -202,16 +143,6 @@ ComPtr<ID3D11Buffer> Primitive::getIndexBuffer() const
 ComPtr<ID3D11Buffer> Primitive::getVertexBuffer() const
 {
 	return m_sharedData->vertexBuffer;
-}
-
-ComPtr<ID3D11ShaderResourceView> Primitive::getVertexStructuredBufferSRV() const
-{
-	return m_sharedData->srv_vertexStructuredBuffer;
-}
-
-ComPtr<ID3D11ShaderResourceView> Primitive::getIndexStructuredBufferSRV() const
-{
-	return m_sharedData->srv_indexStructuredBuffer;
 }
 
 ComPtr<ID3D11ShaderResourceView> Primitive::getTrisBufferSRV() const

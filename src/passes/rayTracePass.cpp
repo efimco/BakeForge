@@ -73,8 +73,6 @@ void RayTracePass::draw(Scene* scene)
 	if (prim)
 	{
 		update(scene, prim);
-		const auto& vertexBufferSRV = prim->getVertexStructuredBufferSRV();
-		const auto& indexBufferSRV = prim->getIndexStructuredBufferSRV();
 		const auto& triangleBufferSRV = prim->getTrisBufferSRV();
 		const auto& triangleIndicesBufferSRV = prim->getTrisIndicesBufferSRV();
 

@@ -25,15 +25,10 @@ struct SharedPrimitiveData
 	std::vector<BVH::Node> bvhNodes;
 
 	ComPtr<ID3D11Buffer> indexBuffer;
-	ComPtr<ID3D11Buffer> indexStructuredBuffer;
 	ComPtr<ID3D11Buffer> vertexBuffer;
-	ComPtr<ID3D11Buffer> vertexStructuredBuffer;
 
 	ComPtr<ID3D11Buffer> trisBuffer;
 	ComPtr<ID3D11Buffer> trisIndicesBuffer;
-
-	ComPtr<ID3D11ShaderResourceView> srv_indexStructuredBuffer;
-	ComPtr<ID3D11ShaderResourceView> srv_vertexStructuredBuffer;
 
 	ComPtr<ID3D11ShaderResourceView> srv_trisBuffer;
 	ComPtr<ID3D11ShaderResourceView> srv_trisIndicesBuffer;
@@ -56,8 +51,6 @@ public:
 	const std::vector<uint32_t>& getIndexData() const;
 	ComPtr<ID3D11Buffer> getIndexBuffer() const;
 	ComPtr<ID3D11Buffer> getVertexBuffer() const;
-	ComPtr<ID3D11ShaderResourceView> getVertexStructuredBufferSRV() const;
-	ComPtr<ID3D11ShaderResourceView> getIndexStructuredBufferSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getTrisBufferSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getTrisIndicesBufferSRV() const;
 

@@ -192,23 +192,30 @@ void CS(uint2 tid : SV_DispatchThreadID)
 
 	float aspect = float(demensions.x) / float(demensions.y);
 
-	float2 ndc = (float2(tid) + 0.5f) / float2(demensions);
-	ndc = ndc * 2.0f - 1.0f;
-	ndc.x *= aspect;
+	// Convert pixel to NDC [-1, 1]
+	// In DirectX, screen Y=0 is top, but NDC Y=+1 is top
+	float2 uv = (float2(tid) + 0.5f) / float2(demensions);
+	float2 ndc;
+	ndc.x = uv.x * 2.0f - 1.0f;       // Left=-1, Right=+1
+	ndc.y = (1.0f - uv.y) * 2.0f - 1.0f; // Top=+1, Bottom=-1
 
-	float fov = deg2Rad(camFOV);
+	float fovY = deg2Rad(camFOV);
+	float tanHalfFovY = tan(fovY * 0.5f);
 
-	float2 film = ndc * tan(fov * 0.5f);
+	// Vertical FOV: Y uses tan(fov/2), X uses tan(fov/2) * aspect
+	float2 film;
+	film.y = ndc.y * tanHalfFovY;
+	film.x = ndc.x * tanHalfFovY * aspect;
 
 	// World space ray
 	Ray rayWorld;
 	rayWorld.origin = camPosition;
 	rayWorld.dir = normalize(camForward + film.x * camRight + film.y * camUp);
 
-	// Transform ray to object space
+	// Transform ray to object space (GLM is column-major, use mul(matrix, vector))
 	Ray ray;
-	ray.origin = mul(float4(rayWorld.origin, 1.0f), worldMatrixInv).xyz;
-	ray.dir = normalize(mul(float4(rayWorld.dir, 0.0f), worldMatrixInv).xyz);
+	ray.origin = mul(worldMatrixInv, float4(rayWorld.origin, 1.0f)).xyz;
+	ray.dir = normalize(mul(worldMatrixInv, float4(rayWorld.dir, 0.0f)).xyz);
 
 	float bestT = 1e30f;
 	float3 bestN = 0.0f;
@@ -217,8 +224,8 @@ void CS(uint2 tid : SV_DispatchThreadID)
 
 	if (bestT < 1e29f)
 	{
-		// Transform normal back to world space
-		bestN = normalize(mul(float4(bestN, 0.0f), transpose(worldMatrixInv)).xyz);
+		// Transform normal back to world space (use transpose of inverse = adjugate for normals)
+		bestN = normalize(mul((float3x3)transpose(worldMatrixInv), bestN));
 		// simple visualization: normal -> color
 		color = 0.5f * (bestN + 1.0f);
 
