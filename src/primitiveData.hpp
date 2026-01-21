@@ -29,8 +29,12 @@ struct Triangle
 	float pad1;
 	Position v2;
 	float pad2;
-	Normal normal;
+	Normal n0;  // vertex normal at v0
 	float pad3;
+	Normal n1;  // vertex normal at v1
+	float pad4;
+	Normal n2;  // vertex normal at v2
+	float pad5;
 	Position Center() const
 	{
 		return (v0 + v1 + v2) / 3.0f;

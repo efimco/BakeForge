@@ -41,7 +41,7 @@ float3 PrefilterEnvMap(float roughness, float3 R)
 	float3 prefilteredColor = float3(0.0f, 0.0f, 0.0f);
 	float TotalWeight = 0.0001f;
 
-	const uint SAMPLE_COUNT = 1024;
+	const uint SAMPLE_COUNT = 1024 * 4;
 	for (uint i = 0; i < SAMPLE_COUNT; i++)
 	{
 		float2 Xi = Hammersley(i, SAMPLE_COUNT);

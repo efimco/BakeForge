@@ -61,7 +61,7 @@ BVHDebugPass::BVHDebugPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 
 	m_vertexBuffer = createVertexBuffer(static_cast<uint32_t>(sizeof(float) * 36 * 3), cubeData);
 
-	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), 4096, SBPreset::CpuWrite);
+	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), 4096 * 4096, SBPreset::CpuWrite);
 	m_bvhNodesSrv = createShaderResourceView(m_bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
 
 	createOrResize();

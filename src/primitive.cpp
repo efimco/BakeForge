@@ -61,7 +61,9 @@ void Primitive::fillTriangles()
 		tri.v0 = m_sharedData->vertexData[m_sharedData->indexData[i]].position;
 		tri.v1 = m_sharedData->vertexData[m_sharedData->indexData[i + 1]].position;
 		tri.v2 = m_sharedData->vertexData[m_sharedData->indexData[i + 2]].position;
-		tri.normal = glm::normalize(glm::cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+		tri.n0 = m_sharedData->vertexData[m_sharedData->indexData[i]].normal;
+		tri.n1 = m_sharedData->vertexData[m_sharedData->indexData[i + 1]].normal;
+		tri.n2 = m_sharedData->vertexData[m_sharedData->indexData[i + 2]].normal;
 		m_sharedData->triangles.push_back(tri);
 	}
 
@@ -153,6 +155,16 @@ ComPtr<ID3D11ShaderResourceView> Primitive::getTrisBufferSRV() const
 ComPtr<ID3D11ShaderResourceView> Primitive::getTrisIndicesBufferSRV() const
 {
 	return m_sharedData->srv_trisIndicesBuffer;
+}
+
+const std::vector<Triangle>& Primitive::getTriangles() const
+{
+	return m_sharedData->triangles;
+}
+
+const std::vector<uint32_t>& Primitive::getTriangleIndices() const
+{
+	return m_sharedData->triangleIndices;
 }
 
 std::vector<BVH::Node>& Primitive::getBVHNodes() const

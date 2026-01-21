@@ -54,6 +54,8 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getTrisBufferSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getTrisIndicesBufferSRV() const;
 
+	const std::vector<Triangle>& getTriangles() const;
+	const std::vector<uint32_t>& getTriangleIndices() const;
 	std::vector<BVH::Node>& getBVHNodes() const;
 
 	void copyFrom(const SceneNode& node) override;
