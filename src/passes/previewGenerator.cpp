@@ -98,6 +98,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		{
 			createMatPreviewResources(mat.get());
 		}
+		update();
 
 		D3D11_VIEWPORT viewport = {};
 		viewport.TopLeftX = 0.0f;

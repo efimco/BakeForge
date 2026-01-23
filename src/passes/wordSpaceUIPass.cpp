@@ -119,7 +119,7 @@ void WorldSpaceUIPass::updateLights(Scene* scene)
 		for (auto& [handle, light] : lights)
 		{
 			lightData[i] = light->getLightData();
-			lightData[i].objectID = static_cast<uint32_t>(static_cast<int32_t>(handle));
+			lightData[i].objectID = static_cast<float>(static_cast<int32_t>(handle));
 			++i;
 		}
 		m_context->Unmap(m_lightsBuffer.Get(), 0);
