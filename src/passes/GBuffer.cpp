@@ -100,7 +100,7 @@ void GBuffer::draw(const glm::mat4& view,
 	static const UINT offset = 0;
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		const auto objectID = static_cast<float>(static_cast<int>(handle));
+		const float objectID = static_cast<float>(static_cast<int32_t>(handle));
 		if (!prim->material)
 		{
 			std::cerr << "Primitive " << objectID << " has no material!" << std::endl;
@@ -112,9 +112,9 @@ void GBuffer::draw(const glm::mat4& view,
 		ID3D11ShaderResourceView* const* SRVs = prim->material->getSRVs();
 		m_context->PSSetShaderResources(0, 3, SRVs);
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
+		unbindShaderResources(0, 3);
 	}
 	unbindRenderTargets(5);
-	unbindShaderResources(0, 4);
 	endDebugEvent();
 }
 

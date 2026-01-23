@@ -5,7 +5,7 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 modelViewProjection;
 	float4x4 inverseTransposedModel;
 	float4x4 model;
-	int objectID;
+	float objectID;
 	float3 _pad;
 	float3 cameraPosition;
 	float _pad2; // align to 16 bytes
@@ -98,6 +98,6 @@ PSOutput PS(VertexOutput input)
 	output.normal = float4(worldNormal * 0.5f + 0.5f, 1.0f);
 
 
-	output.objectID = (float)objectID;
+	output.objectID = objectID;
 	return output;
 }

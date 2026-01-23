@@ -65,6 +65,6 @@ void ObjectPicker::dispatchPick(const ComPtr<ID3D11ShaderResourceView>& srv, con
 		}
 
 		std::cout << "Picked ID: " << readBackID << std::endl;
-		scene->setReadBackID(readBackID);
+		scene->setReadBackID(std::floor(readBackID));
 	}
 }

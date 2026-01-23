@@ -20,7 +20,7 @@ struct Light
 	float2 padding2; // Additional padding to align to 16 bytes
 	float3 attenuations;
 	float radius; // radius for point lights
-	uint objectID;
+	float objectID;
 	float3 padding3;
 };
 
@@ -210,7 +210,7 @@ float3 applyPointLight(Light light, float3 V, float3 F0, GBuffer gbuffer)
 
 float3 outline(uint3 DTid, float objectID)
 {
-	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0
+	if (objectID != selectedID ) // -1 because 0 is value for background but we want to select first object with ID 0
 		return float3(0.0, 0.0, 0.0);
 	float3 outlineColor = float3(0.65, 0.25, 0.0);
 	int thickness = 1;

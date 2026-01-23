@@ -21,7 +21,7 @@ struct alignas(16) LightData
 	glm::vec2 padding2;   // Additional padding to align to 16 bytes
 	glm::vec3 attenuations;
 	float radius; // radius for point lights
-	uint32_t objectID;
+	float objectID;
 	glm::vec3 padding3; // Padding to maintain 16-byte alignment
 };
 

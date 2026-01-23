@@ -25,7 +25,7 @@ struct Light
 	float2 padding2;
 	float3 attenuations;
 	float radius; // radius for point lights
-	uint objectID;
+	float objectID;
 	float3 padding3;
 };
 
