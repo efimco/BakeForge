@@ -81,13 +81,13 @@ void Renderer::draw()
 {
 	if (InputEvents::isKeyDown(KeyButtons::KEY_F11))
 	{
-		AppConfig::setCaptureNextFrame(true);
+		AppConfig::captureNextFrame = true;
 	}
-	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
+	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), nullptr);
 	}
-	if (AppConfig::getNeedsResize())
+	if (AppConfig::needsResize)
 	{
 		resize();
 		m_zPrePass->createOrResize();
@@ -99,7 +99,7 @@ void Renderer::draw()
 		m_rayTracePass->createOrResize();
 		m_bvhDebugPass->createOrResize();
 		m_worldSpaceUIPass->createOrResize();
-		AppConfig::setNeedsResize(false);
+		AppConfig::needsResize = false;
 	}
 
 	// --- CPU Updates ---
@@ -107,12 +107,12 @@ void Renderer::draw()
 	const std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
-	AppConfig::setDeltaTime(m_deltaTime.count());
+	AppConfig::deltaTime = m_deltaTime.count();
 
 	m_scene->getActiveCamera()->processMovementControls(m_scene->getActiveNode());
 	m_view = m_scene->getActiveCamera()->getViewMatrix();
-	const auto vWidth = static_cast<float>(AppConfig::getViewportWidth());
-	const auto vHeight = static_cast<float>(AppConfig::getViewportHeight());
+	const auto vWidth = static_cast<float>(AppConfig::viewportWidth);
+	const auto vHeight = static_cast<float>(AppConfig::viewportHeight);
 	const float aspectRatio = vWidth / vHeight;
 	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov), aspectRatio, 0.1f, 100.0f);
 	static int frameCount = 0;
@@ -138,7 +138,7 @@ void Renderer::draw()
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
-	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::getClearColor());
+	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::clearColor);
 	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -148,7 +148,7 @@ void Renderer::draw()
 	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
-	if (m_rdocAPI && AppConfig::getCaptureNextFrame())
+	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->EndFrameCapture(nullptr, nullptr);
 
@@ -161,7 +161,7 @@ void Renderer::draw()
 			if (m_rdocAPI->GetCapture(idx, path, &pathLen, &timestamp))
 			{
 				m_rdocAPI->LaunchReplayUI(1, path); // 1 = connect to this instance
-				AppConfig::setCaptureNextFrame(false);
+				AppConfig::captureNextFrame = false;
 			}
 		}
 	}
@@ -175,7 +175,7 @@ void Renderer::resize()
 	m_depthStencilBuffer.Reset();
 	m_depthStencilView.Reset();
 
-	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::getWindowWidth(), AppConfig::getWindowHeight(),
+	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::windowWidth, AppConfig::windowHeight,
 											DXGI_FORMAT_UNKNOWN, 0);
 
 	{
@@ -190,8 +190,8 @@ void Renderer::resize()
 
 	{
 		D3D11_TEXTURE2D_DESC depthBufferDesc = {};
-		depthBufferDesc.Width = AppConfig::getWindowWidth();
-		depthBufferDesc.Height = AppConfig::getWindowHeight();
+		depthBufferDesc.Width = AppConfig::windowWidth;
+		depthBufferDesc.Height = AppConfig::windowHeight;
 		depthBufferDesc.MipLevels = 1;
 		depthBufferDesc.ArraySize = 1;
 		depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -217,8 +217,8 @@ void Renderer::resize()
 	}
 
 	D3D11_VIEWPORT viewport = {};
-	viewport.Width = static_cast<float>(AppConfig::getWindowWidth());
-	viewport.Height = static_cast<float>(AppConfig::getWindowHeight());
+	viewport.Width = static_cast<float>(AppConfig::windowWidth);
+	viewport.Height = static_cast<float>(AppConfig::windowHeight);
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MaxDepth = 1.0f;

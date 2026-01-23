@@ -49,6 +49,7 @@ public:
 	void fillTriangles();
 
 	const std::vector<uint32_t>& getIndexData() const;
+	const std::vector<Vertex>& getVertexData() const;
 	ComPtr<ID3D11Buffer> getIndexBuffer() const;
 	ComPtr<ID3D11Buffer> getVertexBuffer() const;
 	ComPtr<ID3D11ShaderResourceView> getTrisBufferSRV() const;

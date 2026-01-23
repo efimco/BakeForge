@@ -65,17 +65,14 @@ void GBuffer::draw(const glm::mat4& view,
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
-	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
-	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
+	viewport.Width = static_cast<float>(AppConfig::viewportWidth);
+	viewport.Height = static_cast<float>(AppConfig::viewportHeight);
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	m_context->RSSetViewports(1, &viewport);
 
 	beginDebugEvent(L"GBuffer Pass");
-	if (AppConfig::getNeedsResize())
-	{
-		createOrResize();
-	}
+
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
@@ -83,7 +80,7 @@ void GBuffer::draw(const glm::mat4& view,
 
 	for (const auto rtv : m_rtvs)
 	{
-		m_context->ClearRenderTargetView(rtv, AppConfig::getClearColor());
+		m_context->ClearRenderTargetView(rtv, AppConfig::clearColor);
 	}
 
 	m_context->IASetInputLayout(m_inputLayout.Get());
@@ -164,30 +161,30 @@ void GBuffer::createOrResize()
 	}
 
 	// albedo
-	t_albedo = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	t_albedo = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	srv_albedo = createShaderResourceView(t_albedo.Get(), SRVPreset::Texture2D);
 	rtv_albedo = createRenderTargetView(t_albedo.Get(), RTVPreset::Texture2D);
 
 	// metallicRoughness
 
-	t_metallicRoughness = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R16G16_UNORM);
+	t_metallicRoughness = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R16G16_UNORM);
 	srv_metallicRoughness = createShaderResourceView(t_metallicRoughness.Get(), SRVPreset::Texture2D);
 	rtv_metallicRoughness = createRenderTargetView(t_metallicRoughness.Get(), RTVPreset::Texture2D);
 
 	// normal
 
-	t_normal = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R10G10B10A2_UNORM);
+	t_normal = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R10G10B10A2_UNORM);
 	srv_normal = createShaderResourceView(t_normal.Get(), SRVPreset::Texture2D);
 	rtv_normal = createRenderTargetView(t_normal.Get(), RTVPreset::Texture2D);
 
 	// position
 
-	t_position = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R16G16B16A16_FLOAT);
+	t_position = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	srv_position = createShaderResourceView(t_position.Get(), SRVPreset::Texture2D);
 	rtv_position = createRenderTargetView(t_position.Get(), RTVPreset::Texture2D);
 
 	// objectID
-	t_objectID = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R32_FLOAT);
+	t_objectID = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32_FLOAT);
 	srv_objectID = createShaderResourceView(t_objectID.Get(), SRVPreset::Texture2D);
 	rtv_objectID = createRenderTargetView(t_objectID.Get(), RTVPreset::Texture2D);
 

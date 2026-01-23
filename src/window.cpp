@@ -60,14 +60,14 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 			const int height = HIWORD(lParam);
 			if (wParam == SIZE_MINIMIZED)
 			{
-				AppConfig::setWindowMinimized(true);
+				AppConfig::isWindowMinimized = true;
 			}
 			else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
 			{
-				AppConfig::setWindowMinimized(false);
-				AppConfig::setWindowHeight(height);
-				AppConfig::setWindowWidth(width);
-				AppConfig::setNeedsResize(true);
+				AppConfig::isWindowMinimized = false;
+				AppConfig::windowHeight = height;
+				AppConfig::windowWidth = width;
+				AppConfig::needsResize = true;
 			}
 			break;
 		}

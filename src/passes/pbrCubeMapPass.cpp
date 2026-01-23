@@ -121,11 +121,11 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
 
 	beginDebugEvent(L"CubemapBGDrawPass");
-	if (AppConfig::getRegeneratePrefilteredMap())
+	if (AppConfig::regeneratePrefilteredMap)
 	{
 		createPrefilteredMap();
 		createBRDFLut();
-		AppConfig::getRegeneratePrefilteredMap() = false;
+		AppConfig::regeneratePrefilteredMap = false;
 	}
 
 	update(view, projection);
@@ -198,9 +198,9 @@ void CubeMapPass::update(const glm::mat4& view, const glm::mat4& projection) con
 	glm::mat4 viewNoTranslation = view;
 	viewNoTranslation[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	data->viewProj = glm::transpose(projection * viewNoTranslation);
-	data->mapRotationY = AppConfig::getIBLRotation();
-	data->isBlurred = AppConfig::getIsBlurred() ? 1 : 0;
-	data->blurAmount = AppConfig::getIsBlurred() ? AppConfig::getBlurAmount() : 0.0f;
+	data->mapRotationY = AppConfig::IBLrotation;
+	data->isBlurred = AppConfig::isBackgroundBlurred ? 1 : 0;
+	data->blurAmount = AppConfig::isBackgroundBlurred ? AppConfig::blurAmount : 0.0f;
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }
 
@@ -313,8 +313,8 @@ void CubeMapPass::createBackgroundResources()
 	backgroundDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	backgroundDesc.CPUAccessFlags = 0;
 	backgroundDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	backgroundDesc.Height = AppConfig::getViewportHeight();
-	backgroundDesc.Width = AppConfig::getViewportWidth();
+	backgroundDesc.Height = AppConfig::viewportHeight;
+	backgroundDesc.Width = AppConfig::viewportWidth;
 	backgroundDesc.MipLevels = 1;
 	backgroundDesc.MiscFlags = 0;
 	backgroundDesc.SampleDesc.Count = 1;

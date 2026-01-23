@@ -50,8 +50,8 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
-	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
-	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
+	viewport.Width = static_cast<float>(AppConfig::viewportWidth);
+	viewport.Height = static_cast<float>(AppConfig::viewportHeight);
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	m_context->RSSetViewports(1, &viewport);
@@ -91,15 +91,15 @@ void FSQuad::createOrResize()
 		m_rtv.Reset();
 		m_srv.Reset();
 	}
-	m_texture = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_texture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_rtv = createRenderTargetView(m_texture.Get(), RTVPreset::Texture2D);
 	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 
 	D3D11_VIEWPORT viewport;
-	viewport.Height = static_cast<float>(AppConfig::getViewportHeight());
-	viewport.Width = static_cast<float>(AppConfig::getViewportWidth());
+	viewport.Height = static_cast<float>(AppConfig::viewportHeight);
+	viewport.Width = static_cast<float>(AppConfig::viewportWidth);
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MaxDepth = 1.0f;

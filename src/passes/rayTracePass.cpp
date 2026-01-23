@@ -53,7 +53,7 @@ void RayTracePass::createOrResize()
 		m_uav.Reset();
 	}
 
-	m_texture = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(),
+	m_texture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight,
 								DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 	m_uav = createUnorderedAccessView(m_texture.Get(), UAVPreset::Texture2D);
@@ -82,7 +82,7 @@ void RayTracePass::draw(Scene* scene)
 		m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 		m_context->CSSetShaderResources(0, 3, srvs);
 		m_context->CSSetUnorderedAccessViews(0, 1, m_uav.GetAddressOf(), nullptr);
-		m_context->Dispatch(AppConfig::getViewportWidth() / 16, AppConfig::getViewportHeight() / 16, 1);
+		m_context->Dispatch(AppConfig::viewportWidth / 16, AppConfig::viewportHeight / 16, 1);
 		m_context->CSSetShader(nullptr, nullptr, 0);
 		unbindShaderResources(0, 3);
 		unbindComputeUAVs(0, 1);
@@ -96,7 +96,7 @@ void RayTracePass::update(Scene* scene, const Primitive* const& prim)
 	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
 	{
 		RayTraceConstantBuffer* constantBuffer = static_cast<RayTraceConstantBuffer*>(mappedResource.pData);
-		constantBuffer->demensions = glm::uvec2(AppConfig::getViewportWidth(), AppConfig::getViewportHeight());
+		constantBuffer->demensions = glm::uvec2(AppConfig::viewportWidth, AppConfig::viewportHeight);
 
 		constantBuffer->camPosition = scene->getActiveCamera()->transform.position;
 		constantBuffer->cameraFOV = scene->getActiveCamera()->fov;

@@ -73,7 +73,7 @@ void WorldSpaceUIPass::createOrResize()
 	}
 
 	m_texture =
-		createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+		createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 	m_rtv = createRenderTargetView(m_texture.Get(), RTVPreset::Texture2D);
 	m_rtvCollector->addRTV("WSUI::wsuiTextrue", m_srv.Get());
@@ -101,7 +101,7 @@ void WorldSpaceUIPass::updateConstantBuffer(const glm::mat4& view, const glm::ma
 	dataPtr->view = glm::transpose(view);
 	dataPtr->cameraPosition = glm::vec3(scene->transform.position);
 	dataPtr->sizeInPixels = 32.0f; // Example value, adjust as needed
-	glm::ivec2 screenSize = glm::ivec2(AppConfig::getViewportWidth(), AppConfig::getViewportHeight());
+	glm::ivec2 screenSize = glm::ivec2(AppConfig::viewportWidth, AppConfig::viewportHeight);
 	dataPtr->screenSize = screenSize;
 
 	m_context->Unmap(m_constantBuffer.Get(), 0);

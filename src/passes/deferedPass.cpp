@@ -25,12 +25,12 @@ struct alignas(16) DeferredConstantBuffer
 DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	createOrResize();
 	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");
 	m_lightsBuffer = createStructuredBuffer(sizeof(LightData), MAX_LIGHTS, SBPreset::CpuWrite);
 	m_lightsSRV = createShaderResourceView(m_lightsBuffer.Get(), SRVPreset::StructuredBuffer, 0, MAX_LIGHTS);
 	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 	m_constantBuffer = createConstantBuffer(sizeof(DeferredConstantBuffer));
+	createOrResize();
 }
 
 void DeferredPass::createOrResize()
@@ -42,7 +42,7 @@ void DeferredPass::createOrResize()
 		m_finalSRV.Reset();
 	}
 
-	m_finalTexture = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(),
+	m_finalTexture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight,
 									 DXGI_FORMAT_R8G8B8A8_UNORM,
 									 D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_finalRTV = createRenderTargetView(m_finalTexture.Get(), RTVPreset::Texture2D);
@@ -64,12 +64,7 @@ void DeferredPass::draw(const glm::mat4& view,
 						ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
 						ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV)
 {
-
 	beginDebugEvent(L"Deffered Pass");
-	if (AppConfig::getNeedsResize())
-	{
-		createOrResize();
-	}
 	if (scene->areLightsDirty())
 	{
 		updateLights(scene);
@@ -81,14 +76,14 @@ void DeferredPass::draw(const glm::mat4& view,
 	if (SUCCEEDED(hr))
 	{
 		auto* cbData = static_cast<DeferredConstantBuffer*>(mappedResource.pData);
-		cbData->IBLrotationY = AppConfig::getIBLRotation();
-		cbData->IBLintensity = AppConfig::getIBLIntensity();
+		cbData->IBLrotationY = AppConfig::IBLrotation;
+		cbData->IBLintensity = AppConfig::IBLintensity;
 		cbData->selectedID = static_cast<float>(scene->getActiveNodeID());
-		cbData->backgroundIntensity = AppConfig::getBackgroundIntensity();
+		cbData->backgroundIntensity = AppConfig::backgroundIntensity;
 		cbData->cameraPosition[0] = cameraPosition.x;
 		cbData->cameraPosition[1] = cameraPosition.y;
 		cbData->cameraPosition[2] = cameraPosition.z;
-		cbData->drawWSUI = AppConfig::getDrawWSUI() ? 1 : 0;
+		cbData->drawWSUI = AppConfig::drawWSUI ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 
@@ -117,9 +112,9 @@ void DeferredPass::draw(const glm::mat4& view,
 
 	// Dispatch compute shader
 	UINT dispatchX = static_cast<UINT>(
-		std::ceil((AppConfig::getViewportWidth() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
+		std::ceil((AppConfig::viewportWidth + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
 	UINT dispatchY = static_cast<UINT>(
-		std::ceil((AppConfig::getViewportHeight() + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
+		std::ceil((AppConfig::viewportHeight + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
 	if (dispatchX == 0)
 		dispatchX = 1;
 	if (dispatchY == 0)

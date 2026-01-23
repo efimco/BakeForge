@@ -129,9 +129,9 @@ void BVHDebugPass::update(const glm::mat4& matrix)
 	{
 		auto* cb = static_cast<BVHCB*>(mappedResource.pData); // Removed const qualifier to allow assignment
 		cb->viewProj = matrix;
-		cb->maxDepth = AppConfig::getMaxBVHDepth();
-		cb->minDepth = AppConfig::getMinBVHDepth();
-		cb->showLeafsOnly = AppConfig::getShowLeavsOnly() ? 1 : 0;
+		cb->maxDepth = AppConfig::maxBVHDepth;
+		cb->minDepth = AppConfig::minBVHDepth;
+		cb->showLeafsOnly = AppConfig::showLeafsOnly ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }
@@ -163,11 +163,11 @@ void BVHDebugPass::createOrResize()
 	}
 
 	m_depthTexture =
-		createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R24G8_TYPELESS);
+		createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R24G8_TYPELESS);
 	m_depthStencilView = createDSView(m_depthTexture.Get(), DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 	m_texture =
-		createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
+		createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_shaderResourceView = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 	m_renderTargetView = createRenderTargetView(m_texture.Get(), RTVPreset::Texture2D);
 

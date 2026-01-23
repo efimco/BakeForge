@@ -137,6 +137,11 @@ const std::vector<uint32_t>& Primitive::getIndexData() const
 	return m_sharedData->indexData;
 }
 
+const std::vector<Vertex>& Primitive::getVertexData() const
+{
+	return m_sharedData->vertexData;
+}
+
 ComPtr<ID3D11Buffer> Primitive::getIndexBuffer() const
 {
 	return m_sharedData->indexBuffer;

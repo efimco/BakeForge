@@ -2,39 +2,31 @@
 
 namespace AppConfig
 {
-	bool& getNeedsResize();
-	void setNeedsResize(bool _needsResize);
+	inline int windowWidth = 2;
+	inline int windowHeight = 2;
+	inline int viewportWidth = 2;
+	inline int viewportHeight = 2;
 
-	const int& getWindowWidth();
-	const int& getWindowHeight();
-	const int& getViewportWidth();
-	const int& getViewportHeight();
-	float getAspectRatio();
-	void setViewportWidth(int width);
-	void setViewportHeight(int height);
-	void setWindowWidth(int width);
-	void setWindowHeight(int height);
-	void setWindowMinimized(bool isMinimized);
-	float& getIBLIntensity();
-	float& getIBLRotation();
-	float& getBackgroundIntensity();
-	bool& getRegeneratePrefilteredMap();
+	inline bool needsResize = true;
+	inline float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	inline bool isWindowMinimized = false;
+	inline double deltaTime = 0.0;
+	inline float IBLintensity = 1.0f;
+	inline float IBLrotation = 0.0f;
+	inline bool regeneratePrefilteredMap = false;
+	inline bool isBackgroundBlurred = false;
+	inline float blurAmount = 0.5f;
+	inline float backgroundIntensity = 1.0f;
 
-	// Debug BVH visualization
-	bool& getShowLeavsOnly();
-	int& getMaxBVHDepth();
-	int& getMinBVHDepth();
+	inline bool drawWSUI = true;
+	inline bool captureNextFrame = false;
 
-	void setDeltaTime(double value);
-	double getDeltaTime();
+	inline int maxBVHDepth = 1;
+	inline int minBVHDepth = 0;
+	inline bool showLeafsOnly = false;
 
-	float* getClearColor();
-	bool& getIsBlurred();
-	float& getBlurAmount();
-	void setClearColor(float r, float g, float b, float a);
-	bool& getDrawWSUI();
-	void setCaptureNextFrame(bool capture);
-	bool getCaptureNextFrame();
-
-
+	inline float getAspectRatio()
+	{
+		return static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);
+	}
 } // namespace AppConfig

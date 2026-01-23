@@ -167,24 +167,24 @@ void UIManager::showSceneSettings() const
 {
 
 	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("IBL Intensity", &AppConfig::getIBLIntensity(), 1.0f, 0.0f, 100.0f);
-	ImGui::DragFloat("IBL Rotation", &AppConfig::getIBLRotation());
-	ImGui::DragFloat("Environment Map Intensity", &AppConfig::getBackgroundIntensity(), 1.0f, 0.0f, 1.0f);
+	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 1.0f, 0.0f, 100.0f);
+	ImGui::DragFloat("IBL Rotation", &AppConfig::IBLrotation);
+	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 1.0f, 0.0f, 1.0f);
 	ImGui::Separator();
 
-	ImGui::Checkbox("Blur Environment Map", &AppConfig::getIsBlurred());
-	if (AppConfig::getIsBlurred())
+	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
+	if (AppConfig::isBackgroundBlurred)
 	{
-		ImGui::SliderFloat("Blur Amount", &AppConfig::getBlurAmount(), 0.0f, 5.0f);
+		ImGui::SliderFloat("Blur Amount", &AppConfig::blurAmount, 0.0f, 5.0f);
 	}
-	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::getRegeneratePrefilteredMap());
+	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::regeneratePrefilteredMap);
 	ImGui::Separator();
 
 	// Debug BVH visualization
 	ImGui::TextWrapped("Debug Visualization");
-	ImGui::Checkbox("Show Leafs only", &AppConfig::getShowLeavsOnly());
-	ImGui::SliderInt("BVH Max Depth", &AppConfig::getMaxBVHDepth(), 0, 64, "%d");
-	ImGui::SliderInt("BVH Min Depth", &AppConfig::getMinBVHDepth(), 0, AppConfig::getMaxBVHDepth(), "%d");
+	ImGui::Checkbox("Show Leafs only", &AppConfig::showLeafsOnly);
+	ImGui::SliderInt("BVH Max Depth", &AppConfig::maxBVHDepth, 0, 64, "%d");
+	ImGui::SliderInt("BVH Min Depth", &AppConfig::minBVHDepth, 0, AppConfig::maxBVHDepth, "%d");
 
 
 	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
@@ -403,12 +403,12 @@ void UIManager::showViewport(const ComPtr<ID3D11ShaderResourceView>& srv)
 	size.x = static_cast<int>(size.x) % 2 == 0 ? size.x : size.x - 1;
 	size.y = static_cast<int>(size.y) % 2 == 0 ? size.y : size.y - 1;
 
-	AppConfig::setViewportWidth(static_cast<int>(size.x));
-	AppConfig::setViewportHeight(static_cast<int>(size.y));
+	AppConfig::viewportWidth = static_cast<int>(size.x);
+	AppConfig::viewportHeight = static_cast<int>(size.y);
 
 	if (size.x != prevSize.x || size.y != prevSize.y)
 	{
-		AppConfig::setNeedsResize(true);
+		AppConfig::needsResize = true;
 		prevSize = size;
 	}
 
@@ -480,12 +480,12 @@ void UIManager::showChWSnappingOptions()
 void UIManager::showChWViewportOptions()
 {
 	// Viewport options child window
-	ImGui::SetCursorPos(ImVec2(AppConfig::getViewportWidth() - 205.0f, 5.0f));
+	ImGui::SetCursorPos(ImVec2(AppConfig::viewportWidth - 205.0f, 5.0f));
 	ImGui::BeginChild("ViewportOptions", ImVec2(200.0f, 150.0f), false, ImGuiWindowFlags_NoScrollbar);
 	{
-		if (ImGui::RadioButton("Show UI Overlay", AppConfig::getDrawWSUI()))
+		if (ImGui::RadioButton("Show UI Overlay", AppConfig::drawWSUI))
 		{
-			AppConfig::getDrawWSUI() = !AppConfig::getDrawWSUI();
+			AppConfig::drawWSUI = !AppConfig::drawWSUI;
 		}
 	}
 	ImGui::EndChild();
@@ -494,7 +494,7 @@ void UIManager::showChWViewportOptions()
 void UIManager::showChWImportProgress(std::shared_ptr<ImportProgress> progress)
 {
 	// Viewport options child window
-	ImGui::SetCursorPos(ImVec2(AppConfig::getViewportWidth() - 300.0f, AppConfig::getViewportHeight() - 100.0f));
+	ImGui::SetCursorPos(ImVec2(AppConfig::viewportWidth - 300.0f, AppConfig::viewportHeight - 100.0f));
 	ImGui::BeginChild("ImportProgress", ImVec2(250.0f, 150.0f), false, ImGuiWindowFlags_NoScrollbar);
 	{
 		ImGui::Text("Import Progress:");

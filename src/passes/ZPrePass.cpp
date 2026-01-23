@@ -115,7 +115,7 @@ void ZPrePass::createOrResize()
 		srv_depth.Reset();
 	}
 
-	t_depth = createTexture2D(AppConfig::getViewportWidth(), AppConfig::getViewportHeight(), DXGI_FORMAT_R24G8_TYPELESS);
+	t_depth = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R24G8_TYPELESS);
 	dsv = createDepthStencilView(t_depth.Get(), DSVPreset::Texture2D);
 	srv_depth = createShaderResourceView(t_depth.Get(), SRVPreset::Texture2D);
 
