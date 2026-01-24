@@ -147,7 +147,7 @@ void PreviewGenerator::update()
 
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 modelViewProjection = glm::transpose(projectionMatrix * viewMatrix * model);
-		glm::mat4 inverseTransposedModel = glm::inverse(glm::transpose(model));
+		glm::mat4 inverseTransposedModel = glm::inverse(model);
 		auto* data = static_cast<PreviewGenCBj*>(mapped.pData);
 		data->modelViewProjection = modelViewProjection;
 		data->inverseTransposedModel = inverseTransposedModel;

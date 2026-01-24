@@ -624,6 +624,7 @@ void BasePass::unbindShaderResources(const UINT startSlot, const UINT count)
 {
 	const std::vector<ID3D11ShaderResourceView*> nullSRVs(count, nullptr);
 	m_context->PSSetShaderResources(startSlot, count, nullSRVs.data());
+	m_context->VSSetShaderResources(startSlot, count, nullSRVs.data());
 	m_context->CSSetShaderResources(startSlot, count, nullSRVs.data());
 }
 

@@ -18,7 +18,7 @@
 static constexpr D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0} };
 
 struct alignas(16) ConstantBufferData
 {
@@ -48,19 +48,19 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(s_gBufferInputLayoutDesc, ARRAYSIZE(s_gBufferInputLayoutDesc),
-												 m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferPointer(),
-												 m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferSize(),
-												 &m_inputLayout);
+			m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferPointer(),
+			m_shaderManager->getVertexShaderBlob("gBuffer")->GetBufferSize(),
+			&m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
 	m_constantbuffer = createConstantBuffer(sizeof(ConstantBufferData));
 }
 
 void GBuffer::draw(const glm::mat4& view,
-				   const glm::mat4& projection,
-				   const glm::vec3& cameraPosition,
-				   Scene* scene,
-				   ComPtr<ID3D11DepthStencilView> dsv)
+	const glm::mat4& projection,
+	const glm::vec3& cameraPosition,
+	Scene* scene,
+	ComPtr<ID3D11DepthStencilView> dsv)
 {
 	D3D11_VIEWPORT viewport = {};
 	viewport.TopLeftX = 0.0f;
@@ -116,23 +116,21 @@ void GBuffer::draw(const glm::mat4& view,
 }
 
 void GBuffer::update(const glm::mat4& view,
-					 const glm::mat4& projection,
-					 const glm::vec3& cameraPosition,
-					 Scene* scene,
-					 const float objectID,
-					 Primitive* prim) const
+	const glm::mat4& projection,
+	const glm::vec3& cameraPosition,
+	Scene* scene,
+	const float objectID,
+	Primitive* prim) const
 {
-	const glm::mat4 model = prim->getWorldMatrix();
-	const glm::mat4 mvp = projection * view * model;
+	const glm::mat4 mvp = projection * view * prim->getWorldMatrix();
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr = m_context->Map(m_constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (SUCCEEDED(hr))
 	{
 		const auto cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		// Use inverse-transpose of the model matrix (upper-left 3x3) for correct normal transformation
-		cbData->inverseTransposedModel = glm::inverse(model);
-		cbData->model = glm::transpose(model);
+		cbData->inverseTransposedModel = glm::inverse(prim->getWorldMatrix());
+		cbData->model = glm::transpose(prim->getWorldMatrix());
 		cbData->objectID = objectID;
 		cbData->cameraPosition = cameraPosition;
 		m_context->Unmap(m_constantbuffer.Get(), 0);

@@ -35,9 +35,9 @@
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
 static bool gUseSnap(false);
-static glm::ivec3 gSnapTranslate = {1, 1, 1};
-static glm::ivec3 gSnapRotate = {15, 15, 15};
-static glm::ivec3 gSnapScale = {1, 1, 1};
+static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
+static glm::ivec3 gSnapRotate = { 15, 15, 15 };
+static glm::ivec3 gSnapScale = { 1, 1, 1 };
 
 UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
 	: m_commandManager(std::make_unique<CommandManager>())
@@ -99,8 +99,8 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 		flipDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		flipDesc.Flags = 0;
 
-		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates,
-													 int desc_templates_count);
+		extern void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC * desc_templates,
+			int desc_templates_count);
 		ImGui_ImplDX11_SetSwapChainDescs(&flipDesc, 1);
 	}
 	m_isMouseInViewport = false;
@@ -114,9 +114,9 @@ UIManager::~UIManager()
 }
 
 void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
-					 Scene* scene,
-					 const glm::mat4& view,
-					 const glm::mat4& projection)
+	Scene* scene,
+	const glm::mat4& view,
+	const glm::mat4& projection)
 {
 	m_view = view;
 	m_projection = projection;
@@ -177,7 +177,12 @@ void UIManager::showSceneSettings() const
 	{
 		ImGui::SliderFloat("Blur Amount", &AppConfig::blurAmount, 0.0f, 5.0f);
 	}
+
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::regeneratePrefilteredMap);
+	ImGui::Separator();
+
+	ImGui::Checkbox("Bake Selected Prim", &AppConfig::bake);
+	ImGui::DragFloat("Ray Length", &AppConfig::rayLength, 1.0f, 1.0f, 1000.0f);
 	ImGui::Separator();
 
 	// Debug BVH visualization
@@ -599,7 +604,7 @@ void UIManager::processGizmo()
 			gUseSnap = !gUseSnap;
 	}
 
-	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{m_commandManager.get(), m_scene, activeNode};
+	TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, activeNode };
 
 	glm::mat4 worldMatrix = activeNode->getWorldMatrix();
 	const auto matrix = glm::value_ptr(worldMatrix);
@@ -622,7 +627,7 @@ void UIManager::processGizmo()
 		break;
 	}
 	ImGuizmo::Manipulate(viewMatrix, projectionMatrix, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, nullptr,
-						 gUseSnap ? &currentSnapValue[0] : nullptr);
+		gUseSnap ? &currentSnapValue[0] : nullptr);
 	if (ImGuizmo::IsUsing())
 	{
 		m_isMouseInViewport = false;
@@ -643,7 +648,7 @@ void UIManager::processGizmo()
 		}
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(localMatrix), matrixTranslation, matrixRotation,
-											  matrixScale);
+			matrixScale);
 		activeNode->transform.position = glm::vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
 		activeNode->transform.rotation = glm::vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
 		activeNode->transform.scale = glm::vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
@@ -944,7 +949,19 @@ void UIManager::showPassesWindow()
 	constexpr auto uv0 = ImVec2(0, 0);
 	constexpr auto uv1 = ImVec2(1, 1);
 	ImVec2 size = ImGui::GetContentRegionAvail();
-	float aspectRatio = AppConfig::getAspectRatio();
+
+	// get aspect ratio from the actual texture
+	ComPtr<ID3D11Resource> resource;
+	rtvMap[rtvNameStrings[currentItemIndex]]->GetResource(&resource);
+	ComPtr<ID3D11Texture2D> texture;
+	resource.As(&texture);
+	D3D11_TEXTURE2D_DESC desc;
+	texture->GetDesc(&desc);
+	ImGui::Text("Texture: %ux%u, Format: %d", desc.Width, desc.Height, desc.Format);
+	ImGui::Text("Format: %d (10=R16G16B16A16_FLOAT)", desc.Format);
+
+	float aspectRatio = static_cast<float>(desc.Width) / static_cast<float>(desc.Height);
+
 	size.x = size.y * aspectRatio;
 	ImGui::Image(tex, size, uv0, uv1);
 	ImGui::End();
@@ -981,7 +998,7 @@ void UIManager::showProperties() const
 void UIManager::showPrimitiveProperties(Primitive* primitive) const
 {
 	{
-		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{m_commandManager.get(), m_scene, primitive};
+		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, primitive };
 
 		ImGui::Text("Type: Primitive");
 		ImGui::Text("Name: %s", primitive->name.c_str());
@@ -1011,9 +1028,9 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 		// Save previous material index
 		const int previousMaterialIndex = currentMaterialIndex;
 		if (ImGui::BeginCombo("Material",
-							  currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size()
-								  ? materialNames[currentMaterialIndex].c_str()
-								  : "Select Material"))
+			currentMaterialIndex >= 0 && currentMaterialIndex < materialNames.size()
+			? materialNames[currentMaterialIndex].c_str()
+			: "Select Material"))
 		{
 			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
@@ -1023,8 +1040,8 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 					currentMaterialIndex = n;
 					if (currentMaterialIndex != previousMaterialIndex)
 					{
-						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene,
-																					primitive};
+						TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene,
+																					primitive };
 						const std::shared_ptr<Material> selectedMaterial = m_scene->getMaterial(materialNames[n]);
 						primitive->material = selectedMaterial;
 					}
@@ -1058,7 +1075,7 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
 
 void UIManager::showLightProperties(Light* light) const
 {
-	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene, light};
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light };
 
 	ImGui::Text("Name: %s", light->name.c_str());
 
@@ -1073,7 +1090,7 @@ void UIManager::showLightProperties(Light* light) const
 
 void UIManager::showCameraProperties(Camera* camera) const
 {
-	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{m_commandManager.get(), m_scene, camera};
+	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera };
 
 	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
@@ -1084,7 +1101,7 @@ void UIManager::showCameraProperties(Camera* camera) const
 std::string UIManager::openFileDialog(const FileType outFileType)
 {
 	OPENFILENAME ofn;
-	char fileName[260] = {0};
+	char fileName[260] = { 0 };
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = nullptr;

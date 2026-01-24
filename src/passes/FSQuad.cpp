@@ -8,6 +8,12 @@
 #include "rtvCollector.hpp"
 #include "shaderManager.hpp"
 
+
+inline static constexpr D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] = {
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
+
 FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context) : BasePass(_device, _context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
@@ -15,8 +21,8 @@ FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _contex
 	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
 
 	HRESULT hr = m_device->CreateInputLayout(FSQuadInputLayoutDesc, ARRAYSIZE(FSQuadInputLayoutDesc),
-											 m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferPointer(),
-											 m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferSize(), &m_inputLayout);
+		m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferPointer(),
+		m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferSize(), &m_inputLayout);
 	assert(SUCCEEDED(hr));
 
 	// Create vertex buffer for fullscreen quad

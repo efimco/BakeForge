@@ -303,7 +303,6 @@ void CubeMapPass::createCubeMapResources()
 	uint32_t gx = (sideSize + 7) / 8;
 	uint32_t gy = (sideSize + 7) / 8;
 	m_context->Dispatch(gx, gy, 6);
-	m_rtvCollector->addRTV("CUBEMAP::cubemap", m_CubeMapSRV.Get());
 }
 
 void CubeMapPass::createBackgroundResources()
@@ -401,7 +400,6 @@ void CubeMapPass::createIrradianceMap()
 			throw std::runtime_error("Failed to create irradiance shader resource view.");
 		}
 	}
-	m_rtvCollector->addRTV("CUBEMAP::irradiance", m_irradianceSRV.Get());
 
 	// Create constant buffer for irradiance generation with correct structure
 	ComPtr<ID3D11Buffer> irradianceConstantBuffer;
@@ -495,7 +493,6 @@ void CubeMapPass::createPrefilteredMap()
 			throw std::runtime_error("Failed to create prefiltered shader resource view.");
 		}
 	}
-	m_rtvCollector->addRTV("CUBEMAP::prefiltered", m_prefilteredSRV.Get());
 
 	// Create constant buffer for prefiltered map generation
 	ComPtr<ID3D11Buffer> prefilteredConstantBuffer;
