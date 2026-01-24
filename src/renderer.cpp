@@ -23,6 +23,7 @@
 #include "passes/previewGenerator.hpp"
 #include "passes/rayTracePass.hpp"
 #include "passes/wordSpaceUIPass.hpp"
+#include "passes/bakerPass.hpp"
 
 
 #include "camera.hpp"
@@ -70,6 +71,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_device->getDevice(), m_device->getContext());
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_device->getDevice(), m_device->getContext());
+	m_bakerPass = std::make_unique<BakerPass>(m_device->getDevice(), m_device->getContext());
 
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
@@ -99,6 +101,7 @@ void Renderer::draw()
 		m_rayTracePass->createOrResize();
 		m_bvhDebugPass->createOrResize();
 		m_worldSpaceUIPass->createOrResize();
+		m_bakerPass->createOrResize();
 		AppConfig::needsResize = false;
 	}
 
@@ -133,6 +136,8 @@ void Renderer::draw()
 		m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
 		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
+	m_bakerPass->bake(m_scene.get(), 512, 512);
+	m_bakerPass->drawRaycastVisualization(m_view, m_projection);
 
 	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());

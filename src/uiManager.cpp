@@ -182,7 +182,7 @@ void UIManager::showSceneSettings() const
 	ImGui::Separator();
 
 	ImGui::Checkbox("Bake Selected Prim", &AppConfig::bake);
-	ImGui::DragFloat("Ray Length", &AppConfig::rayLength, 1.0f, 1.0f, 1000.0f);
+	ImGui::DragFloat("Ray Length", &AppConfig::rayLength, 0.001f, 0.0f, 10.0f);
 	ImGui::Separator();
 
 	// Debug BVH visualization

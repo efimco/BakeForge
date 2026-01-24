@@ -27,7 +27,7 @@ namespace AppConfig
 
 	inline bool bake = false;
 
-	inline float rayLength = 100.0f;
+	inline float rayLength = 0.01f;
 
 	inline float getAspectRatio()
 	{

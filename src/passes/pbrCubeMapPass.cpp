@@ -7,24 +7,24 @@
 #include "shaderManager.hpp"
 
 static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
 
-auto cubeData = new float[]{
+auto cubeData = new float[] {
 	// +X face
 	1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
-	// -X face
-	-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
-	1.0f,
-	// +Y face
-	-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
-	// -Y face
-	-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
-	1.0f,
-	// +Z face
-	-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
-	// -Z face
-	1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
-	-1.0f};
+		// -X face
+		-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
+		1.0f,
+		// +Y face
+		-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
+		// -Y face
+		-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
+		1.0f,
+		// +Z face
+		-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+		// -Z face
+		1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+		-1.0f};
 
 struct alignas(16) CubeMapConstantBufferData
 {
@@ -50,8 +50,8 @@ struct alignas(16) PrefilteredMapConstantBufferData
 
 
 CubeMapPass::CubeMapPass(ComPtr<ID3D11Device> device,
-						 ComPtr<ID3D11DeviceContext> context,
-						 const std::string& hdrImagePath)
+	ComPtr<ID3D11DeviceContext> context,
+	const std::string& hdrImagePath)
 	: BasePass(device, context), m_hdrImagePath(hdrImagePath)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
@@ -134,7 +134,7 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 	m_context->OMSetRenderTargets(1, m_backgroundRTV.GetAddressOf(), nullptr);
 
-	constexpr float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+	constexpr float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_context->ClearRenderTargetView(m_backgroundRTV.Get(), clearColor);
 
 	// Set vertex buffer
@@ -307,47 +307,12 @@ void CubeMapPass::createCubeMapResources()
 
 void CubeMapPass::createBackgroundResources()
 {
-	D3D11_TEXTURE2D_DESC backgroundDesc = {};
-	backgroundDesc.ArraySize = 1;
-	backgroundDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	backgroundDesc.CPUAccessFlags = 0;
-	backgroundDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	backgroundDesc.Height = AppConfig::viewportHeight;
-	backgroundDesc.Width = AppConfig::viewportWidth;
-	backgroundDesc.MipLevels = 1;
-	backgroundDesc.MiscFlags = 0;
-	backgroundDesc.SampleDesc.Count = 1;
-	backgroundDesc.SampleDesc.Quality = 0;
-	backgroundDesc.Usage = D3D11_USAGE_DEFAULT;
+	m_backgroundTexture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC backgroundSRVDesc = {};
-	backgroundSRVDesc.Format = backgroundDesc.Format;
-	backgroundSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	backgroundSRVDesc.Texture2D.MostDetailedMip = 0;
-	backgroundSRVDesc.Texture2D.MipLevels = backgroundDesc.MipLevels;
-
-	D3D11_RENDER_TARGET_VIEW_DESC backgroundRTVDesc = {};
-	backgroundRTVDesc.Format = backgroundDesc.Format;
-	backgroundRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	backgroundRTVDesc.Texture2D.MipSlice = 0;
-
-
-	HRESULT hr = m_device->CreateTexture2D(&backgroundDesc, nullptr, &m_backgroundTexture);
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("Failed to create background texture.");
-	}
-
-	hr = m_device->CreateRenderTargetView(m_backgroundTexture.Get(), nullptr, &m_backgroundRTV);
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("Failed to create background render target view.");
-	}
-	hr = m_device->CreateShaderResourceView(m_backgroundTexture.Get(), nullptr, &m_backgroundSRV);
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("Failed to create background shader resource view.");
-	}
+	m_backgroundRTV = createRenderTargetView(m_backgroundTexture.Get(), RTVPreset::Texture2D);
+	m_backgroundSRV = createShaderResourceView(m_backgroundTexture.Get(), SRVPreset::Texture2D);
 	m_rtvCollector->addRTV("CUBEMAP::background", m_backgroundSRV.Get());
 }
 
