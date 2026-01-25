@@ -8,6 +8,8 @@
 using namespace Microsoft::WRL;
 
 class BakerPass;
+struct Material;
+class Primitive;
 
 class BakerNode : public SceneNode
 {
@@ -20,7 +22,6 @@ class LowPolyNode : public BakerNode
 {
 public:
 	explicit LowPolyNode(const std::string_view nodeName);
-	float cageOffset;
 	~LowPolyNode() override = default;
 };
 
@@ -43,9 +44,13 @@ public:
 	std::unique_ptr<HighPolyNode> highPoly;
 
 	uint32_t textureWidth;
+	float cageOffset;
 
 private:
 	std::unique_ptr<BakerPass> m_bakerPass;
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
+	std::vector<std::shared_ptr<Material>> m_materialsToBake;
+	std::unordered_map<std::string, std::vector<std::pair<Primitive*, Primitive*>>> m_materialsPrimitivesMap;
+	std::unordered_map<std::string, std::unique_ptr<BakerPass>> m_materialsBakerPasses;
 };

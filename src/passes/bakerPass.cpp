@@ -12,7 +12,8 @@ struct alignas(16) BakerCB
 	glm::mat4 worldMatrix;
 	glm::mat4 worldMatrixInvTranspose;
 	glm::uvec2 dimensions;
-	float padding[2];
+	float cageOffset;
+	float padding;
 };
 
 struct alignas(16) RaycastVisCB
@@ -33,7 +34,8 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
 	m_shaderManager = std::make_unique<ShaderManager>(device);
-	m_shaderManager->LoadComputeShader("baker", L"../../src/shaders/baker.hlsl", "CS");
+	m_shaderManager->LoadComputeShader("bakerPrepareTextures", L"../../src/shaders/baker.hlsl", "CSPrepareTextures");
+	m_shaderManager->LoadComputeShader("bakerBakeNormal", L"../../src/shaders/baker.hlsl", "CSBakeNormal");
 	m_shaderManager->LoadVertexShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "PS");
 
@@ -42,35 +44,16 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 
 	m_raycastRasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_raycastDepthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
-	createOrResizeBakedResources(1, 1, nullptr);
 	createOrResize();
 }
 
-void BakerPass::bake(Scene* scene, uint32_t width, uint32_t height)
+void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 {
 	m_lastWidth = width;
 	m_lastHeight = height;
-	const auto& prim = dynamic_cast<Primitive*>(scene->getActiveNode());
-	if (!prim)
-		return;
-	if (!AppConfig::bake)
-		return;
-	beginDebugEvent(L"Baker Pass");
-	createOrResizeBakedResources(width, height, prim);
-	updateBake(width, height, prim);
-	m_context->CSSetShader(m_shaderManager->getComputeShader("baker"), nullptr, 0);
-	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
-	m_context->CSSetUnorderedAccessViews(0, 1, m_worldSpaceTexelPositionUAV.GetAddressOf(), nullptr);
-	m_context->CSSetUnorderedAccessViews(1, 1, m_worldSpaceTexelNormalUAV.GetAddressOf(), nullptr);
-	m_context->CSSetShaderResources(0, 1, m_structuredVertexSRV.GetAddressOf());
-	m_context->CSSetShaderResources(1, 1, m_structuredIndexSRV.GetAddressOf());
-	UINT threadGroupX = (width + 15) / 16;
-	UINT threadGroupY = (height + 15) / 16;
-	m_context->Dispatch(threadGroupX, threadGroupY, 1);
-	unbindComputeUAVs(0, 2);
-	unbindShaderResources(0, 2);
-	AppConfig::bake = false;
-	endDebugEvent();
+	m_cageOffset = cageOffset;
+	createInterpolatedTextures();
+
 }
 
 void BakerPass::drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
@@ -122,29 +105,41 @@ void BakerPass::createOrResize()
 	m_raycastDepthTexture = createTexture2D(AppConfig::windowWidth, AppConfig::windowHeight, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL);
 	m_raycastDepthDSV = createDepthStencilView(m_raycastDepthTexture.Get(), DSVPreset::Texture2D);
 
-	m_rtvCollector->addRTV("RaycastVisualization", m_raycastVisualizationSRV.Get());
+	m_rtvCollector->addRTV(name + "::RaycastVisualization", m_raycastVisualizationSRV.Get());
 }
 
-void BakerPass::setPrimitivesToBake(const std::vector<Primitive*>& lowPolyPrims, const std::vector<Primitive*>& highPolyPrims)
+void BakerPass::setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs)
 {
-	m_lowPolyPrimitivesToBake = lowPolyPrims;
-	m_highPolyPrimitivesToBake = highPolyPrims;
+	m_primitivePairs = primitivePairs;
 }
 
-void BakerPass::updateBake(uint32_t width, uint32_t height, Primitive* prim)
+LowPolyPrimitiveBuffers BakerPass::createLowPolyPrimitiveBuffers(Primitive* prim)
 {
-	D3D11_MAPPED_SUBRESOURCE mapped = {};
-	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
-	{
-		auto* data = static_cast<BakerCB*>(mapped.pData);
-		data->dimensions = glm::uvec2(width, height);
-		data->worldMatrix = glm::transpose(prim->getWorldMatrix());
-		data->worldMatrixInvTranspose = glm::inverse(prim->getWorldMatrix());
-		m_context->Unmap(m_constantBuffer.Get(), 0);
-	}
+	LowPolyPrimitiveBuffers buffers;
+	buffers.structuredIndexBuffer = createStructuredBuffer(sizeof(uint32_t), static_cast<UINT>(prim->getIndexData().size()), SBPreset::CpuWrite);
+	buffers.structuredVertexBuffer = createStructuredBuffer(sizeof(Vertex), static_cast<UINT>(prim->getVertexData().size()), SBPreset::CpuWrite);
+	buffers.structuredIndexSRV = createShaderResourceView(buffers.structuredIndexBuffer.Get(), SRVPreset::StructuredBuffer);
+	buffers.structuredVertexSRV = createShaderResourceView(buffers.structuredVertexBuffer.Get(), SRVPreset::StructuredBuffer);
+	return buffers;
+}
 
+HighPolyPrimitiveBuffers BakerPass::createHighPolyPrimitiveBuffers(Primitive* prim)
+{
+	const auto& triangleBufferSRV = prim->getTrisBufferSRV();
+	const auto& triangleIndicesBufferSRV = prim->getTrisIndicesBufferSRV();
+
+	HighPolyPrimitiveBuffers buffers;
+	buffers.srv_triangleBuffer = triangleBufferSRV;
+	buffers.srv_triangleIndicesBuffer = triangleIndicesBufferSRV;
+	buffers.bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), static_cast<UINT>(prim->getBVHNodes().size()), SBPreset::CpuWrite);
+	buffers.bvhNodesSRV = createShaderResourceView(buffers.bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
+	return buffers;
+}
+
+void BakerPass::updateLowPolyPrimitiveBuffers(Primitive* prim, const LowPolyPrimitiveBuffers& buffers)
+{
 	D3D11_MAPPED_SUBRESOURCE mappedVertexBuffer = {};
-	if (SUCCEEDED(m_context->Map(m_structuredVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVertexBuffer)))
+	if (SUCCEEDED(m_context->Map(buffers.structuredVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVertexBuffer)))
 	{
 		auto* verticies = static_cast<Vertex*>(mappedVertexBuffer.pData);
 		const auto& primVertices = prim->getVertexData();
@@ -152,11 +147,11 @@ void BakerPass::updateBake(uint32_t width, uint32_t height, Primitive* prim)
 		{
 			verticies[i] = primVertices[i];
 		}
-		m_context->Unmap(m_structuredVertexBuffer.Get(), 0);
+		m_context->Unmap(buffers.structuredVertexBuffer.Get(), 0);
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mappedIndexBuffer = {};
-	if (SUCCEEDED(m_context->Map(m_structuredIndexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIndexBuffer)))
+	if (SUCCEEDED(m_context->Map(buffers.structuredIndexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIndexBuffer)))
 	{
 		auto* indices = static_cast<uint32_t*>(mappedIndexBuffer.pData);
 		const auto& primIndices = prim->getIndexData();
@@ -164,9 +159,95 @@ void BakerPass::updateBake(uint32_t width, uint32_t height, Primitive* prim)
 		{
 			indices[i] = primIndices[i];
 		}
-		m_context->Unmap(m_structuredIndexBuffer.Get(), 0);
+		m_context->Unmap(buffers.structuredIndexBuffer.Get(), 0);
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+	{
+		auto* data = static_cast<BakerCB*>(mapped.pData);
+		data->dimensions = glm::uvec2(m_lastWidth, m_lastHeight);
+		data->worldMatrix = glm::transpose(prim->getWorldMatrix());
+		data->worldMatrixInvTranspose = glm::inverse(prim->getWorldMatrix());
+		data->cageOffset = m_cageOffset;
+		m_context->Unmap(m_constantBuffer.Get(), 0);
+	};
+}
+
+void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers)
+{
+	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+	if (SUCCEEDED(m_context->Map(buffers.bvhNodesBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+	{
+		auto* nodes = static_cast<BVH::Node*>(mappedResource.pData);
+		for (int i = 0; i < prim->getBVHNodes().size(); ++i)
+		{
+			nodes[i] = prim->getBVHNodes()[i];
+		}
+		m_context->Unmap(buffers.bvhNodesBuffer.Get(), 0);
 	}
 }
+
+void BakerPass::createInterpolatedTextures()
+{
+	beginDebugEvent(L"Baker::Interpolated Textures");
+	createInterpolatedTexturesResources();
+	createBakedNormalResources();
+	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
+	{
+		if (!lowPoly || !highPoly)
+			continue;
+
+		auto lpBuffers = createLowPolyPrimitiveBuffers(lowPoly);
+		auto hpBuffers = createHighPolyPrimitiveBuffers(highPoly);
+
+		updateLowPolyPrimitiveBuffers(lowPoly, lpBuffers);
+		updateHighPolyPrimitiveBuffers(highPoly, hpBuffers);
+
+
+		m_context->CSSetShader(m_shaderManager->getComputeShader("bakerPrepareTextures"), nullptr, 0);
+		m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+
+		ID3D11UnorderedAccessView* interpolatedTexturesUAVs[2] = { m_worldSpaceTexelPositionUAV.Get(),m_worldSpaceTexelNormalUAV.Get() };
+		m_context->CSSetUnorderedAccessViews(0, 2, interpolatedTexturesUAVs, nullptr);
+
+		ID3D11ShaderResourceView* lpSRVs[2] = { lpBuffers.structuredVertexSRV.Get(), lpBuffers.structuredIndexSRV.Get() };
+		m_context->CSSetShaderResources(0, 2, lpSRVs);
+
+		UINT threadGroupX = (m_lastWidth + 15) / 16;
+		UINT threadGroupY = (m_lastHeight + 15) / 16;
+		m_context->Dispatch(threadGroupX, threadGroupY, 1);
+		unbindComputeUAVs(0, 2);
+		unbindShaderResources(0, 2);
+
+		bakeNormals(hpBuffers);
+	}
+	endDebugEvent();
+}
+
+void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
+{
+	beginDebugEvent(L"Baker::Bake Normals");
+	m_context->CSSetShader(m_shaderManager->getComputeShader("bakerBakeNormal"), nullptr, 0);
+	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+	ID3D11UnorderedAccessView* bakedNormalUAVs[1] = { m_bakedNormalUAV.Get() };
+	m_context->CSSetUnorderedAccessViews(2, 1, bakedNormalUAVs, nullptr);
+	ID3D11ShaderResourceView* hpSRVs[5] = {
+		hpBuffers.srv_triangleBuffer.Get(),
+		hpBuffers.srv_triangleIndicesBuffer.Get(),
+		hpBuffers.bvhNodesSRV.Get(),
+		m_worldSpaceTexelPositionSRV.Get(),
+		m_worldSpaceTexelNormalSRV.Get()
+	};
+	m_context->CSSetShaderResources(2, 5, hpSRVs);
+	UINT threadGroupX = (m_lastWidth + 15) / 16;
+	UINT threadGroupY = (m_lastHeight + 15) / 16;
+	m_context->Dispatch(threadGroupX, threadGroupY, 1);
+	unbindComputeUAVs(2, 1);
+	unbindShaderResources(2, 5);
+	endDebugEvent();
+}
+
 
 void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
 {
@@ -176,12 +257,12 @@ void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat
 		auto* data = static_cast<RaycastVisCB*>(mapped.pData);
 		data->viewProjection = glm::transpose(projection * view);
 		data->textureDimensions = glm::uvec2(m_lastWidth, m_lastHeight);
-		data->rayLength = AppConfig::rayLength;
+		data->rayLength = 0.1f;
 		m_context->Unmap(m_raycastConstantBuffer.Get(), 0);
 	}
 }
 
-void BakerPass::createOrResizeBakedResources(uint32_t width, uint32_t height, Primitive* prim)
+void BakerPass::createInterpolatedTexturesResources()
 {
 	if (m_worldSpaceTexelPositionTexture != nullptr)
 	{
@@ -192,39 +273,33 @@ void BakerPass::createOrResizeBakedResources(uint32_t width, uint32_t height, Pr
 		m_worldSpaceTexelNormalTexture.Reset();
 		m_worldSpaceTexelNormalSRV.Reset();
 		m_worldSpaceTexelNormalUAV.Reset();
-
-		m_structuredVertexBuffer.Reset();
-		m_structuredVertexSRV.Reset();
-
-		m_structuredIndexBuffer.Reset();
-		m_structuredIndexSRV.Reset();
-
-		m_bvhNodesBuffer.Reset();
-		m_bvhNodesSrv.Reset();
 	}
 
-	m_worldSpaceTexelPositionTexture = createTexture2D(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_worldSpaceTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_worldSpaceTexelPositionSRV = createShaderResourceView(m_worldSpaceTexelPositionTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelPositionUAV = createUnorderedAccessView(m_worldSpaceTexelPositionTexture.Get(), UAVPreset::Texture2D, 0);
 
-	m_worldSpaceTexelNormalTexture = createTexture2D(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_worldSpaceTexelNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_worldSpaceTexelNormalSRV = createShaderResourceView(m_worldSpaceTexelNormalTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelNormalUAV = createUnorderedAccessView(m_worldSpaceTexelNormalTexture.Get(), UAVPreset::Texture2D, 0);
 
 	m_rtvCollector->addRTV(name + "::WorldSpaceTexelPosition", m_worldSpaceTexelPositionSRV.Get());
 	m_rtvCollector->addRTV(name + "::WorldSpaceTexelNormal", m_worldSpaceTexelNormalSRV.Get());
+}
 
-	if (!prim)
-		return;
+void BakerPass::createBakedNormalResources()
+{
+	if (m_bakedNormalTexture != nullptr)
+	{
+		m_bakedNormalTexture.Reset();
+		m_bakedNormalSRV.Reset();
+		m_bakedNormalUAV.Reset();
+	}
 
-	m_structuredVertexBuffer = createStructuredBuffer(sizeof(Vertex), static_cast<UINT>(prim->getVertexData().size()), SBPreset::CpuWrite);
-	m_structuredVertexSRV = createShaderResourceView(m_structuredVertexBuffer.Get(), SRVPreset::StructuredBuffer);
+	m_bakedNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_bakedNormalSRV = createShaderResourceView(m_bakedNormalTexture.Get(), SRVPreset::Texture2D);
+	m_bakedNormalUAV = createUnorderedAccessView(m_bakedNormalTexture.Get(), UAVPreset::Texture2D, 0);
 
-	m_structuredIndexBuffer = createStructuredBuffer(sizeof(uint32_t), static_cast<UINT>(prim->getIndexData().size()), SBPreset::CpuWrite);
-	m_structuredIndexSRV = createShaderResourceView(m_structuredIndexBuffer.Get(), SRVPreset::StructuredBuffer);
-
-	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), static_cast<UINT>(prim->getBVHNodes().size()), SBPreset::CpuWrite);
-	m_bvhNodesSrv = createShaderResourceView(m_bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
-
+	m_rtvCollector->addRTV(name + "::BakedNormalTexture", m_bakedNormalSRV.Get());
 }
 

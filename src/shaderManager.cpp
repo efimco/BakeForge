@@ -17,8 +17,8 @@ ShaderManager::ShaderManager(ComPtr<ID3D11Device> device)
 }
 
 bool ShaderManager::LoadVertexShader(const std::string& name,
-									 const std::wstring& filename,
-									 const std::string& entryPoint)
+	const std::wstring& filename,
+	const std::string& entryPoint)
 {
 	if (m_vertexShaders.contains(name))
 	{
@@ -35,11 +35,11 @@ bool ShaderManager::LoadVertexShader(const std::string& name,
 	if (compileShader(info, VERTEX))
 	{
 		m_vertexShaders[name] = std::move(info);
-		std::wcout << L"Loaded vertex shader: " << filename << std::endl;
+		std::wcout << L"Loaded vertex shader: " << name.c_str() << " " << filename << std::endl;
 		return true;
 	}
 
-	std::wcout << L"Failed to load vertex shader: " << filename << std::endl;
+	std::wcout << L"Failed to load vertex shader: " << name.c_str() << " " << filename << std::endl;
 	return false;
 }
 
@@ -61,11 +61,11 @@ bool ShaderManager::LoadPixelShader(const std::string& name, const std::wstring&
 	if (compileShader(info, PIXEL))
 	{
 		m_pixelShaders[name] = std::move(info);
-		std::wcout << L"Loaded pixel shader: " << filename << std::endl;
+		std::wcout << L"Loaded pixel shader: " << name.c_str() << " " << filename << std::endl;
 		return true;
 	}
 
-	std::wcout << L"Failed to load pixel shader: " << filename << std::endl;
+	std::wcout << L"Failed to load pixel shader: " << name.c_str() << " " << filename << std::endl;
 	return false;
 }
 
@@ -86,11 +86,11 @@ bool ShaderManager::LoadComputeShader(const std::string& name, const std::wstrin
 	if (compileShader(info, COMPUTE))
 	{
 		m_computeShaders[name] = std::move(info);
-		std::wcout << L"Loaded compute shader: " << filename << std::endl;
+		std::wcout << L"Loaded compute shader: " << name.c_str() << " " << filename << std::endl;
 		return true;
 	}
 
-	std::wcout << L"Failed to load compute shader: " << filename << std::endl;
+	std::wcout << L"Failed to load compute shader: " << name.c_str() << " " << filename << std::endl;
 	return false;
 }
 
@@ -228,7 +228,7 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 		if (errorBlob)
 		{
 			std::cout << "Shader compilation error:\n"
-					  << static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
+				<< static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
 		}
 		return false;
 	}

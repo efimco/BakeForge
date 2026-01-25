@@ -27,11 +27,11 @@ struct SharedPrimitiveData
 	ComPtr<ID3D11Buffer> indexBuffer;
 	ComPtr<ID3D11Buffer> vertexBuffer;
 
-	ComPtr<ID3D11Buffer> trisBuffer;
-	ComPtr<ID3D11Buffer> trisIndicesBuffer;
+	ComPtr<ID3D11Buffer> structuredTrisBuffer;
+	ComPtr<ID3D11Buffer> structuredTrisIndicesBuffer;
 
-	ComPtr<ID3D11ShaderResourceView> srv_trisBuffer;
-	ComPtr<ID3D11ShaderResourceView> srv_trisIndicesBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_structuredTrisBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_structuredTrisIndicesBuffer;
 };
 
 class Primitive : public SceneNode
@@ -47,6 +47,8 @@ public:
 	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
 	void fillTriangles();
+
+	bool isVisible = true;
 
 	const std::vector<uint32_t>& getIndexData() const;
 	const std::vector<Vertex>& getVertexData() const;

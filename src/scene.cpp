@@ -153,12 +153,24 @@ void Scene::addChild(std::unique_ptr<SceneNode>&& child)
 
 void Scene::addPrimitive(Primitive* primitive)
 {
+	// Check if already registered (e.g., during reparenting)
+	for (const auto& [handle, prim] : m_primitives)
+	{
+		if (prim == primitive)
+			return;
+	}
 	validateName(primitive);
 	m_primitives.emplace(SceneNodeHandle::generateHandle(), primitive);
 }
 
 void Scene::addLight(Light* light)
 {
+	// Check if already registered (e.g., during reparenting)
+	for (const auto& [handle, l] : m_lights)
+	{
+		if (l == light)
+			return;
+	}
 	validateName(light);
 	m_lights.emplace(SceneNodeHandle::generateHandle(), light);
 	setLightsDirty();
@@ -196,6 +208,12 @@ SceneUnorderedMap<Light*>& Scene::getLights()
 
 void Scene::addCamera(Camera* camera)
 {
+	// Check if already registered (e.g., during reparenting)
+	for (const auto& [handle, c] : m_cameras)
+	{
+		if (c == camera)
+			return;
+	}
 	validateName(camera);
 	m_cameras.emplace(SceneNodeHandle::generateHandle(), camera);
 }

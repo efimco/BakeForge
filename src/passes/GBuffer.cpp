@@ -64,14 +64,7 @@ void GBuffer::draw(const glm::mat4& view,
 	Scene* scene,
 	ComPtr<ID3D11DepthStencilView> dsv)
 {
-	D3D11_VIEWPORT viewport = {};
-	viewport.TopLeftX = 0.0f;
-	viewport.TopLeftY = 0.0f;
-	viewport.Width = static_cast<float>(AppConfig::viewportWidth);
-	viewport.Height = static_cast<float>(AppConfig::viewportHeight);
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	m_context->RSSetViewports(1, &viewport);
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 
 	beginDebugEvent(L"GBuffer Pass");
 
@@ -98,6 +91,8 @@ void GBuffer::draw(const glm::mat4& view,
 	static const UINT offset = 0;
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
+		if (!prim->isVisible)
+			continue;
 		const float objectID = static_cast<float>(static_cast<int32_t>(handle));
 		update(view, projection, cameraPosition, scene, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);

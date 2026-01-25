@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #define IM_VEC2_CLASS_EXTRA
 #include "ImGuizmo.h"
 #include "imgui_impl_dx11.h"
@@ -78,9 +79,17 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 	// ones.
 	if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-		style.WindowRounding = 0.0f;
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
+
+	// Style: rounded corners
+	style.WindowRounding = 8.0f;
+	style.ChildRounding = 8.0f;
+	style.FrameRounding = 2.0f;
+	style.PopupRounding = 8.0f;
+	style.ScrollbarRounding = 8.0f;
+	style.GrabRounding = 4.0f;
+	style.TabRounding = 4.0f;
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(hwnd);
@@ -179,10 +188,6 @@ void UIManager::showSceneSettings() const
 	}
 
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::regeneratePrefilteredMap);
-	ImGui::Separator();
-
-	ImGui::Checkbox("Bake Selected Prim", &AppConfig::bake);
-	ImGui::DragFloat("Ray Length", &AppConfig::rayLength, 0.001f, 0.0f, 10.0f);
 	ImGui::Separator();
 
 	// Debug BVH visualization
@@ -736,12 +741,13 @@ void UIManager::drawSceneGraph()
 {
 	ImGui::Begin("Scene Graph");
 	static ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-		ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY;
+		ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 
 	const ImVec2 availableSize = ImGui::GetContentRegionAvail();
-	if (ImGui::BeginTable("SceneGraph", 1, tableFlags, availableSize))
+	if (ImGui::BeginTable("SceneGraph", 2, tableFlags, availableSize))
 	{
-		ImGui::TableSetupColumn(m_scene->name.c_str(), ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("(o)", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_IndentDisable, 25.0f);
+		ImGui::TableSetupColumn(m_scene->name.c_str(), ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_IndentEnable);
 		ImGui::TableHeadersRow();
 		drawNode(m_scene);
 		ImGui::EndTable();
@@ -813,37 +819,58 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 
 void UIManager::drawNode(SceneNode* node)
 {
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	const bool isScene = dynamic_cast<Scene*>(node);
-	if (isScene)
+	if (dynamic_cast<Scene*>(node))
 	{
-		for (auto& child : node->children)
+		for (const auto& child : node->children)
 		{
 			drawNode(child.get());
 		}
 		return;
 	}
-	const auto baker = dynamic_cast<Baker*>(node);
-	const bool isFolder = (node->children.size() > 0);
-	const char* icon = getNodeIcon(node);
-	const std::string label = std::string(icon) + " " + node->name;
-	if (isFolder || baker)
-	{
-		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-		const bool isSelected = m_scene->isNodeSelected(node);
-		if (isSelected)
-		{
-			nodeFlags |= ImGuiTreeNodeFlags_Selected;
-		}
 
-		const bool open = ImGui::TreeNodeEx(label.c_str(), nodeFlags);
-		handleNodeSelection(node);
+
+	ImGui::PushID(node);
+	ImGui::TableNextRow();
+
+	// Column 0: Visibility checkbox (reset indent to align all checkboxes)
+	ImGui::TableNextColumn();
+	if (auto* primitive = dynamic_cast<Primitive*>(node))
+	{
+		bool isVisible = primitive->isVisible;
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ImGui::GetFrameHeight() * 0.2f);
+		if (ImGui::Checkbox("##visible", &isVisible))
+		{
+			primitive->isVisible = isVisible;
+		}
+		ImGui::PopStyleVar();
+	}
+
+	// Column 1: Tree node
+	ImGui::TableNextColumn();
+
+	const auto* baker = dynamic_cast<Baker*>(node);
+	const bool isFolder = !node->children.empty() || baker;
+	const bool isSelected = m_scene->isNodeSelected(node);
+	const char* icon = getNodeIcon(node);
+
+	// Build label once
+	char label[256];
+	snprintf(label, sizeof(label), "%s %s", icon, node->name.c_str());
+
+	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth;
+	if (isSelected)
+		nodeFlags |= ImGuiTreeNodeFlags_Selected;
+
+	if (isFolder)
+	{
+		nodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow;
+		const bool open = ImGui::TreeNodeEx(label, nodeFlags);
 		handleNodeDragDrop(node);
+		handleNodeSelection(node);
 
 		if (open)
 		{
-			for (auto& child : node->children)
+			for (const auto& child : node->children)
 			{
 				drawNode(child.get());
 			}
@@ -854,23 +881,15 @@ void UIManager::drawNode(SceneNode* node)
 			}
 			ImGui::TreePop();
 		}
-
-		ImGui::TableNextColumn();
 	}
 	else
 	{
-		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-		const bool isSelected = m_scene->isNodeSelected(node);
-		if (isSelected)
-		{
-			nodeFlags |= ImGuiTreeNodeFlags_Selected;
-		}
-		ImGui::TreeNodeEx(label.c_str(), nodeFlags);
-
+		nodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+		ImGui::TreeNodeEx(label, nodeFlags);
 		handleNodeDragDrop(node);
 		handleNodeSelection(node);
-		ImGui::TableNextColumn();
 	}
+	ImGui::PopID();
 }
 
 const char* UIManager::getNodeIcon(SceneNode* node)
@@ -1005,8 +1024,6 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 	{
 		TScopedTransaction<Snapshot::SceneNodeTransform> nodeTransaction{ m_commandManager.get(), m_scene, primitive };
 
-		ImGui::Text("Type: Primitive");
-		ImGui::Text("Name: %s", primitive->name.c_str());
 		ImGui::DragFloat3("Position", &primitive->transform.position[0], 0.1f);
 		ImGui::DragFloat3("Rotation", &primitive->transform.rotation[0], 0.1f);
 		ImGui::DragFloat3("Scale", &primitive->transform.scale[0], 0.1f);
@@ -1091,8 +1108,6 @@ void UIManager::showLightProperties(Light* light) const
 {
 	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, light };
 
-	ImGui::Text("Name: %s", light->name.c_str());
-
 	ImGui::Combo("Type", reinterpret_cast<int*>(&light->type), "Point Light\0Directional Light\0Spot Light\0");
 	ImGui::DragFloat3("Position", &light->transform.position[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &light->transform.rotation[0], 0.1f);
@@ -1106,7 +1121,6 @@ void UIManager::showCameraProperties(Camera* camera) const
 {
 	TScopedTransaction<Snapshot::SceneNodeCopy> nodeTransaction{ m_commandManager.get(), m_scene, camera };
 
-	ImGui::Text("Name: %s", camera->name.c_str());
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
@@ -1114,21 +1128,18 @@ void UIManager::showCameraProperties(Camera* camera) const
 
 void UIManager::showBakerProperties(BakerNode* baker) const
 {
-	auto lowPolyNode = dynamic_cast<LowPolyNode*>(baker);
-	auto highPolyNode = dynamic_cast<HighPolyNode*>(baker);
 	auto bakerNode = dynamic_cast<Baker*>(baker);
-	if (lowPolyNode)
-	{
-		ImGui::Text("Name: %s", lowPolyNode->name.c_str());
-		ImGui::DragFloat("Cage Offset", &lowPolyNode->cageOffset, 0.01f, 0.0f, 10.0f);
-	}
 	if (bakerNode)
 	{
 		constexpr uint32_t minVal = 2;
 		constexpr uint32_t maxVal = 4096;
-		ImGui::Text("Name: %s", bakerNode->name.c_str());
 		ImGui::Text("Baking Settings:");
+		ImGui::DragFloat("Cage Offset", &bakerNode->cageOffset, 0.01f, 0.0f, 10.0f);
 		ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &bakerNode->textureWidth, 2.0f, &minVal, &maxVal);
+	}
+	if (ImGui::Button("Start Bake"))
+	{
+		bakerNode->bake();
 	}
 }
 

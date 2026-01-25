@@ -54,7 +54,7 @@ void RayTracePass::createOrResize()
 	}
 
 	m_texture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight,
-								DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+		DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_srv = createShaderResourceView(m_texture.Get(), SRVPreset::Texture2D);
 	m_uav = createUnorderedAccessView(m_texture.Get(), UAVPreset::Texture2D);
 	m_rtvCollector->addRTV("RayTrace", m_srv.Get());
@@ -76,8 +76,8 @@ void RayTracePass::draw(Scene* scene)
 		const auto& triangleBufferSRV = prim->getTrisBufferSRV();
 		const auto& triangleIndicesBufferSRV = prim->getTrisIndicesBufferSRV();
 
-		ID3D11ShaderResourceView* srvs[] = {triangleBufferSRV.Get(), triangleIndicesBufferSRV.Get(),
-											m_bvhNodesSrv.Get()};
+		ID3D11ShaderResourceView* srvs[] = { triangleBufferSRV.Get(), triangleIndicesBufferSRV.Get(),
+											m_bvhNodesSrv.Get() };
 		m_context->CSSetShader(m_shaderManager->getComputeShader("rayTrace"), nullptr, 0);
 		m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 		m_context->CSSetShaderResources(0, 3, srvs);
@@ -92,6 +92,8 @@ void RayTracePass::draw(Scene* scene)
 
 void RayTracePass::update(Scene* scene, const Primitive* const& prim)
 {
+	if (!prim)
+		return;
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
 	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
 	{

@@ -8,6 +8,22 @@ class Scene;
 class RTVCollector;
 class Primitive;
 
+struct LowPolyPrimitiveBuffers
+{
+	ComPtr<ID3D11Buffer> structuredVertexBuffer;
+	ComPtr<ID3D11Buffer> structuredIndexBuffer;
+	ComPtr<ID3D11ShaderResourceView> structuredVertexSRV;
+	ComPtr<ID3D11ShaderResourceView> structuredIndexSRV;
+};
+
+struct HighPolyPrimitiveBuffers
+{
+	ComPtr<ID3D11ShaderResourceView> srv_triangleBuffer;
+	ComPtr<ID3D11ShaderResourceView> srv_triangleIndicesBuffer;
+	ComPtr<ID3D11Buffer> bvhNodesBuffer;
+	ComPtr<ID3D11ShaderResourceView> bvhNodesSRV;
+};
+
 class BakerPass : public BasePass
 {
 public:
@@ -16,28 +32,29 @@ public:
 
 	std::string name = "Baker Pass";
 
-	void bake(Scene* scene, uint32_t width, uint32_t height);
+	void bake(uint32_t width, uint32_t heightm, float cageOffset);
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
-	void setPrimitivesToBake(const std::vector<Primitive*>& lowPolyPrims, const std::vector<Primitive*>& highPolyPrims);
+	void setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs);
 
 private:
 	uint32_t m_lastWidth = 0;
 	uint32_t m_lastHeight = 0;
 
-	std::vector<Primitive*> m_lowPolyPrimitivesToBake;
-	std::vector<Primitive*> m_highPolyPrimitivesToBake;
+	std::vector<std::pair<Primitive*, Primitive*>> m_primitivePairs;
+
+	LowPolyPrimitiveBuffers createLowPolyPrimitiveBuffers(Primitive* prim);
+	HighPolyPrimitiveBuffers createHighPolyPrimitiveBuffers(Primitive* prim);
+	void updateLowPolyPrimitiveBuffers(Primitive* prim, const LowPolyPrimitiveBuffers& buffers);
+	void updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers);
+
+	void createInterpolatedTextures();
+	void bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers);
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-	ComPtr<ID3D11Buffer> m_structuredVertexBuffer;
-	ComPtr<ID3D11Buffer> m_structuredIndexBuffer;
 
-	ComPtr<ID3D11ShaderResourceView> m_structuredVertexSRV;
-	ComPtr<ID3D11ShaderResourceView> m_structuredIndexSRV;
-
-	ComPtr<ID3D11Buffer> m_bvhNodesBuffer;
-	ComPtr<ID3D11ShaderResourceView> m_bvhNodesSrv;
-
+	float m_cageOffset = 0.1f;
+	
 	ComPtr<ID3D11Texture2D> m_worldSpaceTexelPositionTexture;
 	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelPositionSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelPositionUAV;
@@ -45,6 +62,10 @@ private:
 	ComPtr<ID3D11Texture2D> m_worldSpaceTexelNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelNormalSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelNormalUAV;
+
+	ComPtr<ID3D11Texture2D> m_bakedNormalTexture;
+	ComPtr<ID3D11ShaderResourceView> m_bakedNormalSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_bakedNormalUAV;
 
 	ComPtr<ID3D11Texture2D> m_raycastVisualizationTexture;
 	ComPtr<ID3D11ShaderResourceView> m_raycastVisualizationSRV;
@@ -56,10 +77,10 @@ private:
 	ComPtr<ID3D11RasterizerState> m_raycastRasterizerState;
 	ComPtr<ID3D11Buffer> m_raycastConstantBuffer;
 
-	void updateBake(uint32_t width, uint32_t height, Primitive* prim);
 	void updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 
-	void createOrResizeBakedResources(uint32_t width, uint32_t height, Primitive* prim);
+	void createInterpolatedTexturesResources();
+	void createBakedNormalResources();
 
 	std::unique_ptr<RTVCollector> m_rtvCollector;
 };

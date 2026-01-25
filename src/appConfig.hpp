@@ -25,10 +25,6 @@ namespace AppConfig
 	inline int minBVHDepth = 0;
 	inline bool showLeafsOnly = false;
 
-	inline bool bake = false;
-
-	inline float rayLength = 0.01f;
-
 	inline float getAspectRatio()
 	{
 		return static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);

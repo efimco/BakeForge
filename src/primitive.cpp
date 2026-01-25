@@ -85,7 +85,7 @@ void Primitive::fillTriangles()
 		D3D11_SUBRESOURCE_DATA trisInitData = {};
 		trisInitData.pSysMem = m_sharedData->triangles.data();
 
-		HRESULT hr = m_device->CreateBuffer(&trisBufferDesc, &trisInitData, &m_sharedData->trisBuffer);
+		HRESULT hr = m_device->CreateBuffer(&trisBufferDesc, &trisInitData, &m_sharedData->structuredTrisBuffer);
 		assert(SUCCEEDED(hr));
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -94,7 +94,7 @@ void Primitive::fillTriangles()
 		srvDesc.Buffer.FirstElement = 0;
 		srvDesc.Buffer.NumElements = static_cast<UINT>(m_sharedData->triangles.size());
 
-		hr = m_device->CreateShaderResourceView(m_sharedData->trisBuffer.Get(), &srvDesc, &m_sharedData->srv_trisBuffer);
+		hr = m_device->CreateShaderResourceView(m_sharedData->structuredTrisBuffer.Get(), &srvDesc, &m_sharedData->srv_structuredTrisBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -110,7 +110,7 @@ void Primitive::fillTriangles()
 		trisIndicesInitData.pSysMem = m_sharedData->triangleIndices.data();
 
 		HRESULT hr =
-			m_device->CreateBuffer(&trisIndicesBufferDesc, &trisIndicesInitData, &m_sharedData->trisIndicesBuffer);
+			m_device->CreateBuffer(&trisIndicesBufferDesc, &trisIndicesInitData, &m_sharedData->structuredTrisIndicesBuffer);
 		assert(SUCCEEDED(hr));
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -119,8 +119,8 @@ void Primitive::fillTriangles()
 		srvDesc.Buffer.FirstElement = 0;
 		srvDesc.Buffer.NumElements = static_cast<UINT>(m_sharedData->triangleIndices.size());
 
-		hr = m_device->CreateShaderResourceView(m_sharedData->trisIndicesBuffer.Get(), &srvDesc,
-			&m_sharedData->srv_trisIndicesBuffer);
+		hr = m_device->CreateShaderResourceView(m_sharedData->structuredTrisIndicesBuffer.Get(), &srvDesc,
+			&m_sharedData->srv_structuredTrisIndicesBuffer);
 		assert(SUCCEEDED(hr));
 	}
 }
@@ -154,12 +154,12 @@ ComPtr<ID3D11Buffer> Primitive::getVertexBuffer() const
 
 ComPtr<ID3D11ShaderResourceView> Primitive::getTrisBufferSRV() const
 {
-	return m_sharedData->srv_trisBuffer;
+	return m_sharedData->srv_structuredTrisBuffer;
 }
 
 ComPtr<ID3D11ShaderResourceView> Primitive::getTrisIndicesBufferSRV() const
 {
-	return m_sharedData->srv_trisIndicesBuffer;
+	return m_sharedData->srv_structuredTrisIndicesBuffer;
 }
 
 const std::vector<Triangle>& Primitive::getTriangles() const

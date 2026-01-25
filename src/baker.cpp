@@ -9,7 +9,6 @@ LowPolyNode::LowPolyNode(const std::string_view nodeName)
 {
 	movable = false;
 	name = nodeName;
-	cageOffset = 0.01f;
 }
 
 HighPolyNode::HighPolyNode(const std::string_view nodeName)
@@ -27,11 +26,11 @@ Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPt
 	lowPoly = std::make_unique<LowPolyNode>("LowPolyContainer");
 	highPoly = std::make_unique<HighPolyNode>("HighPolyContainer");
 	textureWidth = 1024;
+	cageOffset = 0.1f;
 }
 
 void Baker::bake()
 {
-	std::vector<std::shared_ptr<Material>> materialsToBake;
 	for (const auto& child : lowPoly->children)
 	{
 		const auto prim = dynamic_cast<Primitive*>(child.get());
@@ -41,56 +40,81 @@ void Baker::bake()
 			continue;
 		if (prim->material->name.empty())
 			continue;
-		if (std::ranges::find_if(materialsToBake,
+		if (std::ranges::find_if(m_materialsToBake,
 			[&](const std::shared_ptr<Material>& mat)
 			{
 				return mat->name == prim->material->name;
-			}) == materialsToBake.end())
+			}) == m_materialsToBake.end())
 		{
-			materialsToBake.push_back(prim->material);
+			m_materialsToBake.push_back(prim->material);
 		}
 	}
 
-	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>> > materialsPrimitivesMap;
-	for (const auto& material : materialsToBake)
+	for (const auto& material : m_materialsToBake)
 	{
-		std::vector<Primitive*> lowPolyPrimitives;
-		std::vector<Primitive*> highPolyPrimitives;
+		std::vector<std::pair<Primitive*, Primitive*>> primitivePairs;
 
 		for (const auto& child : lowPoly->children)
 		{
-			if (const auto prim = dynamic_cast<Primitive*>(child.get()))
+			const auto prim = dynamic_cast<Primitive*>(child.get());
+			if (!prim)
+				continue;
+			if (!prim->material || prim->material->name != material->name)
+				continue;
+
+			// Extract base name by removing common suffixes (_low, _LP, _lo)
+			std::string baseName = prim->name;
+			for (const auto& suffix : { "_low", "_LP", "_lo", "_Low", "_LOW" })
 			{
-				if (prim->material->name == material->name)
+				if (baseName.ends_with(suffix))
 				{
-					lowPolyPrimitives.push_back(prim);
+					baseName = baseName.substr(0, baseName.length() - strlen(suffix));
+					break;
 				}
 			}
-		}
-		for (const auto& child : highPoly->children)
-		{
-			if (const auto prim = dynamic_cast<Primitive*>(child.get()))
+
+			// Find matching high-poly primitive
+			Primitive* matchedHighPoly = nullptr;
+			for (const auto& highPolyChild : highPoly->children)
 			{
-				if (prim->material->name == material->name)
+				const auto highPolyPrim = dynamic_cast<Primitive*>(highPolyChild.get());
+				if (!highPolyPrim)
+					continue;
+
+				// Extract high-poly base name by removing common suffixes (_high, _HP, _hi)
+				std::string highPolyBaseName = highPolyPrim->name;
+				for (const auto& suffix : { "_high", "_HP", "_hi", "_High", "_HIGH" })
 				{
-					highPolyPrimitives.push_back(prim);
+					if (highPolyBaseName.ends_with(suffix))
+					{
+						highPolyBaseName = highPolyBaseName.substr(0, highPolyBaseName.length() - strlen(suffix));
+						break;
+					}
+				}
+
+				if (highPolyBaseName == baseName)
+				{
+					matchedHighPoly = highPolyPrim;
+					break;
 				}
 			}
+
+			primitivePairs.emplace_back(prim, matchedHighPoly);
 		}
-		std::pair<std::vector<Primitive*>, std::vector<Primitive*> > pair = { lowPolyPrimitives, highPolyPrimitives };
-		materialsPrimitivesMap[material->name] = std::move(pair);
+
+		m_materialsPrimitivesMap[material->name] = std::move(primitivePairs);
 	}
 
-
-	std::vector<std::unique_ptr<BakerPass>> materialsBakerPasses;
-	for (const auto& material : materialsToBake)
+	for (const auto& material : m_materialsToBake)
 	{
-		// For each material, create a BakerPass and bake the textures
 		auto bakerPass = std::make_unique<BakerPass>(m_device, m_context);
-		bakerPass->name = "Baker Pass for " + name;
-		// Here you would set up the bakerPass with the material properties
-		// and call the bake function. This is a placeholder for demonstration.
-		// bakerPass.bakeMaterial(material, textureWidth, textureWidth);
-		materialsBakerPasses.push_back(std::move(bakerPass));
+		bakerPass->name = "BKR for " + name;
+		bakerPass->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
+		m_materialsBakerPasses[material->name] = std::move(bakerPass);
+	}
+
+	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
+	{
+		bakerPass->bake(textureWidth, textureWidth, cageOffset);
 	}
 }
