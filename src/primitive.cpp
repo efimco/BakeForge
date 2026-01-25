@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <d3d11.h>
 #include <d3d11shader.h>
+#include <iostream>
 
 #include "assert.h"
 
@@ -129,6 +130,10 @@ void Primitive::buildBVH()
 {
 	BVH::BVHBuilder builder(m_sharedData->triangles, m_sharedData->triangleIndices);
 	m_sharedData->bvhNodes = builder.BuildBVH();
+
+	auto stats = BVH::BVHBuilder::CalculateStats(m_sharedData->bvhNodes);
+	std::cout << "BVH for: " << name << std::endl;
+	BVH::BVHBuilder::PrintStats(stats);
 }
 
 

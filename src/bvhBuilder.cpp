@@ -1,6 +1,11 @@
 #pragma
 #include "bvhBuilder.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <iostream>
+
 using namespace BVH;
 
 
@@ -29,20 +34,35 @@ void BVHBuilder::SplitNode(uint32_t nodeIndex, uint32_t depth)
 	// center of the split axis
 	float splitPos = nodes[nodeIndex].bbox.min[splitAxis] + extent[splitAxis] * 0.5f;
 
-	int i = nodes[nodeIndex].firstTriIndex;
-	int j = nodes[nodeIndex].firstTriIndex + nodes[nodeIndex].numTris - 1;
+	int firstTriIndex = nodes[nodeIndex].firstTriIndex;
+	int lastTriIndex = nodes[nodeIndex].firstTriIndex + nodes[nodeIndex].numTris - 1;
 
-	while (i <= j)
+	while (firstTriIndex <= lastTriIndex)
 	{
-		if (tris[trisIndex[i]].Center()[splitAxis] < splitPos)
-			i++;
+		if (tris[trisIndex[firstTriIndex]].Center()[splitAxis] < splitPos)
+			firstTriIndex++;
 		else
-			std::swap(trisIndex[i], trisIndex[j--]);
+			std::swap(trisIndex[firstTriIndex], trisIndex[lastTriIndex--]);
 	}
 
-	uint32_t leftCount = i - nodes[nodeIndex].firstTriIndex;
+	uint32_t leftCount = firstTriIndex - nodes[nodeIndex].firstTriIndex;
+	
+	// Fallback to median split if midpoint split failed (all tris on one side)
 	if (leftCount == 0 || leftCount == nodes[nodeIndex].numTris)
-		return;
+	{
+		// Sort triangles by center along split axis and split at median
+		uint32_t first = nodes[nodeIndex].firstTriIndex;
+		uint32_t count = nodes[nodeIndex].numTris;
+		
+		std::sort(trisIndex.begin() + first, trisIndex.begin() + first + count,
+			[this, splitAxis](uint32_t a, uint32_t b)
+			{
+				return tris[a].Center()[splitAxis] < tris[b].Center()[splitAxis];
+			});
+		
+		leftCount = count / 2;
+		firstTriIndex = first + leftCount;
+	}
 
 	uint32_t leftIndex = ++nodesUsed;
 	uint32_t rightIndex = ++nodesUsed;
@@ -55,7 +75,7 @@ void BVHBuilder::SplitNode(uint32_t nodeIndex, uint32_t depth)
 	nodes[leftIndex].firstTriIndex = nodes[nodeIndex].firstTriIndex;
 	nodes[leftIndex].numTris = leftCount;
 
-	nodes[rightIndex].firstTriIndex = i;
+	nodes[rightIndex].firstTriIndex = firstTriIndex;
 	nodes[rightIndex].numTris = nodes[nodeIndex].numTris - leftCount;
 	
 	nodes[nodeIndex].numTris = 0;
@@ -84,6 +104,78 @@ void BVHBuilder::UpdateBounds(uint32_t index)
 		nodes[index].bbox.min = glm::min(nodes[index].bbox.min, glm::vec3(minX, minY, minZ));
 		nodes[index].bbox.max = glm::max(nodes[index].bbox.max, glm::vec3(maxX, maxY, maxZ));
 	}
+}
+
+BVHStats BVHBuilder::CalculateStats(const std::vector<Node>& nodes)
+{
+	BVHStats stats;
+	if (nodes.empty())
+		return stats;
+
+	stats.totalNodes = static_cast<uint32_t>(nodes.size());
+	uint64_t depthSum = 0;
+
+	std::function<void(uint32_t, uint32_t)> traverse = [&](uint32_t idx, uint32_t depth)
+	{
+		if (idx >= nodes.size())
+			return;
+
+		const auto& node = nodes[idx];
+		stats.maxDepth = std::max(stats.maxDepth, depth);
+
+		if (node.numTris > 0) // Leaf node
+		{
+			stats.leafNodes++;
+			stats.totalTriangles += node.numTris;
+			stats.maxTrisPerLeaf = std::max(stats.maxTrisPerLeaf, node.numTris);
+			stats.minTrisPerLeaf = std::min(stats.minTrisPerLeaf, node.numTris);
+			depthSum += depth;
+		}
+		else // Interior node
+		{
+			stats.interiorNodes++;
+			traverse(node.leftChild, depth + 1);
+			traverse(node.leftChild + 1, depth + 1);
+		}
+	};
+
+	traverse(0, 0);
+
+	if (stats.leafNodes > 0)
+	{
+		stats.avgTrisPerLeaf = static_cast<float>(stats.totalTriangles) / stats.leafNodes;
+		stats.avgDepth = static_cast<float>(depthSum) / stats.leafNodes;
+	}
+	if (stats.minTrisPerLeaf == UINT32_MAX)
+		stats.minTrisPerLeaf = 0;
+
+	return stats;
+}
+
+void BVHBuilder::PrintStats(const BVHStats& stats)
+{
+	std::cout << "=== BVH Statistics ===" << std::endl;
+	std::cout << "Total nodes:      " << stats.totalNodes << std::endl;
+	std::cout << "  Interior:       " << stats.interiorNodes << std::endl;
+	std::cout << "  Leaves:         " << stats.leafNodes << std::endl;
+	std::cout << "Total triangles:  " << stats.totalTriangles << std::endl;
+	std::cout << "Max depth:        " << stats.maxDepth << std::endl;
+	std::cout << "Avg leaf depth:   " << stats.avgDepth << std::endl;
+	std::cout << "Tris per leaf:    min=" << stats.minTrisPerLeaf
+	          << " max=" << stats.maxTrisPerLeaf
+	          << " avg=" << stats.avgTrisPerLeaf << std::endl;
+
+	float idealDepth = std::log2(static_cast<float>(stats.totalTriangles));
+	std::cout << "Ideal depth:      ~" << idealDepth << std::endl;
+
+	if (stats.maxDepth > idealDepth * 2)
+		std::cout << "WARNING: BVH is unbalanced! Consider using SAH." << std::endl;
+	if (stats.avgTrisPerLeaf > 16)
+		std::cout << "WARNING: Too many tris per leaf. Consider smaller leaf threshold." << std::endl;
+	if (stats.maxTrisPerLeaf > 64)
+		std::cout << "WARNING: Some leaves have many triangles (" << stats.maxTrisPerLeaf << ")." << std::endl;
+
+	std::cout << "======================" << std::endl;
 }
 
 std::vector<Node> BVHBuilder::BuildBVH()

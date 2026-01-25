@@ -197,12 +197,13 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			size_t meshIndex = &mesh - &model.meshes[0];
 			Transform transform = getTransformFromNode(meshIndex, model);
 			auto primitive = std::make_unique<Primitive>(m_device);
+			
+			primitive->transform = transform;
+			primitive->name = model.nodes[meshIndex].name;
 
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
 			primitive->fillTriangles();
-			primitive->transform = transform;
-			primitive->name = model.nodes[meshIndex].name;
 
 			if (gltfPrimitive.material >= 0)
 			{
