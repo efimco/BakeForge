@@ -1,4 +1,7 @@
 #include "bakerPass.hpp"
+
+#include <iostream>
+
 #include "glm/glm.hpp"
 
 #include "appConfig.hpp"
@@ -45,6 +48,15 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_raycastRasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_raycastDepthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
 	createOrResize();
+
+	D3D11_QUERY_DESC queryDesc = {};
+	queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+	m_device->CreateQuery(&queryDesc, &m_disjointQuery);
+
+	queryDesc.Query = D3D11_QUERY_TIMESTAMP;
+	m_device->CreateQuery(&queryDesc, &m_startQuery);
+	m_device->CreateQuery(&queryDesc, &m_endQuery);
+
 }
 
 void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
@@ -52,7 +64,30 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 	m_lastWidth = width;
 	m_lastHeight = height;
 	m_cageOffset = cageOffset;
+
+	m_context->Begin(m_disjointQuery.Get());
+	m_context->End(m_startQuery.Get());
+
 	createInterpolatedTextures();
+	m_context->End(m_endQuery.Get());
+	m_context->End(m_disjointQuery.Get());
+
+	// Wait for GPU to finish and get results
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
+	{
+		Sleep(1);
+	}
+
+	if (!disjointData.Disjoint)
+	{
+		UINT64 startTime, endTime;
+		m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
+		m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
+
+		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
+		std::cout << "TOTAL GPU work for baking took " << gpuTimeMs << " ms" << std::endl;
+	}
 
 }
 
@@ -191,6 +226,10 @@ void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPr
 void BakerPass::createInterpolatedTextures()
 {
 	beginDebugEvent(L"Baker::Interpolated Textures");
+
+	m_context->Begin(m_disjointQuery.Get());
+	m_context->End(m_startQuery.Get());
+
 	createInterpolatedTexturesResources();
 	createBakedNormalResources();
 	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
@@ -220,6 +259,26 @@ void BakerPass::createInterpolatedTextures()
 		unbindComputeUAVs(0, 2);
 		unbindShaderResources(0, 2);
 
+		m_context->End(m_endQuery.Get());
+		m_context->End(m_disjointQuery.Get());
+
+		// Wait for GPU to finish and get results
+		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+		while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
+		{
+			Sleep(1);
+		}
+
+		if (!disjointData.Disjoint)
+		{
+			UINT64 startTime, endTime;
+			m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
+			m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
+
+			double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
+			std::cout << "Texture Preparation took " << gpuTimeMs << " ms" << std::endl;
+		}
+
 		bakeNormals(hpBuffers);
 	}
 	endDebugEvent();
@@ -228,6 +287,10 @@ void BakerPass::createInterpolatedTextures()
 void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 {
 	beginDebugEvent(L"Baker::Bake Normals");
+
+	m_context->Begin(m_disjointQuery.Get());
+	m_context->End(m_startQuery.Get());
+
 	m_context->CSSetShader(m_shaderManager->getComputeShader("bakerBakeNormal"), nullptr, 0);
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 	ID3D11UnorderedAccessView* bakedNormalUAVs[1] = { m_bakedNormalUAV.Get() };
@@ -245,6 +308,26 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 	m_context->Dispatch(threadGroupX, threadGroupY, 1);
 	unbindComputeUAVs(2, 1);
 	unbindShaderResources(2, 5);
+
+	m_context->End(m_endQuery.Get());
+	m_context->End(m_disjointQuery.Get());
+
+	// Wait for GPU to finish and get results
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
+	{
+		Sleep(1);
+	}
+
+	if (!disjointData.Disjoint)
+	{
+		UINT64 startTime, endTime;
+		m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
+		m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
+
+		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
+		std::cout << "GPU baking took " << gpuTimeMs << " ms" << std::endl;
+	}
 	endDebugEvent();
 }
 

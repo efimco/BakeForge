@@ -54,7 +54,7 @@ private:
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 
 	float m_cageOffset = 0.1f;
-	
+
 	ComPtr<ID3D11Texture2D> m_worldSpaceTexelPositionTexture;
 	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelPositionSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelPositionUAV;
@@ -76,6 +76,10 @@ private:
 	ComPtr<ID3D11DepthStencilState> m_raycastDepthStencilState;
 	ComPtr<ID3D11RasterizerState> m_raycastRasterizerState;
 	ComPtr<ID3D11Buffer> m_raycastConstantBuffer;
+
+	ComPtr<ID3D11Query> m_disjointQuery;
+	ComPtr<ID3D11Query> m_startQuery;
+	ComPtr<ID3D11Query> m_endQuery;
 
 	void updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 

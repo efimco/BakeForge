@@ -1,9 +1,10 @@
 #include "baker.hpp"
-#include "passes/bakerPass.hpp"
+
 
 #include "material.hpp"
 #include "primitive.hpp"
 
+#include "passes/bakerPass.hpp"
 
 LowPolyNode::LowPolyNode(const std::string_view nodeName)
 {
@@ -117,4 +118,5 @@ void Baker::bake()
 	{
 		bakerPass->bake(textureWidth, textureWidth, cageOffset);
 	}
+
 }

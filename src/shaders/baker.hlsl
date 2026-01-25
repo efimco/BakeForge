@@ -62,13 +62,13 @@ bool uvInsideTriangle(float2 uv, BarycentricTri tri, out float3 barycentric)
 	return (barycentric.x >= 0) && (barycentric.y >= 0) && (barycentric.z >= 0);
 }
 
-#define MAX_STACK_SIZE 64
+#define MAX_STACK_SIZE 32
 
 void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 {
 	uint stack[MAX_STACK_SIZE];
-	int stackPtr = 0;
-	stack[stackPtr++] = 0; // Start with root node
+	uint stackPtr = 0;
+	stack[stackPtr++] = 0; // push root node
 
 	while (stackPtr > 0)
 	{
@@ -97,15 +97,13 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 		}
 		else
 		{
-			// Get both children
+
 			uint leftIdx = node.leftChild;
 			uint rightIdx = leftIdx + 1;
 
-			// Test both children
 			float tLeft = IntersectBox(ray, gNodes[leftIdx].bbox, bestT);
 			float tRight = IntersectBox(ray, gNodes[rightIdx].bbox, bestT);
 
-			// Push far child first (so near child is processed first)
 			if (tLeft < tRight)
 			{
 				if (tRight < bestT) stack[stackPtr++] = rightIdx;
@@ -121,13 +119,16 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 }
 
 
-[numthreads(32, 32, 1)]
+[numthreads(16, 16, 1)]
 void CSPrepareTextures(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x >= dimensions.x || DTid.y >= dimensions.y)
 		return;
 
 	float2 uv = (float2(DTid.xy) + 0.5f) / dimensions;
+
+	oWorldSpaceTexelPosition[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
+	oWorldSpaceTexelNormal[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
 
 	for (uint i = 0; i < gIndices.Length; i += 3)
 	{
@@ -153,47 +154,41 @@ void CSPrepareTextures(uint3 DTid : SV_DispatchThreadID)
 			oWorldSpaceTexelNormal[DTid.xy] = float4(worldNormal, 1.0f);
 			break;
 		}
-		oWorldSpaceTexelPosition[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
-		oWorldSpaceTexelNormal[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
 	}
 }
 
-[numthreads(32, 32, 1)]
+[numthreads(16, 16, 1)]
 void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x >= dimensions.x || DTid.y >= dimensions.y)
 		return;
-
-	float2 uv = (float2(DTid.xy) + 0.5f) / dimensions;
 
 	float4 worldPos = gWorldSpacePositions.Load(int3(DTid.xy, 0));
 	float4 worldNormal = gWorldSpaceNormals.Load(int3(DTid.xy, 0));
 
 	if (worldPos.a == 0.0f) // we write alpha = 0 for invalid texels
 		return;
+
 	Ray ray;
 	ray.origin = worldPos.xyz;
 	ray.dir = -normalize(worldNormal.xyz);
 	ray.origin -= ray.dir * cageOffset; // offset to avoid self-intersection
 	ray.invDir = 1.0f / ray.dir;
-	float bestT = 1e30f;
+	float bestT = cageOffset * 6.0f;
 	float3 bestN = 0.0f;
 	TraverseBVH(ray, bestT, bestN);
-	oBakedNormal[DTid.xy] = float4(bestN, 1.0);
 
-	// Convert world-space normal to tangent space
-	// Build tangent frame from the low-poly normal
 	float3 N = normalize(worldNormal.xyz);
 	float3 T = normalize(cross(N, abs(N.y) < 0.999f ? float3(0, 1, 0) : float3(1, 0, 0)));
-	float3 B = cross(N, T);
+	float3 B = cross(N, T); // build tangent frame from the low-poly normal
 
-	// Transform bestN from world space to tangent space
-	float3 tangentSpaceNormal;
+
+	float3 tangentSpaceNormal; 	// transforms bestN from world space to tangent space
 	tangentSpaceNormal.x = dot(bestN, T);
 	tangentSpaceNormal.y = dot(bestN, B);
 	tangentSpaceNormal.z = dot(bestN, N);
 
-	// Remap from [-1,1] to [0,1] for storage
-	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal * 0.5f + 0.5f, 1.0f);
+
+	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal * 0.5f + 0.5f, 1.0f); // remap from [-1,1] to [0,1] for storage
 
 }

@@ -45,12 +45,13 @@ bool IntersectTri(Ray ray, Tri tri, inout float t, out float2 baryOut)
 	float3 pvec = cross(ray.dir, edge2);
 	float det = dot(edge1, pvec);
 
-	// Use small epsilon for near-parallel rays
-	if (abs(det) < 1e-8f)
+
+	if (abs(det) < 1e-8f) 	// small epsilon for near-parallel rays
 		return false;
 
 	float invDet = 1.0f / det;
 	float3 tvec = ray.origin - tri.v0;
+
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0.0f || u > 1.0f)
 		return false;
@@ -85,7 +86,6 @@ float IntersectBox(Ray ray, BBox box, float tMax)
 	// Return tNear if hit, otherwise return large value
 	return (tNear <= tFar && tFar >= 0.0f && tNear < tMax) ? tNear : 1e30f;
 }
-
 
 bool IsLeaf(BVHNode node)
 {
