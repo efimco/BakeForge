@@ -31,49 +31,49 @@ std::future<AsyncImportResult> GLTFModel::importModelAsync(
 	const std::string& path, ComPtr<ID3D11Device> device, std::shared_ptr<ImportProgress> progress)
 {
 	return std::async(std::launch::async, [path, device, progress]() -> AsyncImportResult
-					  {
-		AsyncImportResult result;
-		result.progress = progress;
-		try
 		{
-			progress->setStage("Creating deferred context...");
+			AsyncImportResult result;
+			result.progress = progress;
+			try
+			{
+				progress->setStage("Creating deferred context...");
 
-			ComPtr<ID3D11DeviceContext> deferredCtx;
-			HRESULT hr = device->CreateDeferredContext(0, &deferredCtx);
-			if (FAILED(hr))
+				ComPtr<ID3D11DeviceContext> deferredCtx;
+				HRESULT hr = device->CreateDeferredContext(0, &deferredCtx);
+				if (FAILED(hr))
+				{
+					progress->hasFailed = true;
+					progress->message = "Failed to create deferred context";
+					return result;
+				}
+
+				GLTFModel importer(path, device, deferredCtx, progress);
+
+				result.primitives = std::move(importer.m_pendingPrimitives);
+				result.textures = std::move(importer.m_pendingTextures);
+				result.materials = std::move(importer.m_pendingMaterials);
+
+				progress->setStage("Finishing command list...");
+				hr = deferredCtx->FinishCommandList(FALSE, &result.commandList);
+				if (FAILED(hr))
+				{
+					progress->hasFailed = true;
+					progress->message = "Failed to finish command list";
+					return result;
+				}
+
+				progress->progress = 1.0f;
+				progress->isCompleted = true;
+				progress->setStage("Ready");
+
+			}
+			catch (const std::exception& e)
 			{
 				progress->hasFailed = true;
-				progress->message = "Failed to create deferred context";
-				return result;
+				progress->message = e.what();
 			}
 
-			GLTFModel importer(path, device, deferredCtx, progress);
-
-			result.primitives = std::move(importer.m_pendingPrimitives);
-			result.textures = std::move(importer.m_pendingTextures);
-			result.materials = std::move(importer.m_pendingMaterials);
-
-			progress->setStage("Finishing command list...");
-			hr = deferredCtx->FinishCommandList(FALSE, &result.commandList);
-			if (FAILED(hr))
-			{
-				progress->hasFailed = true;
-				progress->message = "Failed to finish command list";
-				return result;
-			}
-
-			progress->progress = 1.0f;
-			progress->isCompleted = true;
-			progress->setStage("Ready");
-
-		}
-		catch (const std::exception& e)
-		{
-			progress->hasFailed = true;
-			progress->message = e.what();
-		}
-
-		return result; });
+			return result; });
 }
 
 void GLTFModel::finalizeAsyncImport(
@@ -201,10 +201,27 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
 			primitive->fillTriangles();
-
-			primitive->material = m_materialIndex[gltfPrimitive.material];
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
+
+			if (gltfPrimitive.material >= 0)
+			{
+				primitive->material = m_materialIndex[gltfPrimitive.material];
+			}
+			else
+			{
+				primitive->material = std::make_shared<Material>();
+				
+				primitive->material->name = primitive->name + "_defmat";
+				if (m_scene)
+				{
+					m_scene->addMaterial(primitive->material);
+				}
+				else
+				{
+					m_pendingMaterials.push_back(primitive->material);
+				}
+			}
 			if (m_scene)
 			{
 				m_scene->addChild(std::move(primitive));
@@ -309,7 +326,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 		{
 			if (m_scene->getMaterial(name) == nullptr)
 			{
-				m_scene->addMaterial(std::shared_ptr<Material>(mat));
+				m_scene->addMaterial(mat);
 			}
 			m_materialIndex[i] = m_scene->getMaterial(name);
 		}
@@ -424,9 +441,9 @@ void GLTFModel::processIndexAttrib(const tinygltf::Model& model, const tinygltf:
 }
 
 void GLTFModel::processNormalsAttribute(const tinygltf::Model& model,
-										const tinygltf::Mesh& mesh,
-										const tinygltf::Primitive& primitive,
-										std::vector<Normal>& normals)
+	const tinygltf::Mesh& mesh,
+	const tinygltf::Primitive& primitive,
+	std::vector<Normal>& normals)
 {
 	if (!primitive.attributes.contains("NORMAL"))
 	{
@@ -475,16 +492,16 @@ Transform GLTFModel::getTransformFromNode(const size_t meshIndex, const tinygltf
 	if (node.translation.size() != 0)
 	{
 		transform.position = glm::vec3(node.translation[0], node.translation[1],
-									   node.translation[2]);
+			node.translation[2]);
 	}
 
 	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 	if (node.rotation.size() != 0)
 	{
 		const glm::quat quatRot(static_cast<float>(node.rotation[3]),
-								static_cast<float>(node.rotation[0]),
-								static_cast<float>(node.rotation[1]),
-								static_cast<float>(node.rotation[2]));
+			static_cast<float>(node.rotation[0]),
+			static_cast<float>(node.rotation[1]),
+			static_cast<float>(node.rotation[2]));
 		transform.rotation = glm::eulerAngles(quatRot);
 	}
 

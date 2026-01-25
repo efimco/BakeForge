@@ -125,6 +125,12 @@ void BakerPass::createOrResize()
 	m_rtvCollector->addRTV("RaycastVisualization", m_raycastVisualizationSRV.Get());
 }
 
+void BakerPass::setPrimitivesToBake(const std::vector<Primitive*>& lowPolyPrims, const std::vector<Primitive*>& highPolyPrims)
+{
+	m_lowPolyPrimitivesToBake = lowPolyPrims;
+	m_highPolyPrimitivesToBake = highPolyPrims;
+}
+
 void BakerPass::updateBake(uint32_t width, uint32_t height, Primitive* prim)
 {
 	D3D11_MAPPED_SUBRESOURCE mapped = {};
@@ -192,6 +198,9 @@ void BakerPass::createOrResizeBakedResources(uint32_t width, uint32_t height, Pr
 
 		m_structuredIndexBuffer.Reset();
 		m_structuredIndexSRV.Reset();
+
+		m_bvhNodesBuffer.Reset();
+		m_bvhNodesSrv.Reset();
 	}
 
 	m_worldSpaceTexelPositionTexture = createTexture2D(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
@@ -202,8 +211,8 @@ void BakerPass::createOrResizeBakedResources(uint32_t width, uint32_t height, Pr
 	m_worldSpaceTexelNormalSRV = createShaderResourceView(m_worldSpaceTexelNormalTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelNormalUAV = createUnorderedAccessView(m_worldSpaceTexelNormalTexture.Get(), UAVPreset::Texture2D, 0);
 
-	m_rtvCollector->addRTV("WorldSpaceTexelPosition", m_worldSpaceTexelPositionSRV.Get());
-	m_rtvCollector->addRTV("WorldSpaceTexelNormal", m_worldSpaceTexelNormalSRV.Get());
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelPosition", m_worldSpaceTexelPositionSRV.Get());
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelNormal", m_worldSpaceTexelNormalSRV.Get());
 
 	if (!prim)
 		return;
@@ -213,6 +222,9 @@ void BakerPass::createOrResizeBakedResources(uint32_t width, uint32_t height, Pr
 
 	m_structuredIndexBuffer = createStructuredBuffer(sizeof(uint32_t), static_cast<UINT>(prim->getIndexData().size()), SBPreset::CpuWrite);
 	m_structuredIndexSRV = createShaderResourceView(m_structuredIndexBuffer.Get(), SRVPreset::StructuredBuffer);
+
+	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), static_cast<UINT>(prim->getBVHNodes().size()), SBPreset::CpuWrite);
+	m_bvhNodesSrv = createShaderResourceView(m_bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
 
 }
 

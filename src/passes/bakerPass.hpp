@@ -2,6 +2,7 @@
 
 #include "basePass.hpp"
 #include "glm/glm.hpp"
+#include <string>
 
 class Scene;
 class RTVCollector;
@@ -12,13 +13,20 @@ class BakerPass : public BasePass
 public:
 	explicit BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~BakerPass() override = default;
+
+	std::string name = "Baker Pass";
+
 	void bake(Scene* scene, uint32_t width, uint32_t height);
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
+	void setPrimitivesToBake(const std::vector<Primitive*>& lowPolyPrims, const std::vector<Primitive*>& highPolyPrims);
 
 private:
 	uint32_t m_lastWidth = 0;
 	uint32_t m_lastHeight = 0;
+
+	std::vector<Primitive*> m_lowPolyPrimitivesToBake;
+	std::vector<Primitive*> m_highPolyPrimitivesToBake;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_structuredVertexBuffer;
@@ -27,6 +35,8 @@ private:
 	ComPtr<ID3D11ShaderResourceView> m_structuredVertexSRV;
 	ComPtr<ID3D11ShaderResourceView> m_structuredIndexSRV;
 
+	ComPtr<ID3D11Buffer> m_bvhNodesBuffer;
+	ComPtr<ID3D11ShaderResourceView> m_bvhNodesSrv;
 
 	ComPtr<ID3D11Texture2D> m_worldSpaceTexelPositionTexture;
 	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelPositionSRV;
@@ -35,7 +45,6 @@ private:
 	ComPtr<ID3D11Texture2D> m_worldSpaceTexelNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelNormalSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelNormalUAV;
-
 
 	ComPtr<ID3D11Texture2D> m_raycastVisualizationTexture;
 	ComPtr<ID3D11ShaderResourceView> m_raycastVisualizationSRV;
@@ -46,7 +55,6 @@ private:
 	ComPtr<ID3D11DepthStencilState> m_raycastDepthStencilState;
 	ComPtr<ID3D11RasterizerState> m_raycastRasterizerState;
 	ComPtr<ID3D11Buffer> m_raycastConstantBuffer;
-
 
 	void updateBake(uint32_t width, uint32_t height, Primitive* prim);
 	void updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);

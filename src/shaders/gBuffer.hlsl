@@ -5,10 +5,12 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 modelViewProjection;
 	float4x4 inverseTransposedModel;
 	float4x4 model;
-	float objectID;
-	float3 _pad;
 	float3 cameraPosition;
-	float _pad2; // align to 16 bytes
+	float objectID;
+	float4 albedoColor;
+	float metallicValue;
+	float roughnessValue;
+	float2 padding;
 };
 
 Texture2D albedoTexture : register(t0);
@@ -52,9 +54,11 @@ VertexOutput VS(VertexInput input)
 	return output;
 }
 
-float3 getNormalFromMap(VertexOutput input)
+float3 getNormalFromMap(VertexOutput input, bool hasNormalMap = true)
 {
 	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
+	if (!hasNormalMap)
+		return input.normal;
 	// If no normal map (flat normal), use geometry normal
 	if (length(tangentNormal) < 0.01f)
 		return input.normal;
@@ -76,10 +80,23 @@ float3 getNormalFromMap(VertexOutput input)
 
 PSOutput PS(VertexOutput input)
 {
+	uint albedoWidth, albedoHeight;
+	albedoTexture.GetDimensions(albedoWidth, albedoHeight);
+	bool hasAlbedoTexture = albedoWidth != 0 && albedoHeight != 0;
+
+	uint metallicRoughnessWidth, metallicRoughnessHeight;
+	metallicRoughnessTexture.GetDimensions(metallicRoughnessWidth, metallicRoughnessHeight);
+	bool hasMetallicRoughnessTexture = metallicRoughnessWidth != 0 && metallicRoughnessHeight != 0;
+
+	uint normalWidth, normalHeight;
+	normalTexture.GetDimensions(normalWidth, normalHeight);
+	bool hasNormalTexture = normalWidth != 0 && normalHeight != 0;
+
 	PSOutput output;
-	output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
+	output.albedo = hasAlbedoTexture ? albedoTexture.Sample(samplerState, input.texCoord) : albedoColor;
+
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
-	float3 worldNormal = getNormalFromMap(input);
+	float3 worldNormal = getNormalFromMap(input, hasNormalTexture);
 	float3 N = worldNormal;
 	float3 V = normalize(cameraPosition - input.fragPos.xyz);
 	float NdotV = dot(N, V);
@@ -90,8 +107,8 @@ PSOutput PS(VertexOutput input)
 	}
 	float gammaFactor = 2.6f;
 	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);
-	float roughness = metallicRoughnessTexture.Sample(samplerState, input.texCoord).g;
-	float metallic = metallicRoughnessTexture.Sample(samplerState, input.texCoord).b;
+	float roughness = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).g : roughnessValue;
+	float metallic = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).b : metallicValue;
 	output.metallicRoughness = float2(metallic, roughness);
 
 	// Encode normal from [-1,1] to [0,1] for storage in UNORM render target

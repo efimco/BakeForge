@@ -341,7 +341,7 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Baker"))
 			{
-				auto baker = std::make_unique<Baker>("Baker");
+				auto baker = std::make_unique<Baker>("Baker", m_device, m_context);
 				m_scene->addChild(std::move(baker));
 			}
 			ImGui::EndMenu();
@@ -548,6 +548,7 @@ void UIManager::showMaterialBrowser()
 		{
 			m_scene->setActiveNode(nullptr);
 			m_selectedMaterial = mat;
+			m_scene->setReadBackID(0);
 		}
 		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
 		{
@@ -978,6 +979,7 @@ void UIManager::showProperties() const
 	}
 	else if (m_scene->getActiveNode())
 	{
+		ImGui::Text("Selected Node: %s", m_scene->getActiveNode()->name.c_str());
 		if (dynamic_cast<Primitive*>(m_scene->getActiveNode()))
 		{
 			showPrimitiveProperties(dynamic_cast<Primitive*>(m_scene->getActiveNode()));
@@ -990,7 +992,10 @@ void UIManager::showProperties() const
 		{
 			showCameraProperties(dynamic_cast<Camera*>(m_scene->getActiveNode()));
 		}
-		ImGui::Text("Selected Node: %s", m_scene->getActiveNode()->name.c_str());
+		else if (dynamic_cast<BakerNode*>(m_scene->getActiveNode()))
+		{
+			showBakerProperties(dynamic_cast<BakerNode*>(m_scene->getActiveNode()));
+		}
 	}
 	ImGui::End();
 }
@@ -1056,21 +1061,30 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 	}
 }
 
-void UIManager::showMaterialProperties(std::shared_ptr<Material> material)
+void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 {
 	ImGui::Text("Name: %s", material->name.c_str());
 	ImGui::Text("Albedo: ");
 	ImGui::SameLine();
-	ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
+	if (material->albedo)
+	{
+		ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
+	}
 	ImGui::ColorEdit4("Albedo color: ", glm::value_ptr(material->albedoColor));
 	ImGui::Text("MetallicRougness: ");
 	ImGui::SameLine();
-	ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
+	if (material->metallicRoughness)
+	{
+		ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
+	}
 	ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Roughness", &material->roughnessValue, 0.01f, 0.04f, 1.0f);
 	ImGui::Text("Normal: ");
 	ImGui::SameLine();
-	ImGui::Image(material->normal->srv.Get(), ImVec2(128, 128));
+	if (material->normal)
+	{
+		ImGui::Image(material->normal->srv.Get(), ImVec2(128, 128));
+	}
 }
 
 void UIManager::showLightProperties(Light* light) const
@@ -1096,6 +1110,26 @@ void UIManager::showCameraProperties(Camera* camera) const
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
+}
+
+void UIManager::showBakerProperties(BakerNode* baker) const
+{
+	auto lowPolyNode = dynamic_cast<LowPolyNode*>(baker);
+	auto highPolyNode = dynamic_cast<HighPolyNode*>(baker);
+	auto bakerNode = dynamic_cast<Baker*>(baker);
+	if (lowPolyNode)
+	{
+		ImGui::Text("Name: %s", lowPolyNode->name.c_str());
+		ImGui::DragFloat("Cage Offset", &lowPolyNode->cageOffset, 0.01f, 0.0f, 10.0f);
+	}
+	if (bakerNode)
+	{
+		constexpr uint32_t minVal = 2;
+		constexpr uint32_t maxVal = 4096;
+		ImGui::Text("Name: %s", bakerNode->name.c_str());
+		ImGui::Text("Baking Settings:");
+		ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &bakerNode->textureWidth, 2.0f, &minVal, &maxVal);
+	}
 }
 
 std::string UIManager::openFileDialog(const FileType outFileType)

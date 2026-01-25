@@ -25,10 +25,12 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
-	float objectID;
-	float padding[3]; // Align to 16 bytes
 	glm::vec3 cameraPosition;
-	float padding2; // Align to 16 bytes
+	float objectID;
+	glm::vec4 albedoColor;
+	float metallicValue;
+	float roughnessValue;
+	float padding[2];
 };
 
 GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
@@ -82,7 +84,6 @@ void GBuffer::draw(const glm::mat4& view,
 	{
 		m_context->ClearRenderTargetView(rtv, AppConfig::clearColor);
 	}
-
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -98,11 +99,6 @@ void GBuffer::draw(const glm::mat4& view,
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
 		const float objectID = static_cast<float>(static_cast<int32_t>(handle));
-		if (!prim->material)
-		{
-			std::cerr << "Primitive " << objectID << " has no material!" << std::endl;
-			continue;
-		}
 		update(view, projection, cameraPosition, scene, objectID, prim);
 		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
 		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -131,8 +127,20 @@ void GBuffer::update(const glm::mat4& view,
 		cbData->modelViewProjection = glm::transpose(mvp);
 		cbData->inverseTransposedModel = glm::inverse(prim->getWorldMatrix());
 		cbData->model = glm::transpose(prim->getWorldMatrix());
-		cbData->objectID = objectID;
 		cbData->cameraPosition = cameraPosition;
+		cbData->objectID = objectID;
+		if (prim->material)
+		{
+			cbData->albedoColor = prim->material->albedoColor;
+			cbData->metallicValue = prim->material->metallicValue;
+			cbData->roughnessValue = prim->material->roughnessValue;
+		}
+		else
+		{
+			cbData->albedoColor = glm::vec4(1.0f);
+			cbData->metallicValue = 0.0f;
+			cbData->roughnessValue = 0.5f;
+		}
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
 }

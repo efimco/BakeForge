@@ -18,6 +18,7 @@ struct Material;
 class Light;
 class CommandManager;
 class RTVCollector;
+class BakerNode;
 
 
 #define ICON_FA_CUBE "\xef\x86\xb2"		 // Mesh/Primitive
@@ -82,9 +83,10 @@ private:
 
 	void showProperties() const;
 	void showPrimitiveProperties(Primitive* primitive) const;
-	static void showMaterialProperties(std::shared_ptr<Material> material);
+	void showMaterialProperties(std::shared_ptr<Material> material) const;
 	void showLightProperties(Light* light) const;
 	void showCameraProperties(Camera* camera) const;
+	void showBakerProperties(BakerNode* baker) const;
 
 	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
 

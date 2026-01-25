@@ -30,7 +30,10 @@ VertexOutput VS(VertexInput input)
 // Pixel shader for alpha testing
 void PS(VertexOutput input)
 {
-	float4 albedo = albedoTexture.Sample(samplerState, input.texCoord);
+	uint2 albedoTexSize;
+	albedoTexture.GetDimensions(albedoTexSize.x, albedoTexSize.y);
+	bool hasAlbedoTexture = albedoTexSize.x > 0 && albedoTexSize.y > 0;
+	float4 albedo = hasAlbedoTexture ? albedoTexture.Sample(samplerState, input.texCoord) : float4(1.0, 1.0, 1.0, 1.0);
 	if (albedo.a < 0.5)
 		discard;
 }

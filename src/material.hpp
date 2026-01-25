@@ -15,10 +15,10 @@ struct Material
 {
 	std::string name;
 	std::shared_ptr<Texture> albedo;
-	glm::vec4 albedoColor; // with alpha channel
+	glm::vec4 albedoColor = glm::vec4(1.0f); // with alpha channel
 	std::shared_ptr<Texture> metallicRoughness;
-	float metallicValue;
-	float roughnessValue;
+	float metallicValue = 0.0f;
+	float roughnessValue = 0.5f;
 	std::shared_ptr<Texture> normal;
 	ID3D11ShaderResourceView* const* getSRVs();
 	bool needsPreviewUpdate = true;
@@ -30,5 +30,5 @@ struct Material
 	} preview;
 
 private:
-	ID3D11ShaderResourceView* m_srvCache[3] = {nullptr, nullptr, nullptr};
+	ID3D11ShaderResourceView* m_srvCache[3] = { nullptr, nullptr, nullptr };
 };
