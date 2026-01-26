@@ -36,9 +36,9 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(s_zPrePassInputLayoutDesc, ARRAYSIZE(s_zPrePassInputLayoutDesc),
-												 m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer(),
-												 m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize(),
-												 &m_inputLayout);
+			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferPointer(),
+			m_shaderManager->getVertexShaderBlob("zPrePass")->GetBufferSize(),
+			&m_inputLayout);
 		assert(SUCCEEDED(hr));
 	};
 
@@ -52,42 +52,43 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 
 	beginDebugEvent(L"ZPrePass");
 	m_context->RSSetState(m_rasterizerState.Get());
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 
-	m_context->OMSetRenderTargets(0, nullptr, dsv.Get());
-	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
+		m_context->OMSetRenderTargets(0, nullptr, dsv.Get());
+		m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_context->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	m_context->IASetInputLayout(m_inputLayout.Get());
-	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_context->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		m_context->IASetInputLayout(m_inputLayout.Get());
+		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_context->VSSetShader(m_shaderManager->getVertexShader("zPrePass"), nullptr, 0);
-	m_context->PSSetShader(m_shaderManager->getPixelShader("zPrePass"), nullptr, 0);
-	m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
-	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+		m_context->VSSetShader(m_shaderManager->getVertexShader("zPrePass"), nullptr, 0);
+		m_context->PSSetShader(m_shaderManager->getPixelShader("zPrePass"), nullptr, 0);
+		m_context->VSSetConstantBuffers(0, 1, m_constantbuffer.GetAddressOf());
+		m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
-	static const UINT stride = sizeof(Vertex);
-	static const UINT offset = 0;
+		static const UINT stride = sizeof(Vertex);
+		static const UINT offset = 0;
 
-	for (auto& [handle, prim] : scene->getPrimitives())
-	{
-		if (!prim->isVisible)
-			continue;
-		update(view, projection, prim);
-
-		// Bind albedo texture for alpha testing
-		if (prim->material && prim->material->albedo)
+		for (auto& [handle, prim] : scene->getPrimitives())
 		{
-			ID3D11ShaderResourceView* albedoSRV = prim->material->albedo->srv.Get();
-			m_context->PSSetShaderResources(0, 1, &albedoSRV);
-		}
+			if (!prim->isVisible)
+				continue;
+			update(view, projection, prim);
 
-		m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
-		m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
-	}
-	unbindRenderTargets(1);
-	unbindShaderResources(0, 1);
-	endDebugEvent();
+			// Bind albedo texture for alpha testing
+			if (prim->material && prim->material->albedo)
+			{
+				ID3D11ShaderResourceView* albedoSRV = prim->material->albedo->srv.Get();
+				m_context->PSSetShaderResources(0, 1, &albedoSRV);
+			}
+
+			m_context->IASetVertexBuffers(0, 1, prim->getVertexBuffer().GetAddressOf(), &stride, &offset);
+			m_context->IASetIndexBuffer(prim->getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
+		}
+		unbindRenderTargets(1);
+		unbindShaderResources(0, 1);
+		endDebugEvent();
 }
 
 ComPtr<ID3D11DepthStencilView> ZPrePass::getDSV()

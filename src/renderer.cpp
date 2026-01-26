@@ -124,6 +124,9 @@ void Renderer::draw()
 		m_shaderManager->checkForChanges();
 	}
 
+	// Process any pending bake requests (deferred from UI)
+	m_scene->processPendingBakes();
+
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection, m_scene.get());
 	m_gBuffer->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get(),

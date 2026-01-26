@@ -226,6 +226,14 @@ void Scene::addBaker(Baker* baker)
 	addBakerNode(baker->highPoly.get());
 }
 
+void Scene::processPendingBakes()
+{
+	for (auto& [handle, baker] : m_bakers)
+	{
+		baker->processPendingBake();
+	}
+}
+
 void Scene::addBakerNode(BakerNode* node)
 {
 	validateName(node);

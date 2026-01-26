@@ -72,6 +72,7 @@ public:
 	float getReadBackID();
 
 	void validateName(SceneNode* node);
+	void processPendingBakes();
 
 	void importModel(const std::string& filepath, ComPtr<ID3D11Device> device);
 	void updateAsyncImport(); // called each frame

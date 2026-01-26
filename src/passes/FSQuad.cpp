@@ -53,14 +53,7 @@ void FSQuad::draw(ComPtr<ID3D11ShaderResourceView> srv)
 	static constexpr UINT stride = 5 * sizeof(float);
 	static constexpr UINT offset = 0;
 
-	D3D11_VIEWPORT viewport = {};
-	viewport.TopLeftX = 0.0f;
-	viewport.TopLeftY = 0.0f;
-	viewport.Width = static_cast<float>(AppConfig::viewportWidth);
-	viewport.Height = static_cast<float>(AppConfig::viewportHeight);
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	m_context->RSSetViewports(1, &viewport);
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 
 	beginDebugEvent(L"FSQuad Pass");
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -112,7 +105,6 @@ void FSQuad::createOrResize()
 	viewport.MinDepth = 0.0f;
 
 	m_rtvCollector->addRTV("FSQUAD::RTV", m_srv.Get());
-	m_context->RSSetViewports(1, &viewport);
 }
 
 const ComPtr<ID3D11ShaderResourceView>& FSQuad::getSRV() const

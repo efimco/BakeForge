@@ -141,7 +141,7 @@ void WorldSpaceUIPass::draw(const glm::mat4& view,
 	static const UINT stride = sizeof(QuadVertex);
 	static const UINT offset = 0;
 	ID3D11ShaderResourceView* srvs[2] = {m_lightIconTexture->srv.Get(), m_lightsSRV.Get()};
-
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

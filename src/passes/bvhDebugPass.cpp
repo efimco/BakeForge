@@ -80,7 +80,8 @@ void BVHDebugPass::draw(Scene* scene, const glm::mat4& view, const glm::mat4& pr
 {
 
 	beginDebugEvent(L"DebugBVH");
-	// CRITICAL: Clear first!
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
+	
 	float clearColor[4] = {0.1f, 0.1f, 0.1f, 1.0f}; // Dark gray to see if it's working
 	m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
 	m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);

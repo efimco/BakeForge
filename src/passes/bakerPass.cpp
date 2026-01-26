@@ -6,9 +6,12 @@
 
 #include "appConfig.hpp"
 #include "primitive.hpp"
+#include "primitiveData.hpp"
 #include "rtvCollector.hpp"
 #include "scene.hpp"
 #include "shaderManager.hpp"
+
+#define PROFILE_BAKER_PASS
 
 struct alignas(16) BakerCB
 {
@@ -41,12 +44,28 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_shaderManager->LoadComputeShader("bakerBakeNormal", L"../../src/shaders/baker.hlsl", "CSBakeNormal");
 	m_shaderManager->LoadVertexShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "PS");
+	m_shaderManager->LoadVertexShader("uvRasterize", L"../../src/shaders/uvRasterize.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("uvRasterize", L"../../src/shaders/uvRasterize.hlsl", "PS");
 
 	m_constantBuffer = createConstantBuffer(sizeof(BakerCB));
 	m_raycastConstantBuffer = createConstantBuffer(sizeof(RaycastVisCB));
 
 	m_raycastRasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_raycastDepthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
+	m_uvRasterRasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
+	m_uvRasterDepthStencilState = createDSState(DepthStencilPreset::Disabled);
+
+	// Create input layout for UV rasterization (matches Vertex struct)
+	static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	};
+	m_device->CreateInputLayout(uvRasterInputLayoutDesc, ARRAYSIZE(uvRasterInputLayoutDesc),
+		m_shaderManager->getVertexShaderBlob("uvRasterize")->GetBufferPointer(),
+		m_shaderManager->getVertexShaderBlob("uvRasterize")->GetBufferSize(),
+		&m_uvRasterInputLayout);
+
 	createOrResize();
 
 	D3D11_QUERY_DESC queryDesc = {};
@@ -72,6 +91,7 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 	m_context->End(m_endQuery.Get());
 	m_context->End(m_disjointQuery.Get());
 
+#ifdef PROFILE_BAKER_PASS
 	// Wait for GPU to finish and get results
 	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
 	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
@@ -88,6 +108,7 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
 		std::cout << "TOTAL GPU work for baking took " << gpuTimeMs << " ms" << std::endl;
 	}
+#endif
 
 }
 
@@ -148,15 +169,6 @@ void BakerPass::setPrimitivesToBake(const std::vector<std::pair<Primitive*, Prim
 	m_primitivePairs = primitivePairs;
 }
 
-LowPolyPrimitiveBuffers BakerPass::createLowPolyPrimitiveBuffers(Primitive* prim)
-{
-	LowPolyPrimitiveBuffers buffers;
-	buffers.structuredIndexBuffer = createStructuredBuffer(sizeof(uint32_t), static_cast<UINT>(prim->getIndexData().size()), SBPreset::CpuWrite);
-	buffers.structuredVertexBuffer = createStructuredBuffer(sizeof(Vertex), static_cast<UINT>(prim->getVertexData().size()), SBPreset::CpuWrite);
-	buffers.structuredIndexSRV = createShaderResourceView(buffers.structuredIndexBuffer.Get(), SRVPreset::StructuredBuffer);
-	buffers.structuredVertexSRV = createShaderResourceView(buffers.structuredVertexBuffer.Get(), SRVPreset::StructuredBuffer);
-	return buffers;
-}
 
 HighPolyPrimitiveBuffers BakerPass::createHighPolyPrimitiveBuffers(Primitive* prim)
 {
@@ -169,44 +181,6 @@ HighPolyPrimitiveBuffers BakerPass::createHighPolyPrimitiveBuffers(Primitive* pr
 	buffers.bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), static_cast<UINT>(prim->getBVHNodes().size()), SBPreset::CpuWrite);
 	buffers.bvhNodesSRV = createShaderResourceView(buffers.bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
 	return buffers;
-}
-
-void BakerPass::updateLowPolyPrimitiveBuffers(Primitive* prim, const LowPolyPrimitiveBuffers& buffers)
-{
-	D3D11_MAPPED_SUBRESOURCE mappedVertexBuffer = {};
-	if (SUCCEEDED(m_context->Map(buffers.structuredVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVertexBuffer)))
-	{
-		auto* verticies = static_cast<Vertex*>(mappedVertexBuffer.pData);
-		const auto& primVertices = prim->getVertexData();
-		for (size_t i = 0; i < primVertices.size(); ++i)
-		{
-			verticies[i] = primVertices[i];
-		}
-		m_context->Unmap(buffers.structuredVertexBuffer.Get(), 0);
-	}
-
-	D3D11_MAPPED_SUBRESOURCE mappedIndexBuffer = {};
-	if (SUCCEEDED(m_context->Map(buffers.structuredIndexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIndexBuffer)))
-	{
-		auto* indices = static_cast<uint32_t*>(mappedIndexBuffer.pData);
-		const auto& primIndices = prim->getIndexData();
-		for (size_t i = 0; i < primIndices.size(); ++i)
-		{
-			indices[i] = primIndices[i];
-		}
-		m_context->Unmap(buffers.structuredIndexBuffer.Get(), 0);
-	}
-
-	D3D11_MAPPED_SUBRESOURCE mapped = {};
-	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
-	{
-		auto* data = static_cast<BakerCB*>(mapped.pData);
-		data->dimensions = glm::uvec2(m_lastWidth, m_lastHeight);
-		data->worldMatrix = glm::transpose(prim->getWorldMatrix());
-		data->worldMatrixInvTranspose = glm::inverse(prim->getWorldMatrix());
-		data->cageOffset = m_cageOffset;
-		m_context->Unmap(m_constantBuffer.Get(), 0);
-	};
 }
 
 void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers)
@@ -223,12 +197,69 @@ void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPr
 	}
 }
 
+void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
+{
+	// Update constant buffer with world matrix
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+	{
+		auto* data = static_cast<BakerCB*>(mapped.pData);
+		data->dimensions = glm::uvec2(m_lastWidth, m_lastHeight);
+		data->worldMatrix = glm::transpose(lowPoly->getWorldMatrix());
+		data->worldMatrixInvTranspose = glm::inverse(lowPoly->getWorldMatrix());
+		data->cageOffset = m_cageOffset;
+		m_context->Unmap(m_constantBuffer.Get(), 0);
+	}
+
+	// Clear render targets
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	m_context->ClearRenderTargetView(m_worldSpaceTexelPositionRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_worldSpaceTexelNormalRTV.Get(), clearColor);
+
+	// Set viewport to texture dimensions
+	D3D11_VIEWPORT vp = { 0, 0, static_cast<float>(m_lastWidth), static_cast<float>(m_lastHeight), 0.0f, 1.0f };
+	m_context->RSSetViewports(1, &vp);
+
+	// Set render targets (MRT: position + normal)
+	ID3D11RenderTargetView* rtvs[2] = { m_worldSpaceTexelPositionRTV.Get(), m_worldSpaceTexelNormalRTV.Get() };
+	m_context->OMSetRenderTargets(2, rtvs, nullptr);
+
+	// Set pipeline state
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_context->IASetInputLayout(m_uvRasterInputLayout.Get());
+	m_context->RSSetState(m_uvRasterRasterizerState.Get());
+	m_context->OMSetDepthStencilState(m_uvRasterDepthStencilState.Get(), 0);
+
+	// Set shaders
+	m_context->VSSetShader(m_shaderManager->getVertexShader("uvRasterize"), nullptr, 0);
+	m_context->PSSetShader(m_shaderManager->getPixelShader("uvRasterize"), nullptr, 0);
+	m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+
+	// Set vertex and index buffers from the primitive
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	auto vb = lowPoly->getVertexBuffer();
+	auto ib = lowPoly->getIndexBuffer();
+	m_context->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
+	m_context->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	// Draw
+	m_context->DrawIndexed(static_cast<UINT>(lowPoly->getIndexData().size()), 0, 0);
+
+	// Unbind render targets
+	ID3D11RenderTargetView* nullRTVs[2] = { nullptr, nullptr };
+	m_context->OMSetRenderTargets(2, nullRTVs, nullptr);}
+
+
+
 void BakerPass::createInterpolatedTextures()
 {
 	beginDebugEvent(L"Baker::Interpolated Textures");
 
+#ifdef PROFILE_BAKER_PASS
 	m_context->Begin(m_disjointQuery.Get());
 	m_context->End(m_startQuery.Get());
+#endif
 
 	createInterpolatedTexturesResources();
 	createBakedNormalResources();
@@ -237,29 +268,12 @@ void BakerPass::createInterpolatedTextures()
 		if (!lowPoly || !highPoly)
 			continue;
 
-		auto lpBuffers = createLowPolyPrimitiveBuffers(lowPoly);
 		auto hpBuffers = createHighPolyPrimitiveBuffers(highPoly);
-
-		updateLowPolyPrimitiveBuffers(lowPoly, lpBuffers);
 		updateHighPolyPrimitiveBuffers(highPoly, hpBuffers);
 
+		rasterizeUVSpace(lowPoly);
 
-		m_context->CSSetShader(m_shaderManager->getComputeShader("bakerPrepareTextures"), nullptr, 0);
-		m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
-
-		ID3D11UnorderedAccessView* interpolatedTexturesUAVs[2] = { m_worldSpaceTexelPositionUAV.Get(),m_worldSpaceTexelNormalUAV.Get() };
-		m_context->CSSetUnorderedAccessViews(0, 2, interpolatedTexturesUAVs, nullptr);
-
-		ID3D11ShaderResourceView* lpSRVs[2] = { lpBuffers.structuredVertexSRV.Get(), lpBuffers.structuredIndexSRV.Get() };
-		m_context->CSSetShaderResources(0, 2, lpSRVs);
-
-		UINT threadGroupX = (m_lastWidth + 15) / 16;
-		UINT threadGroupY = (m_lastHeight + 15) / 16;
-		m_context->Dispatch(threadGroupX, threadGroupY, 1);
-		unbindComputeUAVs(0, 2);
-		unbindShaderResources(0, 2);
-
-		m_context->End(m_endQuery.Get());
+#ifdef PROFILE_BAKER_PASS
 		m_context->End(m_disjointQuery.Get());
 
 		// Wait for GPU to finish and get results
@@ -278,6 +292,7 @@ void BakerPass::createInterpolatedTextures()
 			double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
 			std::cout << "Texture Preparation took " << gpuTimeMs << " ms" << std::endl;
 		}
+#endif
 
 		bakeNormals(hpBuffers);
 	}
@@ -288,8 +303,10 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 {
 	beginDebugEvent(L"Baker::Bake Normals");
 
+#ifdef PROFILE_BAKER_PASS
 	m_context->Begin(m_disjointQuery.Get());
 	m_context->End(m_startQuery.Get());
+#endif
 
 	m_context->CSSetShader(m_shaderManager->getComputeShader("bakerBakeNormal"), nullptr, 0);
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
@@ -312,6 +329,7 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 	m_context->End(m_endQuery.Get());
 	m_context->End(m_disjointQuery.Get());
 
+#ifdef PROFILE_BAKER_PASS
 	// Wait for GPU to finish and get results
 	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
 	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
@@ -328,6 +346,7 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
 		std::cout << "GPU baking took " << gpuTimeMs << " ms" << std::endl;
 	}
+#endif
 	endDebugEvent();
 }
 
@@ -352,19 +371,23 @@ void BakerPass::createInterpolatedTexturesResources()
 		m_worldSpaceTexelPositionTexture.Reset();
 		m_worldSpaceTexelPositionSRV.Reset();
 		m_worldSpaceTexelPositionUAV.Reset();
+		m_worldSpaceTexelPositionRTV.Reset();
 
 		m_worldSpaceTexelNormalTexture.Reset();
 		m_worldSpaceTexelNormalSRV.Reset();
 		m_worldSpaceTexelNormalUAV.Reset();
+		m_worldSpaceTexelNormalRTV.Reset();
 	}
 
-	m_worldSpaceTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_worldSpaceTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
 	m_worldSpaceTexelPositionSRV = createShaderResourceView(m_worldSpaceTexelPositionTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelPositionUAV = createUnorderedAccessView(m_worldSpaceTexelPositionTexture.Get(), UAVPreset::Texture2D, 0);
+	m_worldSpaceTexelPositionRTV = createRenderTargetView(m_worldSpaceTexelPositionTexture.Get(), RTVPreset::Texture2D);
 
-	m_worldSpaceTexelNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_worldSpaceTexelNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
 	m_worldSpaceTexelNormalSRV = createShaderResourceView(m_worldSpaceTexelNormalTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelNormalUAV = createUnorderedAccessView(m_worldSpaceTexelNormalTexture.Get(), UAVPreset::Texture2D, 0);
+	m_worldSpaceTexelNormalRTV = createRenderTargetView(m_worldSpaceTexelNormalTexture.Get(), RTVPreset::Texture2D);
 
 	m_rtvCollector->addRTV(name + "::WorldSpaceTexelPosition", m_worldSpaceTexelPositionSRV.Get());
 	m_rtvCollector->addRTV(name + "::WorldSpaceTexelNormal", m_worldSpaceTexelNormalSRV.Get());

@@ -1139,7 +1139,7 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 	}
 	if (ImGui::Button("Start Bake"))
 	{
-		bakerNode->bake();
+		bakerNode->requestBake();
 	}
 }
 

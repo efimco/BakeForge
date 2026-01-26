@@ -43,9 +43,7 @@ private:
 
 	std::vector<std::pair<Primitive*, Primitive*>> m_primitivePairs;
 
-	LowPolyPrimitiveBuffers createLowPolyPrimitiveBuffers(Primitive* prim);
 	HighPolyPrimitiveBuffers createHighPolyPrimitiveBuffers(Primitive* prim);
-	void updateLowPolyPrimitiveBuffers(Primitive* prim, const LowPolyPrimitiveBuffers& buffers);
 	void updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers);
 
 	void createInterpolatedTextures();
@@ -81,6 +79,14 @@ private:
 	ComPtr<ID3D11Query> m_startQuery;
 	ComPtr<ID3D11Query> m_endQuery;
 
+	// UV Rasterization resources
+	ComPtr<ID3D11RenderTargetView> m_worldSpaceTexelPositionRTV;
+	ComPtr<ID3D11RenderTargetView> m_worldSpaceTexelNormalRTV;
+	ComPtr<ID3D11InputLayout> m_uvRasterInputLayout;
+	ComPtr<ID3D11RasterizerState> m_uvRasterRasterizerState;
+	ComPtr<ID3D11DepthStencilState> m_uvRasterDepthStencilState;
+
+	void rasterizeUVSpace(Primitive* lowPoly);
 	void updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 
 	void createInterpolatedTexturesResources();

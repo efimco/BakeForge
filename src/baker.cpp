@@ -109,7 +109,7 @@ void Baker::bake()
 	for (const auto& material : m_materialsToBake)
 	{
 		auto bakerPass = std::make_unique<BakerPass>(m_device, m_context);
-		bakerPass->name = "BKR for " + name;
+		bakerPass->name = "BKR for " + material->name;
 		bakerPass->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
 		m_materialsBakerPasses[material->name] = std::move(bakerPass);
 	}

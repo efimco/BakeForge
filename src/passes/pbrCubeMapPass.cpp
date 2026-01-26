@@ -127,7 +127,7 @@ void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 		createBRDFLut();
 		AppConfig::regeneratePrefilteredMap = false;
 	}
-
+	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 	update(view, projection);
 	m_context->RSSetState(m_rasterizerState.Get());
 
