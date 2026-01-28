@@ -101,7 +101,6 @@ void Renderer::draw()
 		m_rayTracePass->createOrResize();
 		m_bvhDebugPass->createOrResize();
 		m_worldSpaceUIPass->createOrResize();
-		// m_bakerPass->createOrResize();
 		AppConfig::needsResize = false;
 	}
 
@@ -139,8 +138,6 @@ void Renderer::draw()
 		m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
 		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
-	// m_bakerPass->bake(512, 512);
-	m_bakerPass->drawRaycastVisualization(m_view, m_projection);
 
 	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
 	m_fsquad->draw(m_deferredPass->getFinalSRV());

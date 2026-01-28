@@ -39,9 +39,8 @@ public:
 	~Baker() override = default;
 
 	void bake();
-	void requestBake() { m_pendingBake = true; }
-	void processPendingBake() { if (m_pendingBake) { bake(); m_pendingBake = false; } }
-	bool hasPendingBake() const { return m_pendingBake; }
+	void requestBake();
+	void processPendingBake();
 
 	std::unique_ptr<LowPolyNode> lowPoly;
 	std::unique_ptr<HighPolyNode> highPoly;

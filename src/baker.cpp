@@ -41,11 +41,8 @@ void Baker::bake()
 			continue;
 		if (prim->material->name.empty())
 			continue;
-		if (std::ranges::find_if(m_materialsToBake,
-			[&](const std::shared_ptr<Material>& mat)
-			{
-				return mat->name == prim->material->name;
-			}) == m_materialsToBake.end())
+		if (std::ranges::find_if(m_materialsToBake, [&](const std::shared_ptr<Material>& mat)
+								 { return mat->name == prim->material->name; }) == m_materialsToBake.end())
 		{
 			m_materialsToBake.push_back(prim->material);
 		}
@@ -63,9 +60,8 @@ void Baker::bake()
 			if (!prim->material || prim->material->name != material->name)
 				continue;
 
-			// Extract base name by removing common suffixes (_low, _LP, _lo)
 			std::string baseName = prim->name;
-			for (const auto& suffix : { "_low", "_LP", "_lo", "_Low", "_LOW" })
+			for (const auto& suffix : {"_low", "_LP", "_lo", "_Low", "_LOW"})
 			{
 				if (baseName.ends_with(suffix))
 				{
@@ -74,7 +70,6 @@ void Baker::bake()
 				}
 			}
 
-			// Find matching high-poly primitive
 			Primitive* matchedHighPoly = nullptr;
 			for (const auto& highPolyChild : highPoly->children)
 			{
@@ -82,9 +77,8 @@ void Baker::bake()
 				if (!highPolyPrim)
 					continue;
 
-				// Extract high-poly base name by removing common suffixes (_high, _HP, _hi)
 				std::string highPolyBaseName = highPolyPrim->name;
-				for (const auto& suffix : { "_high", "_HP", "_hi", "_High", "_HIGH" })
+				for (const auto& suffix : {"_high", "_HP", "_hi", "_High", "_HIGH"})
 				{
 					if (highPolyBaseName.ends_with(suffix))
 					{
@@ -118,5 +112,19 @@ void Baker::bake()
 	{
 		bakerPass->bake(textureWidth, textureWidth, cageOffset);
 	}
+}
 
+void Baker::requestBake()
+{
+
+	m_pendingBake = true;
+}
+
+void Baker::processPendingBake()
+{
+	if (m_pendingBake)
+	{
+		bake();
+		m_pendingBake = false;
+	}
 }

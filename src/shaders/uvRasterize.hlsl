@@ -1,6 +1,3 @@
-// UV-Space Rasterization Shader
-// Rasterizes triangles using UV coordinates as screen positions
-// Outputs world-space position and normal per texel
 
 cbuffer Constants : register(b0)
 {
@@ -34,12 +31,12 @@ PSInput VS(VSInput input)
 {
 	PSInput output;
 	
-	// Use UV as clip-space position: map [0,1] to [-1,1]
-	float2 clipPos = input.texCoord * 2.0f - 1.0f;
-	clipPos.y = -clipPos.y;  // Flip Y for texture coordinates
+	
+	float2 clipPos = input.texCoord * 2.0f - 1.0f; // clip-space position [0,1] to [-1,1]
+	clipPos.y = -clipPos.y;  
 	output.position = float4(clipPos, 0.0f, 1.0f);
 	
-	// Transform to world space for output
+
 	output.worldPos = mul(float4(input.position, 1.0f), worldMatrix).xyz;
 	output.worldNormal = normalize(mul(float4(input.normal, 0.0f), worldMatrixInvTranspose).xyz);
 	

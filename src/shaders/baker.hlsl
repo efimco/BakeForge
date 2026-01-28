@@ -8,61 +8,20 @@ cbuffer Constants : register(b0)
 	float cageOffset;
 };
 
-struct BarycentricVertex
-{
-	float3 position;
-	float3 normal;
-	float2 texCoords;
-};
-
-struct BarycentricTri
-{
-	BarycentricVertex v0;
-	BarycentricVertex v1;
-	BarycentricVertex v2;
-};
-
-
-
-//those are for making ray origin/direction textures
-StructuredBuffer<BarycentricVertex> gVerticies : register(t0);
-StructuredBuffer<uint> gIndices : register(t1);
 
 //those are for actual baking
-StructuredBuffer<Tri> gTris : register(t2);
-StructuredBuffer<uint> gTrisIndices : register(t3);
-StructuredBuffer<BVHNode> gNodes : register(t4);
-Texture2D<float4> gWorldSpacePositions : register(t5);
-Texture2D<float4> gWorldSpaceNormals : register(t6);
-
+StructuredBuffer<Tri> gTris : register(t0);
+StructuredBuffer<uint> gTrisIndices : register(t1);
+StructuredBuffer<BVHNode> gNodes : register(t2);
 //ray origin/direction textures
-RWTexture2D<float4> oWorldSpaceTexelPosition : register(u0);
-RWTexture2D<float4> oWorldSpaceTexelNormal : register(u1);
+Texture2D<float4> gWorldSpacePositions : register(t3);
+Texture2D<float4> gWorldSpaceNormals : register(t4);
 
 //this one is for baking output
-RWTexture2D<float4> oBakedNormal : register(u2);
+RWTexture2D<float4> oBakedNormal : register(u0);
 
-bool uvInsideTriangle(float2 uv, BarycentricTri tri, out float3 barycentric)
-{
-	float2 v0 = tri.v1.texCoords - tri.v0.texCoords;
-	float2 v1 = tri.v2.texCoords - tri.v0.texCoords;
-	float2 v2 = uv - tri.v0.texCoords;
 
-	float d00 = dot(v0, v0);
-	float d01 = dot(v0, v1);
-	float d11 = dot(v1, v1);
-	float d20 = dot(v2, v0);
-	float d21 = dot(v2, v1);
-	float denom = d00 * d11 - d01 * d01;
-
-	barycentric.y = (d11 * d20 - d01 * d21) / denom;
-	barycentric.z = (d00 * d21 - d01 * d20) / denom;
-	barycentric.x = 1.0f - barycentric.y - barycentric.z;
-
-	return (barycentric.x >= 0) && (barycentric.y >= 0) && (barycentric.z >= 0);
-}
-
-#define MAX_STACK_SIZE 32
+#define MAX_STACK_SIZE 64
 
 void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 {
@@ -75,12 +34,12 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 		uint nodeIdx = stack[--stackPtr];
 		BVHNode node = gNodes[nodeIdx];
 
-		// Early cull with current best t
+		// early cull with current best t
 		float tBox = IntersectBox(ray, node.bbox, bestT);
 		if (tBox >= bestT)
 			continue;
 
-		if (node.numTris > 0) // Leaf node
+		if (node.numTris > 0) // leaf node
 		{
 			for (uint i = 0; i < node.numTris; i++)
 			{
@@ -118,45 +77,6 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 	}
 }
 
-
-[numthreads(16, 16, 1)]
-void CSPrepareTextures(uint3 DTid : SV_DispatchThreadID)
-{
-	if (DTid.x >= dimensions.x || DTid.y >= dimensions.y)
-		return;
-
-	float2 uv = (float2(DTid.xy) + 0.5f) / dimensions;
-
-	oWorldSpaceTexelPosition[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
-	oWorldSpaceTexelNormal[DTid.xy] = float4(0.0, 0.0, 0.0f, 0.0f);
-
-	for (uint i = 0; i < gIndices.Length; i += 3)
-	{
-		BarycentricTri tri;
-		tri.v0 = gVerticies[gIndices[i + 0]];
-		tri.v1 = gVerticies[gIndices[i + 1]];
-		tri.v2 = gVerticies[gIndices[i + 2]];
-		float3 barycentric;
-		if (uvInsideTriangle(uv, tri, barycentric))
-		{
-			float3 localPos = barycentric.x * tri.v0.position
-				+ barycentric.y * tri.v1.position
-				+ barycentric.z * tri.v2.position;
-
-			float3 localNormal = normalize(
-				barycentric.x * tri.v0.normal
-				+ barycentric.y * tri.v1.normal
-				+ barycentric.z * tri.v2.normal);
-
-			float3 worldPos = mul(float4(localPos, 1.0f), worldMatrix).xyz;
-			float3 worldNormal = mul(float4(localNormal, 1.0f), worldMatrixInvTranspose).xyz;
-			oWorldSpaceTexelPosition[DTid.xy] = float4(worldPos, 1.0f);
-			oWorldSpaceTexelNormal[DTid.xy] = float4(worldNormal, 1.0f);
-			break;
-		}
-	}
-}
-
 [numthreads(16, 16, 1)]
 void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 {
@@ -166,7 +86,7 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	float4 worldPos = gWorldSpacePositions.Load(int3(DTid.xy, 0));
 	float4 worldNormal = gWorldSpaceNormals.Load(int3(DTid.xy, 0));
 
-	if (worldPos.a == 0.0f) // we write alpha = 0 for invalid texels
+	if (worldPos.a == 0.0f) // i write alpha = 0 for invalid texels
 		return;
 
 	Ray ray;
