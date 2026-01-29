@@ -148,7 +148,9 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 	showInvisibleDockWindow();
 	showSceneSettings();
 	showViewport(srv);
+#ifdef _DEBUG
 	showPassesWindow();
+#endif
 	drawSceneGraph();
 	showProperties();
 	showMaterialBrowser();
@@ -491,7 +493,7 @@ void UIManager::showChWViewportOptions()
 {
 	// Viewport options child window
 	ImGui::SetCursorPos(ImVec2(AppConfig::viewportWidth - 205.0f, 5.0f));
-	ImGui::BeginChild("ViewportOptions", ImVec2(200.0f, 150.0f), false, ImGuiWindowFlags_NoScrollbar);
+	ImGui::BeginChild("ViewportOptions", ImVec2(200.0f, 25.0f), false, ImGuiWindowFlags_NoScrollbar);
 	{
 		if (ImGui::RadioButton("Show UI Overlay", AppConfig::drawWSUI))
 		{
@@ -549,12 +551,41 @@ void UIManager::showMaterialBrowser()
 	{
 		const auto mat = m_scene->getMaterial(materialNames[i]);
 		const ImTextureRef previewTexture = mat->preview.srv_preview.Get();
-		if (ImGui::ImageButton(materialNames[i].c_str(), previewTexture, ImVec2(itemSize, itemSize)))
+		ImGui::BeginGroup();
 		{
-			m_scene->setActiveNode(nullptr);
-			m_selectedMaterial = mat;
-			m_scene->setReadBackID(0);
+			bool selectedMatGuard = false;
+			if (mat == m_highlightedMaterial && !selectedMatGuard)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.5f, 0.0f, 1.0f)); // orange border
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			}
+			if (mat == m_selectedMaterial)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // green border
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			}
+			if (ImGui::ImageButton(materialNames[i].c_str(), previewTexture, ImVec2(itemSize, itemSize)))
+			{
+				m_scene->setActiveNode(nullptr);
+				m_scene->setReadBackID(-1.0f);
+				m_selectedMaterial = mat;
+				selectedMatGuard = true;
+			}
+			if (mat == m_selectedMaterial && !selectedMatGuard)
+			{
+				ImGui::PopStyleVar();
+				ImGui::PopStyleColor();
+			}
+			if (mat == m_highlightedMaterial)
+			{
+				ImGui::PopStyleVar();
+				ImGui::PopStyleColor();
+			}
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + itemSize);
+			ImGui::TextWrapped("%s", materialNames[i].c_str());
+			ImGui::PopTextWrapPos();
 		}
+		ImGui::EndGroup();
 		if (itemsPerRow > 0 && (i + 1) % itemsPerRow != 0 && i < materialNames.size() - 1)
 		{
 			ImGui::SameLine();
@@ -774,15 +805,23 @@ void UIManager::handleNodeSelection(SceneNode* node)
 {
 	bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
 	float readBackID = m_scene->getReadBackID();
+
 	if (ImGui::IsItemClicked())
 	{
 		m_scene->setActiveNode(node, isShiftPressed);
+		const auto prim = dynamic_cast<Primitive*>(node);
+		if (prim)
+		{
+			m_highlightedMaterial = prim->material;
+		}
 		m_selectedMaterial = nullptr;
 		m_scene->setReadBackID(-1.0f);
 	}
 	else if (readBackID == 0)
 	{
 		m_scene->clearSelectedNodes();
+		m_highlightedMaterial = nullptr;
+		m_selectedMaterial = nullptr;
 	}
 	else if (readBackID > 0)
 	{
@@ -790,6 +829,11 @@ void UIManager::handleNodeSelection(SceneNode* node)
 		if (!selectedNode)
 			return;
 		m_scene->setActiveNode(selectedNode, isShiftPressed);
+		const auto prim = dynamic_cast<Primitive*>(selectedNode);
+		if (prim)
+		{
+			m_highlightedMaterial = prim->material;
+		}
 		m_selectedMaterial = nullptr;
 	}
 }
@@ -1057,6 +1101,8 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 			for (int n = 0; n < static_cast<int>(materialNames.size()); n++)
 			{
 				const bool isSelected = (currentMaterialIndex == n);
+				ImGui::Image(m_scene->getMaterial(materialNames[n])->preview.srv_preview.Get(), ImVec2(32, 32));
+				ImGui::SameLine();
 				if (ImGui::Selectable(materialNames[n].c_str(), isSelected))
 				{
 					currentMaterialIndex = n;
@@ -1087,15 +1133,25 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	{
 		ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
 	}
-	ImGui::ColorEdit4("Albedo color: ", glm::value_ptr(material->albedoColor));
+	if (ImGui::ColorEdit4("Albedo color: ", glm::value_ptr(material->albedoColor)))
+	{
+		material->needsPreviewUpdate = true;
+	}
 	ImGui::Text("MetallicRougness: ");
-	ImGui::SameLine();
+
 	if (material->metallicRoughness)
 	{
+		ImGui::SameLine();
 		ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
 	}
-	ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Roughness", &material->roughnessValue, 0.01f, 0.04f, 1.0f);
+	if (ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f))
+	{
+		material->needsPreviewUpdate = true;
+	}
+	if (ImGui::DragFloat("Roughness", &material->roughnessValue, 0.01f, 0.04f, 1.0f))
+	{
+		material->needsPreviewUpdate = true;
+	}
 	ImGui::Text("Normal: ");
 	ImGui::SameLine();
 	if (material->normal)

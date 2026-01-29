@@ -61,7 +61,7 @@ class GLTFModel
 public:
 	std::string path;
 	GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene* scene);
-	~GLTFModel();
+	~GLTFModel() = default;
 
 	static std::future<AsyncImportResult>
 	importModelAsync(const std::string& path, ComPtr<ID3D11Device> device, std::shared_ptr<ImportProgress> progress);

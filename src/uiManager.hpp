@@ -58,6 +58,7 @@ private:
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
 	Scene* m_scene;
+	std::shared_ptr<Material> m_highlightedMaterial = nullptr;
 	std::shared_ptr<Material> m_selectedMaterial = nullptr;
 	void showSceneSettings() const;
 	void showMainMenuBar();

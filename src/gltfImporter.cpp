@@ -21,10 +21,6 @@ GLTFModel::GLTFModel(const std::string& path, ComPtr<ID3D11Device> device, Scene
 	processGlb(model);
 }
 
-GLTFModel::~GLTFModel()
-{
-	std::cout << "GLTFModel Destructor Called" << std::endl;
-}
 
 
 std::future<AsyncImportResult> GLTFModel::importModelAsync(

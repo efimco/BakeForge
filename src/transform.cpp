@@ -7,6 +7,7 @@
 
 void Transform::updateMatrix()
 {
+
 	prevMatrix = matrix;
 
 	// Create transformation matrix: Scale -> Rotate -> Translate

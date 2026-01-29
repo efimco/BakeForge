@@ -24,11 +24,18 @@ struct SphereVertex
 	Normal normal;
 };
 
-struct alignas(16) PreviewGenCBj
+struct alignas(16) PreviewGenCB
 {
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
+	glm::vec4 albedoColor;
+	float metallicValue;
+	float roughnessValue;
+	uint32_t hasAlbedoTexture;
+	uint32_t hasMetallicRoughnessTexture;
+	uint32_t hasNormalTexture;
+	float padding[3];
 };
 
 static constexpr int SPHERE_SEGMENTS = 32;
@@ -43,7 +50,7 @@ static uint32_t GeneratedSphereIndices[SPHERE_INDEX_COUNT];
 static constexpr D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0} };
 
 constexpr uint32_t PREVIEW_SIZE = 512;
 
@@ -57,22 +64,21 @@ PreviewGenerator::PreviewGenerator(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	m_depthStencilState = createDSState(DepthStencilPreset::WriteDepth);
 	m_samplerState = createSamplerState(SamplerPreset::LinearWrap);
 
-	// Create depth buffer
 	m_depthTexture =
 		createTexture2D(PREVIEW_SIZE, PREVIEW_SIZE, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL);
 	m_depthStencilView = createDepthStencilView(m_depthTexture.Get(), DSVPreset::Texture2D);
-	// m_rtvCollector->addRTV("PreviewGenerator", m_shaderResourceView.Get());
+
 
 	InitializeSphere();
 	m_vertexBuffer = createVertexBuffer(sizeof(GeneratedSphereVertices), GeneratedSphereVertices);
 	m_indexBuffer = createIndexBuffer(sizeof(GeneratedSphereIndices), GeneratedSphereIndices);
 
-	m_constantBuffer = createConstantBuffer(sizeof(PreviewGenCBj));
+	m_constantBuffer = createConstantBuffer(sizeof(PreviewGenCB));
 
 	m_device->CreateInputLayout(FSQuadInputLayoutDesc, ARRAYSIZE(FSQuadInputLayoutDesc),
-								m_shaderManager->getVertexShaderBlob("previewGenerator")->GetBufferPointer(),
-								m_shaderManager->getVertexShaderBlob("previewGenerator")->GetBufferSize(),
-								&m_inputLayout);
+		m_shaderManager->getVertexShaderBlob("previewGenerator")->GetBufferPointer(),
+		m_shaderManager->getVertexShaderBlob("previewGenerator")->GetBufferSize(),
+		&m_inputLayout);
 }
 
 void PreviewGenerator::createMatPreviewResources(Material* material)
@@ -80,7 +86,7 @@ void PreviewGenerator::createMatPreviewResources(Material* material)
 	material->preview.t_preview = createTexture2D(PREVIEW_SIZE, PREVIEW_SIZE, DXGI_FORMAT_R8G8B8A8_UNORM);
 	material->preview.srv_preview = createShaderResourceView(material->preview.t_preview.Get(), SRVPreset::Texture2D);
 	material->preview.rtv_preview = createRenderTargetView(material->preview.t_preview.Get(), RTVPreset::Texture2D);
-	m_rtvCollector->addRTV("Mat: " + material->name + " preveiw", material->preview.srv_preview.Get());
+	m_rtvCollector->addRTV("Mat: " + material->name + " preview", material->preview.srv_preview.Get());
 }
 
 void PreviewGenerator::generatePreview(Scene* scene)
@@ -98,7 +104,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		{
 			createMatPreviewResources(mat.get());
 		}
-		update();
+		update(mat.get());
 
 		setViewport(PREVIEW_SIZE, PREVIEW_SIZE);
 		m_context->RSSetState(m_rasterizerState.Get());
@@ -106,7 +112,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 
 		const uint32_t stride = sizeof(SphereVertex);
 		const uint32_t offset = 0;
-		const float clearColor[4] = {0.2f, 0.2f, 0.2f, 0.2f};
+		const float clearColor[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
 		m_context->ClearRenderTargetView(mat->preview.rtv_preview.Get(), clearColor);
 		m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 		m_context->IASetInputLayout(m_inputLayout.Get());
@@ -120,6 +126,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 		m_context->VSSetShader(m_shaderManager->getVertexShader("previewGenerator"), nullptr, 0);
 		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 		m_context->PSSetShader(m_shaderManager->getPixelShader("previewGenerator"), nullptr, 0);
+		m_context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 		m_context->OMSetRenderTargets(1, mat->preview.rtv_preview.GetAddressOf(), m_depthStencilView.Get());
 
 		m_context->DrawIndexed(SPHERE_INDEX_COUNT, 0, 0);
@@ -130,7 +137,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 	}
 }
 
-void PreviewGenerator::update()
+void PreviewGenerator::update(Material* material)
 {
 	D3D11_MAPPED_SUBRESOURCE mapped = {};
 	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
@@ -148,10 +155,16 @@ void PreviewGenerator::update()
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 modelViewProjection = glm::transpose(projectionMatrix * viewMatrix * model);
 		glm::mat4 inverseTransposedModel = glm::inverse(model);
-		auto* data = static_cast<PreviewGenCBj*>(mapped.pData);
+		auto* data = static_cast<PreviewGenCB*>(mapped.pData);
 		data->modelViewProjection = modelViewProjection;
 		data->inverseTransposedModel = inverseTransposedModel;
 		data->model = model;
+		data->albedoColor = material->albedoColor;
+		data->metallicValue = material->metallicValue;
+		data->roughnessValue = material->roughnessValue;
+		data->hasAlbedoTexture = material->albedo != nullptr ? 1 : 0;
+		data->hasMetallicRoughnessTexture = material->metallicRoughness != nullptr ? 1 : 0;
+		data->hasNormalTexture = material->normal != nullptr ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }
@@ -174,11 +187,11 @@ void PreviewGenerator::InitializeSphere()
 			float z = sinPhi * sinf(theta);
 
 			int index = ring * (SPHERE_SEGMENTS + 1) + seg;
-			GeneratedSphereVertices[index].pos = {x, y, z};
-			GeneratedSphereVertices[index].texCoords = {static_cast<float>(seg) / static_cast<float>(SPHERE_SEGMENTS),
-														static_cast<float>(ring) / static_cast<float>(SPHERE_RINGS)};
+			GeneratedSphereVertices[index].pos = { x, y, z };
+			GeneratedSphereVertices[index].texCoords = { static_cast<float>(seg) / static_cast<float>(SPHERE_SEGMENTS),
+														static_cast<float>(ring) / static_cast<float>(SPHERE_RINGS) };
 			// For a unit sphere centered at origin, the normal is the same as the position
-			GeneratedSphereVertices[index].normal = {x, y, z};
+			GeneratedSphereVertices[index].normal = { x, y, z };
 		}
 	}
 

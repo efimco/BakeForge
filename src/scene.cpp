@@ -178,7 +178,7 @@ void Scene::addLight(Light* light)
 
 Light* Scene::getLightByID(const size_t id)
 {
-	const auto it = m_lights.find(SceneNodeHandle{static_cast<int>(id)});
+	const auto it = m_lights.find(SceneNodeHandle{ static_cast<int>(id) });
 	if (it != m_lights.end())
 	{
 		return it->second;
@@ -193,7 +193,7 @@ SceneUnorderedMap<Primitive*>& Scene::getPrimitives()
 
 Primitive* Scene::getPrimitiveByID(const size_t id)
 {
-	const auto it = m_primitives.find(SceneNodeHandle{static_cast<int>(id)});
+	const auto it = m_primitives.find(SceneNodeHandle{ static_cast<int>(id) });
 	if (it != m_primitives.end())
 	{
 		return it->second;
@@ -394,8 +394,10 @@ SceneNode* Scene::adoptClonedNode(
 	assert(getNodeByHandle(preferredHandle) == nullptr);
 	// the parent of a cloned node must be nullptr
 	assert(clonedNode->parent == nullptr);
-	addChild(std::move(clonedNode));
-	SceneNode* nodeClone = children.back().get();
+
+	SceneNode* nodeClone = clonedNode.get();
+	validateName(nodeClone);
+
 	if (auto prim = dynamic_cast<Primitive*>(nodeClone))
 	{
 		m_primitives.emplace(preferredHandle, prim);
@@ -409,6 +411,17 @@ SceneNode* Scene::adoptClonedNode(
 	{
 		m_cameras.emplace(preferredHandle, camera);
 	}
+	if (auto baker = dynamic_cast<Baker*>(nodeClone))
+	{
+		m_bakers.emplace(preferredHandle, baker);
+	}
+	if (auto bakerNode = dynamic_cast<BakerNode*>(nodeClone))
+	{
+		m_bakerNodes.emplace(preferredHandle, bakerNode);
+	}
+
+	SceneNode::addChild(std::move(clonedNode));
+
 	setActiveNode(nodeClone);
 	return nodeClone;
 }

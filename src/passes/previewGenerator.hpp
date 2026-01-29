@@ -24,7 +24,7 @@ public:
 private:
 	static void InitializeSphere();
 	void createMatPreviewResources(Material* material);
-	void update();
+	void update(Material* material);
 
 	ComPtr<ID3D11Texture2D> m_depthTexture;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;

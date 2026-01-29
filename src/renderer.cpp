@@ -30,9 +30,12 @@
 #include "light.hpp"
 #include "scene.hpp"
 
+#define DRAW_DEBUG_BVH 0
+
+
 Renderer::Renderer(const HWND& hwnd)
 {
-
+#ifdef _DEBUG
 	const HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
 	if (rdocModule)
 	{
@@ -43,15 +46,14 @@ Renderer::Renderer(const HWND& hwnd)
 			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, reinterpret_cast<void**>(&m_rdocAPI));
 		}
 	}
+#endif
 	m_device = std::make_unique<DXDevice>(hwnd);
 	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
 	m_camera = std::make_unique<Camera>(cameraPosition);
-	// Initialize camera matrices
 
 	m_view = m_camera->getViewMatrix();
-
 
 	m_prevTime = std::chrono::system_clock::now();
 	m_scene = std::make_unique<Scene>("Main Scene");
@@ -59,6 +61,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene->addChild(std::move(pointLight));
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
+
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
@@ -73,6 +76,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_device->getDevice(), m_device->getContext());
 	m_bakerPass = std::make_unique<BakerPass>(m_device->getDevice(), m_device->getContext());
 
+
 	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
 	resize();
 }
@@ -85,10 +89,12 @@ void Renderer::draw()
 	{
 		AppConfig::captureNextFrame = true;
 	}
+#ifdef _DEBUG
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), nullptr);
 	}
+#endif
 	if (AppConfig::needsResize)
 	{
 		resize();
@@ -98,8 +104,9 @@ void Renderer::draw()
 		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
 		m_cubeMapPass->createOrResize();
-		m_rayTracePass->createOrResize();
+#if DRAW_DEBUG_BVH
 		m_bvhDebugPass->createOrResize();
+#endif
 		m_worldSpaceUIPass->createOrResize();
 		AppConfig::needsResize = false;
 	}
@@ -128,7 +135,9 @@ void Renderer::draw()
 
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection, m_scene.get());
-	m_gBuffer->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get(),
+	m_gBuffer->draw(m_view, m_projection,
+		m_scene->getActiveCamera()->transform.position,
+		m_scene.get(),
 		m_zPrePass->getDSV());
 	m_previewGenerator->generatePreview(m_scene.get());
 	m_cubeMapPass->draw(m_view, m_projection);
@@ -138,8 +147,9 @@ void Renderer::draw()
 		m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
 		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
-
+#if DRAW_DEBUG_BVH
 	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
+#endif
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
 	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
@@ -148,11 +158,10 @@ void Renderer::draw()
 	m_device->getContext()->RSSetState(m_rasterizerState.Get());
 	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	m_rayTracePass->draw(m_scene.get());
-
 	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_device->getSwapChain()->Present(0, 0);
+#ifdef _DEBUG
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->EndFrameCapture(nullptr, nullptr);
@@ -170,6 +179,7 @@ void Renderer::draw()
 			}
 		}
 	}
+#endif
 }
 
 
