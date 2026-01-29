@@ -1025,7 +1025,7 @@ void UIManager::showPassesWindow()
 
 	ImGui::Combo("RTVList", &currentItemIndex, rtvNames.data(), static_cast<int>(rtvNames.size()));
 
-	const ImTextureRef tex = rtvMap[rtvNameStrings[currentItemIndex]];
+	const ImTextureRef tex = rtvMap[rtvNameStrings[currentItemIndex]].Get();
 	constexpr auto uv0 = ImVec2(0, 0);
 	constexpr auto uv1 = ImVec2(1, 1);
 	ImVec2 size = ImGui::GetContentRegionAvail();
