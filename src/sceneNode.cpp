@@ -94,6 +94,15 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 	childPtr->transform.updateMatrix();
 }
 
+void SceneNode::clearChildren()
+{
+	for (auto& child : children)
+	{
+		child->parent = nullptr;
+	}
+	children.clear();
+}
+
 std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 {
 	if (child->parent != this)
@@ -103,10 +112,10 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 
 	child->parent = nullptr;
 	const auto it = std::ranges::find_if(children,
-										 [child](const std::unique_ptr<SceneNode>& ptr)
-										 {
-											 return ptr.get() == child;
-										 });
+		[child](const std::unique_ptr<SceneNode>& ptr)
+		{
+			return ptr.get() == child;
+		});
 	if (it == children.end())
 	{
 		std::cerr << "Error: Child not found in parent's children list." << std::endl;

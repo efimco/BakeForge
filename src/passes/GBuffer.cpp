@@ -30,7 +30,10 @@ struct alignas(16) ConstantBufferData
 	glm::vec4 albedoColor;
 	float metallicValue;
 	float roughnessValue;
-	float padding[2];
+	uint32_t useAlbedoTexture;
+	uint32_t useMetallicRoughnessTexture;
+	uint32_t useNormalTexture;
+	float padding[3]; 
 };
 
 GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
@@ -129,12 +132,9 @@ void GBuffer::update(const glm::mat4& view,
 			cbData->albedoColor = prim->material->albedoColor;
 			cbData->metallicValue = prim->material->metallicValue;
 			cbData->roughnessValue = prim->material->roughnessValue;
-		}
-		else
-		{
-			cbData->albedoColor = glm::vec4(1.0f);
-			cbData->metallicValue = 0.0f;
-			cbData->roughnessValue = 0.5f;
+			cbData->useAlbedoTexture = prim->material->useAlbedo ? 1 : 0;
+			cbData->useMetallicRoughnessTexture = prim->material->useMetallicRoughness ? 1 : 0;
+			cbData->useNormalTexture = prim->material->useNormal ? 1 : 0;
 		}
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}

@@ -31,6 +31,7 @@ public:
 	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
 	virtual void addChild(std::unique_ptr<SceneNode>&& child);
+	virtual void clearChildren();
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
 	glm::mat4 getWorldMatrix();
 };

@@ -523,3 +523,34 @@ void Scene::saveScene(std::string_view filepath)
 void Scene::loadScene(std::string_view filepath)
 {
 }
+
+void Scene::clearScene()
+{
+	m_selectedNodes.clear();
+	m_activeNode = nullptr;
+
+	while (children.size() > 1)
+	{
+		SceneNode* nodeToDelete = nullptr;
+
+		for (auto& child : children)
+		{
+			if (auto* cam = dynamic_cast<Camera*>(child.get()))
+			{
+				if (m_cameras.size() <= 1)
+					continue;
+			}
+			nodeToDelete = child.get();
+			break;
+		}
+
+		if (!nodeToDelete)
+			break;
+
+		deleteNode(nodeToDelete);
+	}
+
+	m_textures.clear();
+	m_materials.clear();
+
+}

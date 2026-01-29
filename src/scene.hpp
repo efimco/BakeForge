@@ -78,8 +78,9 @@ public:
 	void updateAsyncImport(); // called each frame
 	std::shared_ptr<ImportProgress> getImportProgress() const;
 
-	static void saveScene(std::string_view filepath);
-	static void loadScene(std::string_view filepath);
+	void saveScene(std::string_view filepath);
+	void loadScene(std::string_view filepath);
+	void clearScene();
 
 private:
 	void addLight(Light* light);

@@ -10,7 +10,10 @@ cbuffer ConstantBuffer : register(b0)
 	float4 albedoColor;
 	float metallicValue;
 	float roughnessValue;
-	float2 padding;
+	uint useAlbedoTexture;
+	uint useMetallicRoughnessTexture;
+	uint useNormalTexture;
+	float3 padding;
 };
 
 Texture2D albedoTexture : register(t0);
@@ -57,10 +60,7 @@ VertexOutput VS(VertexInput input)
 float3 getNormalFromMap(VertexOutput input, bool hasNormalMap = true)
 {
 	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
-	if (!hasNormalMap)
-		return input.normal;
-	// If no normal map (flat normal), use geometry normal
-	if (length(tangentNormal) < 0.01f)
+	if (!hasNormalMap || !useNormalTexture)
 		return input.normal;
 	// Invert Y for DirectX normal maps
 	tangentNormal.y = -tangentNormal.y;
@@ -93,7 +93,15 @@ PSOutput PS(VertexOutput input)
 	bool hasNormalTexture = normalWidth != 0 && normalHeight != 0;
 
 	PSOutput output;
-	output.albedo = hasAlbedoTexture ? albedoTexture.Sample(samplerState, input.texCoord) : albedoColor;
+	if (!hasAlbedoTexture || !useAlbedoTexture)
+	{
+		output.albedo = albedoColor;
+	}
+	else
+	{
+		output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
+	}
+
 
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
 	float3 worldNormal = getNormalFromMap(input, hasNormalTexture);
@@ -107,9 +115,18 @@ PSOutput PS(VertexOutput input)
 	}
 	float gammaFactor = 2.6f;
 	output.albedo = float4(pow(output.albedo.rgb, float3(gammaFactor, gammaFactor, gammaFactor)), output.albedo.a);
-	float roughness = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).g : roughnessValue;
-	float metallic = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).b : metallicValue;
-	output.metallicRoughness = float2(metallic, roughness);
+
+	float roughness, metallic;
+	if (!hasMetallicRoughnessTexture || !useMetallicRoughnessTexture)
+	{
+		output.metallicRoughness = float2(metallicValue, roughnessValue);
+	}
+	else
+	{
+		metallic = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).b : metallicValue;
+		roughness = hasMetallicRoughnessTexture ? metallicRoughnessTexture.Sample(samplerState, input.texCoord).g : roughnessValue;
+		output.metallicRoughness = float2(metallic, roughness);
+	}
 
 	// Encode normal from [-1,1] to [0,1] for storage in UNORM render target
 	output.normal = float4(worldNormal * 0.5f + 0.5f, 1.0f);

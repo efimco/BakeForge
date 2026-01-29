@@ -32,6 +32,15 @@
 #include "commands/nodeSnapshot.hpp"
 #include "commands/scopedTransaction.hpp"
 
+enum class Theme
+{
+	Light,
+	Dark,
+	Classic
+};
+static int currentTheme = static_cast<int>(Theme::Dark);
+
+
 
 static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
@@ -158,6 +167,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 	processNodeDeletion();
 	processNodeDuplication();
 	processUndoRedo();
+	processThemeSelection();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -199,6 +209,10 @@ void UIManager::showSceneSettings() const
 	ImGui::SliderInt("BVH Min Depth", &AppConfig::minBVHDepth, 0, AppConfig::maxBVHDepth, "%d");
 
 
+	ImGui::Text("Theme: ");
+	ImGui::Combo("Theme", &currentTheme, "Light\0Dark\0Classic\0");
+
+
 	ImGui::TextWrapped("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / m_io->Framerate, m_io->Framerate);
 	ImGui::End();
 }
@@ -210,16 +224,26 @@ void UIManager::showMainMenuBar()
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("New Scene", "Ctrl+N"))
-			{ /* TODO: New scene */
+			{
+				m_selectedMaterial = nullptr;
+				m_highlightedMaterial = nullptr;
+				m_commandManager->clearUndoBuffer();
+				m_commandManager->clearRedoBuffer();
+				m_scene->clearScene();
+				std::cout << "New scene triggered from menu\n";
 			}
 			if (ImGui::MenuItem("Open...", "Ctrl+O"))
-			{ /* TODO: Open file dialog */
+			{
+				const std::string filepath = openFileDialog(FileType::SCENE);
+				if (!filepath.empty())
+				{
+					m_scene->loadScene(filepath);
+					std::cout << "Open scene triggered from menu\n";
+				}
 			}
 			if (ImGui::MenuItem("Save", "Ctrl+S"))
-			{ /* TODO: Save scene */
-			}
-			if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
-			{ /* TODO: Save as dialog */
+			{
+				m_scene->saveScene("scene.ttdx");
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
@@ -246,23 +270,20 @@ void UIManager::showMainMenuBar()
 		if (ImGui::BeginMenu("Edit"))
 		{
 			if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false))
-			{ /* TODO: Undo */
+			{
+				m_commandManager->undo();
 			}
 			if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false))
-			{ /* TODO: Redo */
+			{
+				m_commandManager->redo();
 			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Cut", "Ctrl+X", false, false))
-			{ /* TODO: Cut */
-			}
-			if (ImGui::MenuItem("Copy", "Ctrl+C", false, false))
+			if (ImGui::MenuItem("Duplicate", "Shift+D", false, false))
 			{ /* TODO: Copy */
 			}
-			if (ImGui::MenuItem("Paste", "Ctrl+V", false, false))
-			{ /* TODO: Paste */
-			}
 			if (ImGui::MenuItem("Delete", "Del"))
-			{ /* TODO: Delete selected */
+			{
+				m_scene->deleteNode(m_scene->getActiveNode());
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Select All", "Ctrl+A"))
@@ -280,17 +301,8 @@ void UIManager::showMainMenuBar()
 			if (ImGui::MenuItem("Viewport", nullptr, true))
 			{ /* Toggle viewport */
 			}
-			if (ImGui::MenuItem("Scene Graph", nullptr, true))
-			{ /* Toggle scene graph */
-			}
-			if (ImGui::MenuItem("Properties", nullptr, true))
-			{ /* Toggle properties */
-			}
 			if (ImGui::MenuItem("Material Browser", nullptr, true))
 			{ /* Toggle material browser */
-			}
-			if (ImGui::MenuItem("GBuffer", nullptr, true))
-			{ /* Toggle GBuffer view */
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Reset Layout"))
@@ -305,15 +317,6 @@ void UIManager::showMainMenuBar()
 			{
 				if (ImGui::MenuItem("Cube"))
 				{ /* TODO: Add cube */
-				}
-				if (ImGui::MenuItem("Sphere"))
-				{ /* TODO: Add sphere */
-				}
-				if (ImGui::MenuItem("Plane"))
-				{ /* TODO: Add plane */
-				}
-				if (ImGui::MenuItem("Cylinder"))
-				{ /* TODO: Add cylinder */
 				}
 				ImGui::EndMenu();
 			}
@@ -364,15 +367,6 @@ void UIManager::showMainMenuBar()
 			{
 				if (ImGui::MenuItem("Albedo"))
 				{ /* TODO: Show albedo only */
-				}
-				if (ImGui::MenuItem("Normals"))
-				{ /* TODO: Show normals */
-				}
-				if (ImGui::MenuItem("Metallic/Roughness"))
-				{ /* TODO: Show metallic/roughness */
-				}
-				if (ImGui::MenuItem("Depth"))
-				{ /* TODO: Show depth */
 				}
 				ImGui::EndMenu();
 			}
@@ -553,37 +547,38 @@ void UIManager::showMaterialBrowser()
 		const ImTextureRef previewTexture = mat->preview.srv_preview.Get();
 		ImGui::BeginGroup();
 		{
-			bool selectedMatGuard = false;
-			if (mat == m_highlightedMaterial && !selectedMatGuard)
+			static ImVec4 outlineColor;
+
+			if (m_selectedMaterial == mat)
 			{
-				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.5f, 0.0f, 1.0f)); // orange border
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 5.0f);
+				outlineColor = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // green border
 			}
-			if (mat == m_selectedMaterial)
+			else if (m_highlightedMaterial == mat)
 			{
-				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // green border
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 5.0f);
+				outlineColor = ImVec4(1.0f, 0.5f, 0.0f, 1.0f); // orange border
 			}
+			else
+			{
+				outlineColor = ImVec4(0.0f, 0.0f, 0.0f, 0.0f); // default black border
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Border, outlineColor);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 5.0f);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 			if (ImGui::ImageButton(materialNames[i].c_str(), previewTexture, ImVec2(itemSize, itemSize)))
 			{
 				m_scene->setActiveNode(nullptr);
 				m_scene->setReadBackID(-1.0f);
-				m_selectedMaterial = mat;
-				m_highlightedMaterial = nullptr;
-				selectedMatGuard = true;
+				if (m_selectedMaterial != mat)
+				{
+					m_selectedMaterial = mat;
+					m_highlightedMaterial = nullptr;
+				}
 			}
 			ImGui::PopStyleVar();
-			if (mat == m_selectedMaterial && !selectedMatGuard)
-			{
-				ImGui::PopStyleVar();
-				ImGui::PopStyleColor();
-			}
-			if (mat == m_highlightedMaterial)
-			{
-				ImGui::PopStyleVar();
-				ImGui::PopStyleColor();
-			}
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+
 			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + itemSize);
 			ImGui::TextWrapped("%s", materialNames[i].c_str());
 			ImGui::PopTextWrapPos();
@@ -771,6 +766,24 @@ void UIManager::processUndoRedo() const
 	}
 }
 
+void UIManager::processThemeSelection() const
+{
+	switch (currentTheme)
+	{
+	case static_cast<int>(Theme::Light):
+		ImGui::StyleColorsLight();
+		break;
+	case static_cast<int>(Theme::Dark):
+		ImGui::StyleColorsDark();
+		break;
+	case static_cast<int>(Theme::Classic):
+		ImGui::StyleColorsClassic();
+		break;
+	default:
+		break;
+	}
+}
+
 void UIManager::drawSceneGraph()
 {
 	ImGui::Begin("Scene Graph");
@@ -836,8 +849,8 @@ void UIManager::handleNodeSelection(SceneNode* node)
 		if (prim)
 		{
 			m_highlightedMaterial = prim->material;
+			m_selectedMaterial = nullptr;
 		}
-		m_selectedMaterial = nullptr;
 	}
 }
 
@@ -1130,8 +1143,12 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 {
 	ImGui::Text("Name: %s", material->name.c_str());
+
 	ImGui::Separator();
+
 	ImGui::Text("Albedo: ");
+	ImGui::Checkbox("##Use Albedo", &material->useAlbedo);
+	ImGui::SameLine();
 	if (material->albedo)
 	{
 		ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
@@ -1142,11 +1159,13 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	{
 		material->needsPreviewUpdate = true;
 	}
-	ImGui::Text("MetallicRougness: ");
 
+	ImGui::Separator();
+
+	ImGui::Text("MetallicRoughness: ");
+	ImGui::Checkbox("##Use MetallicRoughness", &material->useMetallicRoughness);
 	if (material->metallicRoughness)
 	{
-		ImGui::SameLine();
 		ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
 	}
 	if (ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f))
@@ -1157,7 +1176,11 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	{
 		material->needsPreviewUpdate = true;
 	}
+
+	ImGui::Separator();
+
 	ImGui::Text("Normal: ");
+	ImGui::Checkbox("##Use Normal", &material->useNormal);
 	ImGui::SameLine();
 	if (material->normal)
 	{

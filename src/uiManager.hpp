@@ -35,7 +35,8 @@ enum class FileType
 {
 	IMAGE,
 	MODEL,
-	UNKNOWN
+	UNKNOWN,
+	SCENE
 };
 
 class UIManager
@@ -74,6 +75,7 @@ private:
 	void processNodeDuplication();
 	void processNodeDeletion();
 	void processUndoRedo() const;
+	void processThemeSelection() const;
 
 	void drawSceneGraph();
 	void handleNodeSelection(SceneNode* node);
