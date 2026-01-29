@@ -12,7 +12,7 @@ file(GLOB SOURCE_FILES
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
 
 
-file(GLOB_RECURSE INCLUDES
+file(GLOB_RECURSE IMGUI
 				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui/*.cpp"
 )
 
@@ -33,7 +33,7 @@ if(MSVC)
 	add_compile_options("$<$<CONFIG:Debug>:/Z7>")
 endif()
 
-add_library(ThirdParty STATIC ${INCLUDES})
+add_library(IMGUI STATIC ${IMGUI})
 
 add_executable(TimeToDX
 				${SOURCE_FILES}
@@ -44,7 +44,7 @@ target_link_libraries(TimeToDX
 				d3d11
 				dxgi
 				d3dcompiler
-				ThirdParty
+				IMGUI
 )
 target_include_directories(TimeToDX
 				PRIVATE
@@ -52,6 +52,7 @@ target_include_directories(TimeToDX
 				${CMAKE_CURRENT_SOURCE_DIR}/src/passes
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
+				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/rapidjson
 )
 set_target_properties(TimeToDX PROPERTIES
 				WIN32_EXECUTABLE TRUE
