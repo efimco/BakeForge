@@ -557,20 +557,23 @@ void UIManager::showMaterialBrowser()
 			if (mat == m_highlightedMaterial && !selectedMatGuard)
 			{
 				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.5f, 0.0f, 1.0f)); // orange border
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 5.0f);
 			}
 			if (mat == m_selectedMaterial)
 			{
 				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // green border
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 5.0f);
 			}
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 			if (ImGui::ImageButton(materialNames[i].c_str(), previewTexture, ImVec2(itemSize, itemSize)))
 			{
 				m_scene->setActiveNode(nullptr);
 				m_scene->setReadBackID(-1.0f);
 				m_selectedMaterial = mat;
+				m_highlightedMaterial = nullptr;
 				selectedMatGuard = true;
 			}
+			ImGui::PopStyleVar();
 			if (mat == m_selectedMaterial && !selectedMatGuard)
 			{
 				ImGui::PopStyleVar();
@@ -1127,13 +1130,15 @@ void UIManager::showPrimitiveProperties(Primitive* primitive) const
 void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 {
 	ImGui::Text("Name: %s", material->name.c_str());
+	ImGui::Separator();
 	ImGui::Text("Albedo: ");
-	ImGui::SameLine();
 	if (material->albedo)
 	{
 		ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
 	}
-	if (ImGui::ColorEdit4("Albedo color: ", glm::value_ptr(material->albedoColor)))
+	ImGui::Text("Albedo Color: ");
+	ImGui::SameLine();
+	if (ImGui::ColorEdit4("##AlbedoColor", glm::value_ptr(material->albedoColor), ImGuiColorEditFlags_NoInputs))
 	{
 		material->needsPreviewUpdate = true;
 	}

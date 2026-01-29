@@ -112,7 +112,7 @@ void PreviewGenerator::generatePreview(Scene* scene)
 
 		const uint32_t stride = sizeof(SphereVertex);
 		const uint32_t offset = 0;
-		const float clearColor[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
+		const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		m_context->ClearRenderTargetView(mat->preview.rtv_preview.Get(), clearColor);
 		m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 		m_context->IASetInputLayout(m_inputLayout.Get());
