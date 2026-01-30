@@ -3,7 +3,7 @@
 #include <consoleapi.h>
 #include <iostream>
 
-#include "baker.hpp"
+#include "bakerNode.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "glm/glm.hpp"
+#include "DirectXTex.h"
 
 #include "appConfig.hpp"
 #include "primitive.hpp"
@@ -10,6 +11,7 @@
 #include "rtvCollector.hpp"
 #include "scene.hpp"
 #include "shaderManager.hpp"
+
 
 #define PROFILE_BAKER_PASS 0
 
@@ -75,40 +77,35 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_device->CreateQuery(&queryDesc, &m_startQuery);
 	m_device->CreateQuery(&queryDesc, &m_endQuery);
 
-	}
+}
 
 void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 {
+	if (path.empty())
+	{
+		std::cerr << "BakerPass::bake: No output path specified!" << std::endl;
+		return;
+	}
+	std::cout << "Started baking: " << name << std::endl;
 	m_lastWidth = width;
 	m_lastHeight = height;
 	m_cageOffset = cageOffset;
 
-	m_context->Begin(m_disjointQuery.Get());
-	m_context->End(m_startQuery.Get());
-
-	createInterpolatedTextures();
-	m_context->End(m_endQuery.Get());
-	m_context->End(m_disjointQuery.Get());
-
-#if PROFILE_BAKER_PASS
-	// Wait for GPU to finish and get results
-	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
-	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
+	createInterpolatedTexturesResources();
+	createBakedNormalResources();
+	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
 	{
-		Sleep(1);
+		if (!lowPoly || !highPoly)
+			continue;
+
+		auto hpBuffers = createHighPolyPrimitiveBuffers(highPoly);
+		updateHighPolyPrimitiveBuffers(highPoly, hpBuffers);
+
+		rasterizeUVSpace(lowPoly);
+
+		bakeNormals(hpBuffers);
+		saveToTextureFile();
 	}
-
-	if (!disjointData.Disjoint)
-	{
-		UINT64 startTime, endTime;
-		m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
-		m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
-
-		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
-		std::cout << "TOTAL GPU work for baking took " << gpuTimeMs << " ms" << std::endl;
-	}
-#endif
-
 }
 
 void BakerPass::drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
@@ -199,6 +196,13 @@ void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPr
 void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 {
 
+#if PROFILE_BAKER_PASS
+	m_context->Begin(m_disjointQuery.Get());
+	m_context->End(m_startQuery.Get());
+#endif
+
+	beginDebugEvent(L"Baker::Rasterize UV Space");
+	std::cout << "Rasterizing UV space for primitive: " << lowPoly->name << std::endl;
 	D3D11_MAPPED_SUBRESOURCE mapped = {};
 	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
 	{
@@ -239,55 +243,33 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 	m_context->DrawIndexed(static_cast<UINT>(lowPoly->getIndexData().size()), 0, 0);
 
 	unbindRenderTargets(2);
-}
 
-
-void BakerPass::createInterpolatedTextures()
-{
-	beginDebugEvent(L"Baker::Interpolated Textures");
-
-#if PROFILE_BAKER_PASS
-	m_context->Begin(m_disjointQuery.Get());
-	m_context->End(m_startQuery.Get());
-#endif
-
-	createInterpolatedTexturesResources();
-	createBakedNormalResources();
-	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
-	{
-		if (!lowPoly || !highPoly)
-			continue;
-
-		auto hpBuffers = createHighPolyPrimitiveBuffers(highPoly);
-		updateHighPolyPrimitiveBuffers(highPoly, hpBuffers);
-
-		rasterizeUVSpace(lowPoly);
-
-#if PROFILE_BAKER_PASS
-		m_context->End(m_disjointQuery.Get());
-
-		// Wait for GPU to finish and get results
-		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
-		while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
-		{
-			Sleep(1);
-		}
-
-		if (!disjointData.Disjoint)
-		{
-			UINT64 startTime, endTime;
-			m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
-			m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
-
-			double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
-			std::cout << "Texture Preparation took " << gpuTimeMs << " ms" << std::endl;
-		}
-#endif
-
-		bakeNormals(hpBuffers);
-	}
 	endDebugEvent();
+
+#if PROFILE_BAKER_PASS
+	m_context->End(m_endQuery.Get());
+	m_context->End(m_disjointQuery.Get());
+
+	// Wait for GPU to finish and get results
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
+	{
+		Sleep(1);
+	}
+
+	if (!disjointData.Disjoint)
+	{
+		UINT64 startTime, endTime;
+		m_context->GetData(m_startQuery.Get(), &startTime, sizeof(startTime), 0);
+		m_context->GetData(m_endQuery.Get(), &endTime, sizeof(endTime), 0);
+
+		double gpuTimeMs = (endTime - startTime) / static_cast<double>(disjointData.Frequency) * 1000.0;
+		std::cout << "Texture Preparation took " << gpuTimeMs << " ms" << std::endl;
+	}
+#endif
+
 }
+
 
 void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 {
@@ -308,7 +290,7 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 		hpBuffers.bvhNodesSRV.Get(),
 		m_worldSpaceTexelPositionSRV.Get(),
 		m_worldSpaceTexelNormalSRV.Get()
-};
+	};
 	m_context->CSSetShaderResources(0, 5, hpSRVs);
 	UINT threadGroupX = (m_lastWidth + 15) / 16;
 	UINT threadGroupY = (m_lastHeight + 15) / 16;
@@ -316,10 +298,12 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 	unbindComputeUAVs(0, 1);
 	unbindShaderResources(0, 5);
 
+	endDebugEvent();
+
+#if PROFILE_BAKER_PASS
 	m_context->End(m_endQuery.Get());
 	m_context->End(m_disjointQuery.Get());
 
-#if PROFILE_BAKER_PASS
 	// Wait for GPU to finish and get results
 	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
 	while (m_context->GetData(m_disjointQuery.Get(), &disjointData, sizeof(disjointData), 0) == S_FALSE)
@@ -337,9 +321,37 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 		std::cout << "GPU baking took " << gpuTimeMs << " ms" << std::endl;
 	}
 #endif
-	endDebugEvent();
 }
 
+void BakerPass::saveToTextureFile()
+{
+	DirectX::ScratchImage image;
+	if (FAILED(DirectX::CaptureTexture(m_device.Get(), m_context.Get(),
+		m_bakedNormalTexture.Get(), image)))
+	{
+		std::cerr << "Failed to capture texture for saving." << std::endl;
+		return;
+	}
+	if (path.ends_with(".png"))
+	{
+		HRESULT hr = DirectX::SaveToWICFile(
+			*image.GetImage(0, 0, 0),
+			DirectX::WIC_FLAGS_NONE,
+			DirectX::GetWICCodec(DirectX::WIC_CODEC_PNG),
+			std::wstring(path.begin(), path.end()).c_str());
+	}
+	else if (path.ends_with(".tga"))
+	{
+		HRESULT hr = DirectX::SaveToTGAFile(
+			*image.GetImage(0, 0, 0),
+			DirectX::TGA_FLAGS_NONE,
+			std::wstring(path.begin(), path.end()).c_str());
+	}
+	else
+	{
+		std::cerr << "Unsupported file format for saving texture: " << path << std::endl;
+	}
+}
 
 void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
 {
@@ -369,6 +381,7 @@ void BakerPass::createInterpolatedTexturesResources()
 		m_worldSpaceTexelNormalRTV.Reset();
 	}
 
+	std::cout << "Creating interpolated textures of size: " << m_lastWidth << "x" << m_lastHeight << std::endl;
 	m_worldSpaceTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
 	m_worldSpaceTexelPositionSRV = createShaderResourceView(m_worldSpaceTexelPositionTexture.Get(), SRVPreset::Texture2D);
 	m_worldSpaceTexelPositionUAV = createUnorderedAccessView(m_worldSpaceTexelPositionTexture.Get(), UAVPreset::Texture2D, 0);
@@ -391,6 +404,7 @@ void BakerPass::createBakedNormalResources()
 		m_bakedNormalSRV.Reset();
 		m_bakedNormalUAV.Reset();
 	}
+	std::cout << "Creating baked normal texture of size: " << m_lastWidth << "x" << m_lastHeight << std::endl;
 
 	m_bakedNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_bakedNormalSRV = createShaderResourceView(m_bakedNormalTexture.Get(), SRVPreset::Texture2D);

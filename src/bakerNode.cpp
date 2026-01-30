@@ -1,5 +1,5 @@
-#include "baker.hpp"
-
+#include "bakerNode.hpp"
+#include <iostream>
 
 #include "material.hpp"
 #include "primitive.hpp"
@@ -32,6 +32,41 @@ Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPt
 
 void Baker::bake()
 {
+	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
+	{
+		std::cout << "Baking material: " << materialName << std::endl;
+		bakerPass->bake(textureWidth, textureWidth, cageOffset);
+	}
+}
+
+void Baker::requestBake()
+{
+
+	m_pendingBake = true;
+}
+
+void Baker::processPendingBake()
+{
+	updateState();
+	if (m_pendingBake)
+	{
+		bake();
+		m_pendingBake = false;
+	}
+}
+
+std::vector<BakerPass*> Baker::getPasses()
+{
+	std::vector<BakerPass*> passes;
+	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
+	{
+		passes.push_back(bakerPass.get());
+	}
+	return passes;
+}
+
+void Baker::updateState()
+{
 	for (const auto& child : lowPoly->children)
 	{
 		const auto prim = dynamic_cast<Primitive*>(child.get());
@@ -42,7 +77,7 @@ void Baker::bake()
 		if (prim->material->name.empty())
 			continue;
 		if (std::ranges::find_if(m_materialsToBake, [&](const std::shared_ptr<Material>& mat)
-								 { return mat->name == prim->material->name; }) == m_materialsToBake.end())
+			{ return mat->name == prim->material->name; }) == m_materialsToBake.end())
 		{
 			m_materialsToBake.push_back(prim->material);
 		}
@@ -61,7 +96,7 @@ void Baker::bake()
 				continue;
 
 			std::string baseName = prim->name;
-			for (const auto& suffix : {"_low", "_LP", "_lo", "_Low", "_LOW"})
+			for (const auto& suffix : { "_low", "_LP", "_lo", "_Low", "_LOW" })
 			{
 				if (baseName.ends_with(suffix))
 				{
@@ -78,7 +113,7 @@ void Baker::bake()
 					continue;
 
 				std::string highPolyBaseName = highPolyPrim->name;
-				for (const auto& suffix : {"_high", "_HP", "_hi", "_High", "_HIGH"})
+				for (const auto& suffix : { "_high", "_HP", "_hi", "_High", "_HIGH" })
 				{
 					if (highPolyBaseName.ends_with(suffix))
 					{
@@ -102,29 +137,12 @@ void Baker::bake()
 
 	for (const auto& material : m_materialsToBake)
 	{
+		if (m_materialsBakerPasses.contains(material->name) && m_materialsPrimitivesMap[material->name] == m_materialsBakerPasses[material->name]->getPrimitivesToBake())
+			continue;
 		auto bakerPass = std::make_unique<BakerPass>(m_device, m_context);
 		bakerPass->name = "BKR for " + material->name;
 		bakerPass->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
 		m_materialsBakerPasses[material->name] = std::move(bakerPass);
 	}
-
-	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
-	{
-		bakerPass->bake(textureWidth, textureWidth, cageOffset);
-	}
 }
 
-void Baker::requestBake()
-{
-
-	m_pendingBake = true;
-}
-
-void Baker::processPendingBake()
-{
-	if (m_pendingBake)
-	{
-		bake();
-		m_pendingBake = false;
-	}
-}

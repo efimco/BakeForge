@@ -16,6 +16,10 @@ file(GLOB_RECURSE IMGUI
 				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui/*.cpp"
 )
 
+file(GLOB_RECURSE DXTEX
+				"${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/DXTEX/*.cpp"
+)
+
 file(GLOB PASSES
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.cpp"
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/passes/*.hpp")
@@ -34,6 +38,7 @@ if(MSVC)
 endif()
 
 add_library(IMGUI STATIC ${IMGUI})
+add_library(DXTEX STATIC ${DXTEX})
 
 add_executable(TimeToDX
 				${SOURCE_FILES}
@@ -45,6 +50,7 @@ target_link_libraries(TimeToDX
 				dxgi
 				d3dcompiler
 				IMGUI
+				DXTEX
 )
 target_include_directories(TimeToDX
 				PRIVATE
@@ -52,7 +58,7 @@ target_include_directories(TimeToDX
 				${CMAKE_CURRENT_SOURCE_DIR}/src/passes
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
-				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/rapidjson
+				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/DXTEX
 )
 set_target_properties(TimeToDX PROPERTIES
 				WIN32_EXECUTABLE TRUE

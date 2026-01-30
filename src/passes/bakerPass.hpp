@@ -32,10 +32,12 @@ public:
 
 	std::string name = "Baker Pass";
 
-	void bake(uint32_t width, uint32_t heightm, float cageOffset);
+	void bake(uint32_t width, uint32_t height, float cageOffset);
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
 	void setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs);
+	std::vector<std::pair<Primitive*, Primitive*>> getPrimitivesToBake() const { return m_primitivePairs; }
+	std::string path = "";
 
 private:
 	uint32_t m_lastWidth = 0;
@@ -46,8 +48,8 @@ private:
 	HighPolyPrimitiveBuffers createHighPolyPrimitiveBuffers(Primitive* prim);
 	void updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers);
 
-	void createInterpolatedTextures();
 	void bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers);
+	void saveToTextureFile();
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 

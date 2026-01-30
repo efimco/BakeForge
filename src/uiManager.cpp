@@ -19,7 +19,7 @@
 #include "inputEventsHandler.hpp"
 #include "passes/GBuffer.hpp"
 
-#include "baker.hpp"
+#include "bakerNode.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"
@@ -31,6 +31,8 @@
 #include "commands/nodeCommand.hpp"
 #include "commands/nodeSnapshot.hpp"
 #include "commands/scopedTransaction.hpp"
+
+#include "passes/bakerPass.hpp"
 
 enum class Theme
 {
@@ -1220,6 +1222,69 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 		ImGui::Text("Baking Settings:");
 		ImGui::DragFloat("Cage Offset", &bakerNode->cageOffset, 0.01f, 0.0f, 10.0f);
 		ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &bakerNode->textureWidth, 2.0f, &minVal, &maxVal);
+		for (auto& pass : bakerNode->getPasses())
+		{
+			ImGui::PushID(pass->name.c_str());
+			ImGui::Text("%s", pass->name.c_str());
+
+			std::string fullPath = pass->path;
+			std::string directory;
+			std::string filename;
+
+			size_t lastSlash = fullPath.find_last_of("\\/");
+			if (lastSlash != std::string::npos)
+			{
+				directory = fullPath.substr(0, lastSlash);
+				filename = fullPath.substr(lastSlash + 1);
+			}
+			else
+			{
+				filename = fullPath;
+			}
+
+			// Directory input with browse button
+			char dirBuffer[260];
+			strcpy_s(dirBuffer, directory.c_str());
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 30.0f);
+			bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
+			ImGui::SameLine();
+			if (ImGui::Button("..."))
+			{
+				std::string selectedDir = openFileDialog(FileType::UNKNOWN);
+				if (!selectedDir.empty())
+				{
+					strcpy_s(dirBuffer, selectedDir.c_str());
+					dirChanged = true;
+				}
+			}
+
+			// Filename input
+			char nameBuffer[260];
+			strcpy_s(nameBuffer, filename.c_str());
+			bool nameChanged = ImGui::InputText("Filename", nameBuffer, sizeof(nameBuffer));
+
+
+			if (dirChanged || nameChanged)
+			{
+				std::string newDir = dirBuffer;
+				std::string newName = nameBuffer;
+				if (!newDir.empty() && !newName.empty())
+				{
+					pass->path = newDir + "\\" + newName;
+				}
+				else if (!newName.empty())
+				{
+					pass->path = newName;
+				}
+				else
+				{
+					pass->path = newDir;
+				}
+			}
+
+			ImGui::Separator();
+			ImGui::PopID();
+		}
 	}
 	if (ImGui::Button("Start Bake"))
 	{

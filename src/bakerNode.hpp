@@ -41,6 +41,7 @@ public:
 	void bake();
 	void requestBake();
 	void processPendingBake();
+	std::vector<BakerPass*> getPasses();
 
 	std::unique_ptr<LowPolyNode> lowPoly;
 	std::unique_ptr<HighPolyNode> highPoly;
@@ -49,10 +50,10 @@ public:
 	float cageOffset;
 
 private:
+	void updateState();
 	bool m_pendingBake = false;
 
 private:
-	std::unique_ptr<BakerPass> m_bakerPass;
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
