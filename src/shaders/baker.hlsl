@@ -93,15 +93,7 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	float4 worldSmoothedNormal = gWorldSpaceSmoothedNormals.Load(int3(DTid.xy, 0));
 
 	float bestT = 1e20f;
-	float3 bestN = float3(0.5, 0.5f, 1.0f);
-
-	if (worldPos.a == 0.0f) // i clear alpha = 0 for invalid texels
-	{
-		bestN = pow(bestN, float3(2.2f, 2.2f, 2.2f)); // gamma correct
-		oBakedNormal[DTid.xy] = float4(bestN, 1.0f);
-		return;
-	}
-
+	float3 bestN = float3(0.0f, 0.0f, 0.0f);
 
 	Ray ray;
 	ray.origin = worldPos.xyz;
@@ -112,17 +104,22 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	TraverseBVH(ray, bestT, bestN);
 	float3 N = normalize(worldNormal.xyz);
 	float3 T = normalize(worldTangent.xyz);
-	float3 B = cross(N, T); // build tangent frame from the low-poly normal
-
+	float3 B = cross(N, T);
 
 	float3 tangentSpaceNormal; 	// transforms bestN from world space to tangent space
 	tangentSpaceNormal.x = dot(bestN, T);
 	tangentSpaceNormal.y = dot(bestN, B);
 	tangentSpaceNormal.z = dot(bestN, N);
 
-	tangentSpaceNormal = tangentSpaceNormal * 0.5f + 0.5f; // remap from [-1,1] to [0,1] for storage
+	tangentSpaceNormal = tangentSpaceNormal * 0.5f + 0.5f; // remap from [-1,1] to [0,1] texture space
+
+	if (bestN.x == 0.0f && bestN.y == 0.0f && bestN.z == 0.0f)
+	{
+		tangentSpaceNormal = float3(0.5f, 0.5f, 1.0f); // default normal if no intersection
+	}
+
 	tangentSpaceNormal = pow(tangentSpaceNormal, float3(2.2f, 2.2f, 2.2f)); // gamma correct
 
-	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal, 1.0f); // remap from [-1,1] to [0,1] for storage
+	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal, 1.0f);
 
 }

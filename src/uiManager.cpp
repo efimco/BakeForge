@@ -190,9 +190,9 @@ void UIManager::showSceneSettings() const
 {
 
 	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 1.0f, 0.0f, 100.0f);
+	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 0.1f, 0.0f, 10.0f);
 	ImGui::DragFloat("IBL Rotation", &AppConfig::IBLrotation);
-	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 1.0f, 0.0f, 1.0f);
+	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 0.1f, 0.0f, 1.0f);
 	ImGui::Separator();
 
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
@@ -258,7 +258,7 @@ void UIManager::showMainMenuBar()
 				const FileDialogResult result = openFileDialog(FileType::MODEL);
 				if (result)
 				{
-					m_scene->importModel(result.fullPath, m_device);
+					m_scene->importModel(result.fullPath);
 					std::cout << "Import model triggered from menu\n";
 					m_importProgress = m_scene->getImportProgress();
 				}
@@ -1245,6 +1245,8 @@ void UIManager::showCameraProperties(Camera* camera) const
 	ImGui::DragFloat3("Position", &camera->orbitPivot[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &camera->transform.rotation[0], 0.1f);
 	ImGui::DragFloat("Fov", &camera->fov, 0.1f, 1.0f, 120.0f);
+	ImGui::DragFloat("Near Clip", &camera->nearPlane, 0.01f, 0.01f, 100.0f);
+	ImGui::DragFloat("Far Clip", &camera->farPlane, 1.0f, 10.0f, 10000.0f);
 }
 
 void UIManager::showBakerProperties(BakerNode* baker) const

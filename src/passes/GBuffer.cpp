@@ -44,7 +44,7 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 	m_context = context;
 	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
-	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyEqual);
+	m_depthStencilState = createDSState(DepthStencilPreset::ReadOnlyLessEqual);
 	m_samplerState = createSamplerState(SamplerPreset::AnisotropicWrap);
 
 	// Load shaders via inherited m_shaderManager

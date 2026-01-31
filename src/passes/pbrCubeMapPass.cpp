@@ -55,7 +55,7 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device> device,
 	: BasePass(device, context), m_hdrImagePath(hdrImagePath)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device, true);
+	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device);
 
 	m_shaderManager->LoadVertexShader("cubemapVS", L"../../src/shaders/cubemap.hlsl", "VS");
 	m_shaderManager->LoadPixelShader("cubemapPS", L"../../src/shaders/cubemap.hlsl", "PS");

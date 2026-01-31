@@ -2,6 +2,7 @@
 
 #include <consoleapi.h>
 #include <iostream>
+#include <ranges>
 
 #include "bakerNode.hpp"
 #include "camera.hpp"
@@ -10,10 +11,12 @@
 #include "primitive.hpp"
 #include "texture.hpp"
 
-Scene::Scene(const std::string_view name)
+Scene::Scene(const std::string_view name, ComPtr<ID3D11Device> device)
 {
 	this->name = name;
+	m_device = device;
 }
+
 
 SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 {
@@ -132,19 +135,19 @@ void Scene::addChild(std::unique_ptr<SceneNode>&& child)
 	{
 		addLight(light);
 	}
-	if (const auto primitive = dynamic_cast<Primitive*>(child.get()))
+	else if (const auto primitive = dynamic_cast<Primitive*>(child.get()))
 	{
 		addPrimitive(primitive);
 	}
-	if (const auto camera = dynamic_cast<Camera*>(child.get()))
+	else if (const auto camera = dynamic_cast<Camera*>(child.get()))
 	{
 		addCamera(camera);
 	}
-	if (const auto baker = dynamic_cast<Baker*>(child.get()))
+	else if (const auto baker = dynamic_cast<Baker*>(child.get()))
 	{
 		addBaker(baker);
 	}
-	if (const auto node = dynamic_cast<BakerNode*>(child.get()))
+	else if (const auto node = dynamic_cast<BakerNode*>(child.get()))
 	{
 		addBakerNode(node);
 	}
@@ -231,6 +234,74 @@ void Scene::processPendingBakes()
 	for (auto& [handle, baker] : m_bakers)
 	{
 		baker->processPendingBake();
+	}
+}
+
+void Scene::checkTextureUpdates()
+{
+	for (auto& [name, texture] : m_textures)
+	{
+		if (texture->filepath.empty())
+			continue;
+		bool alreadyPending = std::ranges::any_of(m_pendingTextureReloads,
+			[&name](const PendingTextureReload& p) { return p.name == name; });
+		if (alreadyPending)
+			continue;
+
+		auto ftime = std::filesystem::last_write_time(texture->filepath);
+		if (ftime != texture->lastModifiedTime)
+		{
+
+			auto progress = std::make_shared<TextureLoadProgress>();
+			auto future = Texture::loadTextureAsync(texture->filepath, texture->device, progress);
+			m_pendingTextureReloads.push_back(PendingTextureReload{ name, std::move(future), progress });
+
+			texture->lastModifiedTime = ftime;
+		}
+	}
+}
+
+void Scene::updateAsyncPendingTextureReloads()
+{
+	for (auto it = m_pendingTextureReloads.begin(); it != m_pendingTextureReloads.end();)
+	{
+		if (it->progress->isCompleted)
+		{
+			try
+			{
+				auto result = it->future.get();
+
+				if (!result.progress->hasFailed && result.texture)
+				{
+					ComPtr<ID3D11DeviceContext> immContext;
+					m_device->GetImmediateContext(&immContext);
+					Texture::finalizeAsyncLoad(std::move(result), immContext);
+
+					auto existingTexture = m_textures[it->name];
+					if (existingTexture)
+					{
+						existingTexture->textureResource = result.texture->textureResource;
+						existingTexture->srv = result.texture->srv;
+						existingTexture->texDesc = result.texture->texDesc;
+					}
+
+					std::cout << "Texture reloaded successfully: " << it->name << std::endl;
+				}
+				else
+				{
+					std::cerr << "Failed to reload texture " << it->name << ": " << result.progress->errorMessage << std::endl;
+				}
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << "Exception while reloading texture " << it->name << ": " << e.what() << std::endl;
+			}
+			it = m_pendingTextureReloads.erase(it);
+		}
+		else
+		{
+			++it;
+		}
 	}
 }
 
@@ -457,7 +528,15 @@ void Scene::validateName(SceneNode* node)
 	}
 }
 
-void Scene::importModel(const std::string& filepath, ComPtr<ID3D11Device> device)
+void Scene::updateState()
+{
+	processPendingBakes();
+	checkTextureUpdates();
+	updateAsyncPendingTextureReloads();
+	updateAsyncImport();
+}
+
+void Scene::importModel(const std::string& filepath)
 {
 	if (filepath.empty())
 	{
@@ -471,9 +550,8 @@ void Scene::importModel(const std::string& filepath, ComPtr<ID3D11Device> device
 	}
 
 	m_isImporting = true;
-	m_importDevice = device;
 	m_importProgress = std::make_shared<ImportProgress>();
-	m_importFuture = GLTFModel::importModelAsync(filepath, device, m_importProgress);
+	m_importFuture = GLTFModel::importModelAsync(filepath, m_device, m_importProgress);
 
 	std::cout << "Started async import: " << filepath << std::endl;
 }
@@ -496,7 +574,7 @@ void Scene::updateAsyncImport()
 			{
 				auto importResult = m_importFuture.get();
 				ComPtr<ID3D11DeviceContext> context;
-				m_importDevice->GetImmediateContext(&context);
+				m_device->GetImmediateContext(&context);
 				GLTFModel::finalizeAsyncImport(std::move(importResult), context, this);
 				std::cout << "Model import completed." << std::endl;
 			}
@@ -506,7 +584,6 @@ void Scene::updateAsyncImport()
 			}
 			m_isImporting = false;
 			m_importProgress = nullptr;
-			m_importDevice = nullptr;
 		}
 	}
 }

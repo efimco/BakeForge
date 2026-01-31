@@ -13,7 +13,7 @@
 #include "shaderManager.hpp"
 
 
-#define PROFILE_BAKER_PASS 0
+#define PROFILE_BAKER_PASS 1
 
 struct alignas(16) BakerCB
 {
@@ -107,7 +107,10 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 		rasterizeUVSpace(lowPoly);
 
 		bakeNormals(hpBuffers);
-		saveToTextureFile();
+		asyncSaveTextureToFile(directory + "\\" + filename,
+			m_device,
+			m_context,
+			m_bakedNormalTexture);
 	}
 }
 
@@ -219,7 +222,7 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 	}
 
 
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_context->ClearRenderTargetView(m_wsTexelPositionRTV.Get(), clearColor);
 	m_context->ClearRenderTargetView(m_wsTexelNormalRTV.Get(), clearColor);
 	m_context->ClearRenderTargetView(m_wsTexelTangentRTV.Get(), clearColor);
@@ -364,6 +367,63 @@ void BakerPass::saveToTextureFile()
 	{
 		std::cerr << "Unsupported file format for saving texture: " << filename << std::endl;
 	}
+}
+
+void BakerPass::asyncSaveTextureToFile(const std::string& fullPath,
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> context,
+	ComPtr<ID3D11Texture2D> texture)
+
+{
+	std::cout << "Saving baked normal texture to: " << fullPath << std::endl;
+	DirectX::ScratchImage capturedImage;
+	if (FAILED(DirectX::CaptureTexture(device.Get(), context.Get(),
+		texture.Get(), capturedImage)))
+	{
+		std::cerr << "Failed to capture texture for saving." << std::endl;
+		return;
+	}
+
+	DirectX::ScratchImage convertedImage;
+	HRESULT hr = DirectX::Convert(
+		*capturedImage.GetImage(0, 0, 0),
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		DirectX::TEX_FILTER_DEFAULT,
+		DirectX::TEX_THRESHOLD_DEFAULT,
+		convertedImage);
+
+	if (FAILED(hr))
+	{
+		std::cerr << "Failed to convert texture format." << std::endl;
+		return;
+	}
+
+
+	m_saveTextureFuture = std::async(std::launch::async, [fullPath, image = std::move(convertedImage)]() mutable
+		{
+
+			if (fullPath.ends_with(".png"))
+			{
+				HRESULT hr = DirectX::SaveToWICFile(
+					*image.GetImage(0, 0, 0),
+					DirectX::WIC_FLAGS_NONE,
+					DirectX::GetWICCodec(DirectX::WIC_CODEC_PNG),
+					std::wstring(fullPath.begin(), fullPath.end()).c_str());
+				std::cout << "Finished saving texture to: " << fullPath << std::endl;
+			}
+			else if (fullPath.ends_with(".tga"))
+			{
+				HRESULT hr = DirectX::SaveToTGAFile(
+					*image.GetImage(0, 0, 0),
+					DirectX::TGA_FLAGS_NONE,
+					std::wstring(fullPath.begin(), fullPath.end()).c_str());
+				std::cout << "Finished saving texture to: " << fullPath << std::endl;
+			}
+			else
+			{
+				std::cerr << "Unsupported file format for saving texture: " << fullPath << std::endl;
+			}
+		});
 }
 
 void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "basePass.hpp"
-#include "glm/glm.hpp"
 #include <string>
+#include <future>
+
+#include "glm/glm.hpp"
 
 class Scene;
 class RTVCollector;
@@ -51,6 +53,12 @@ private:
 
 	void bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers);
 	void saveToTextureFile();
+	void asyncSaveTextureToFile(const std::string& fullPath,
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> context,
+		ComPtr<ID3D11Texture2D> texture);
+
+	std::future<void> m_saveTextureFuture;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 

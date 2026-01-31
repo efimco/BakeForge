@@ -56,7 +56,7 @@ private:
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
 
-	std::unique_ptr<DXDevice> m_device;
+	std::unique_ptr<DXDevice> m_dxDevice;
 	std::unique_ptr<ShaderManager> m_shaderManager;
 	std::unique_ptr<UIManager> m_uiManager;
 	std::unique_ptr<Camera> m_camera;

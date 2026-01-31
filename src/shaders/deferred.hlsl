@@ -42,6 +42,8 @@ cbuffer CB : register(b0)
 	float backgroundIntensity;
 	float3 cameraPosition;
 	int drawWSUI;
+	int numLights;
+	int3 _pad;
 };
 
 StructuredBuffer<Light> lights : register(t6);
@@ -242,7 +244,7 @@ void applyLighting(inout float3 color, GBuffer gbuffer)
 	float3 V = normalize(cameraPosition - gbuffer.fragPos);
 	float3 F0 = lerp(float3(MIN_REFLECTANCE, MIN_REFLECTANCE, MIN_REFLECTANCE), gbuffer.albedo.rgb, gbuffer.metallic);
 	{
-		for (int i = 0; i < lights.Length; ++i)
+		for (int i = 0; i < numLights; ++i)
 		{
 			Light light = lights[i];
 			if (light.lightType == 0) // Point

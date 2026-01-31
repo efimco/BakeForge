@@ -21,12 +21,15 @@ class Camera;
 class Baker;
 class BakerNode;
 
+struct PendingTextureReload;
+
 using namespace Microsoft::WRL;
+
 
 class Scene : public SceneNode
 {
 public:
-	explicit Scene(std::string_view name = "Default Scene");
+	explicit Scene(std::string_view name = "Default Scene", ComPtr<ID3D11Device> device = nullptr);
 	~Scene() override = default;
 
 	SceneNodeHandle findHandleOfNode(SceneNode* node) const;
@@ -72,10 +75,9 @@ public:
 	float getReadBackID();
 
 	void validateName(SceneNode* node);
-	void processPendingBakes();
+	void updateState();
 
-	void importModel(const std::string& filepath, ComPtr<ID3D11Device> device);
-	void updateAsyncImport(); // called each frame
+	void importModel(const std::string& filepath);
 	std::shared_ptr<ImportProgress> getImportProgress() const;
 
 	void saveScene(std::string_view filepath);
@@ -83,6 +85,10 @@ public:
 	void clearScene();
 
 private:
+	void updateAsyncImport(); // called each frame
+	void processPendingBakes();
+	void checkTextureUpdates();
+	void updateAsyncPendingTextureReloads();
 	void addLight(Light* light);
 	void addPrimitive(Primitive* primitive);
 	void addCamera(Camera* camera);
@@ -102,7 +108,8 @@ private:
 	bool m_isImporting = false;
 	std::future<AsyncImportResult> m_importFuture;
 	std::shared_ptr<ImportProgress> m_importProgress;
-	ComPtr<ID3D11Device> m_importDevice;
+	ComPtr<ID3D11Device> m_device;
+	std::vector<PendingTextureReload> m_pendingTextureReloads;
 
 	std::unordered_map<SceneNode*, bool> m_selectedNodes;
 

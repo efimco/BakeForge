@@ -17,6 +17,8 @@ public:
 
 	float fov = 45.0f;
 	float distanceToOrbitPivot = 0.f;
+	float nearPlane = 0.1f;
+	float farPlane = 1000.0f;
 
 	explicit Camera(glm::vec3 pos, std::string_view nodeName = "Camera");
 	void processMovementControls(SceneNode* activeNode);

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "stb_image.h"
+#include "DirectXTex.h"
 
 Texture::Texture(const ComPtr<ID3D11Device>& _device)
 	: device(_device)
@@ -62,7 +62,7 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 		device->GetImmediateContext(&context);
 	}
 	context->UpdateSubresource(textureResource.Get(), 0, nullptr, image.image.data(),
-							   image.width * image.component, 0);
+		image.width * image.component, 0);
 
 	// Create Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -82,69 +82,131 @@ Texture::Texture(const tinygltf::Image& image, ComPtr<ID3D11Device> _device, Com
 
 uint32_t GetBytesPerPixel(DXGI_FORMAT format);
 
-Texture::Texture(std::string filepath, ComPtr<ID3D11Device> _device, bool isHdr)
+Texture::Texture(std::string filepath, ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> context)
 {
+
 	device = _device;
-	int width, height, channels;
-	void* data = nullptr;
-	if (isHdr)
+
+	bool isTga = false;
+	bool isDds = false;
+	bool isWic = false;
+	bool isHDR = false;
+
+	if (filepath.ends_with(".tga") || filepath.ends_with(".TGA"))
 	{
-		data = stbi_loadf(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		isTga = true;
+	}
+	else if (filepath.ends_with(".dds") || filepath.ends_with(".DDS"))
+	{
+		isDds = true;
+	}
+	else if (filepath.ends_with(".hdr") || filepath.ends_with(".HDR"))
+	{
+		isHDR = true;
 	}
 	else
 	{
-		data = stbi_load(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		isWic = true;
 	}
-	if (!data)
+
+	DirectX::ScratchImage tempImage;
+	HRESULT hr = S_OK;
+	if (isTga)
 	{
-		std::cerr << "Failed to load texture image: " << filepath << std::endl;
+		hr = DirectX::LoadFromTGAFile(
+			std::wstring(filepath.begin(), filepath.end()).c_str(),
+			DirectX::TGA_FLAGS_NONE,
+			nullptr,
+			tempImage);
+	}
+	else if (isDds)
+	{
+		hr = DirectX::LoadFromDDSFile(
+			std::wstring(filepath.begin(), filepath.end()).c_str(),
+			DirectX::DDS_FLAGS_NONE,
+			nullptr,
+			tempImage);
+	}
+	else if (isHDR)
+	{
+		hr = DirectX::LoadFromHDRFile(
+			std::wstring(filepath.begin(), filepath.end()).c_str(),
+			nullptr,
+			tempImage);
+
+		if (SUCCEEDED(hr) && tempImage.GetMetadata().format == DXGI_FORMAT_R32G32B32_FLOAT)
+		{
+			DirectX::ScratchImage converted;
+			hr = DirectX::Convert(
+				tempImage.GetImages(),
+				tempImage.GetImageCount(),
+				tempImage.GetMetadata(),
+				DXGI_FORMAT_R16G16B16A16_FLOAT,
+				DirectX::TEX_FILTER_DEFAULT,
+				DirectX::TEX_THRESHOLD_DEFAULT,
+				converted);
+			if (SUCCEEDED(hr))
+			{
+				tempImage = std::move(converted);
+			}
+		}
+	}
+	else if (isWic)
+	{
+		hr = DirectX::LoadFromWICFile(
+			std::wstring(filepath.begin(), filepath.end()).c_str(),
+			DirectX::WIC_FLAGS_NONE,
+			nullptr,
+			tempImage);
+	}
+
+	lastModifiedTime = std::filesystem::last_write_time(filepath);
+	name = filepath.find_last_of("/\\") != std::string::npos ?
+		filepath.substr(filepath.find_last_of("/\\") + 1) : filepath;
+
+
+	this->filepath = filepath;
+
+	const auto& metadata = tempImage.GetMetadata();
+	const auto* image = tempImage.GetImage(0, 0, 0);
+
+	// Use DirectXTex helper to create texture - handles row pitch correctly
+	ComPtr<ID3D11Resource> resource;
+	hr = DirectX::CreateTexture(
+		device.Get(),
+		tempImage.GetImages(),
+		tempImage.GetImageCount(),
+		metadata,
+		&resource);
+
+	if (FAILED(hr))
+	{
+		std::cerr << "Failed to create texture " << filepath << " hr=" << hr << std::endl;
 		return;
 	}
-	name = filepath;
-	this->filepath = filepath;
-	texDesc.Height = height;
-	texDesc.Width = width;
-	texDesc.CPUAccessFlags = 0;
-	DXGI_FORMAT format = isHdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM;
-	texDesc.Format = format;
-	texDesc.MipLevels = 1;
-	texDesc.ArraySize = 1;
-	texDesc.SampleDesc.Count = 1;
-	texDesc.SampleDesc.Quality = 0;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	texDesc.MiscFlags = isHdr ? 0 : D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
-	D3D11_SUBRESOURCE_DATA subresData;
-	subresData.pSysMem = data;
-	subresData.SysMemPitch = width * GetBytesPerPixel(format);
-	subresData.SysMemSlicePitch = 0;
+	hr = resource.As(&textureResource);
+	if (FAILED(hr))
+	{
+		std::cerr << "Failed to cast resource to Texture2D" << std::endl;
+		return;
+	}
 
+	textureResource->GetDesc(&texDesc);
+
+	// Create SRV
+	hr = DirectX::CreateShaderResourceView(
+		device.Get(),
+		tempImage.GetImages(),
+		tempImage.GetImageCount(),
+		metadata,
+		&srv);
+
+	if (FAILED(hr))
 	{
-		HRESULT hr = device->CreateTexture2D(&texDesc, &subresData, &textureResource);
-		if (FAILED(hr))
-		{
-			std::cerr << "Failed to create texture resource = " << hr << std::endl;
-		}
+		std::cerr << "Failed to create shader resource view = " << hr << std::endl;
+		return;
 	}
-	// Create Shader Resource View
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = texDesc.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-	{
-		HRESULT hr = device->CreateShaderResourceView(textureResource.Get(), &srvDesc, &srv);
-		if (FAILED(hr))
-		{
-			std::cerr << "Failed to create shader resource view = " << hr << std::endl;
-		}
-	}
-	ComPtr<ID3D11DeviceContext> context;
-	device->GetImmediateContext(&context);
-	if (!isHdr)
-		context->GenerateMips(srv.Get());
-	stbi_image_free(data);
 }
 
 uint32_t Texture::getWidth() const
@@ -155,6 +217,72 @@ uint32_t Texture::getWidth() const
 uint32_t Texture::getHeight() const
 {
 	return texDesc.Height;
+}
+
+std::future<AsyncTextureResult> Texture::loadTextureAsync(const std::string& filepath, ComPtr<ID3D11Device> device, std::shared_ptr<TextureLoadProgress> progress)
+{
+	if (!progress)
+	{
+		progress = std::make_shared<TextureLoadProgress>();
+	}
+	return std::async(std::launch::async, [filepath, device, progress]() -> AsyncTextureResult
+		{
+			AsyncTextureResult result;
+			result.progress = progress;
+			try
+			{
+				ComPtr<ID3D11DeviceContext> deferredContext;
+				HRESULT hr = device->CreateDeferredContext(0, &deferredContext);
+				if (FAILED(hr))
+				{
+					progress->errorMessage = "Failed to create deferred context";
+					progress->hasFailed = true;
+					progress->isCompleted = true;
+					return result;
+				}
+
+				result.texture = std::make_shared<Texture>(filepath, device, deferredContext);
+
+				if (!result.texture->textureResource)
+				{
+					progress->errorMessage = "Failed to create texture: " + filepath;
+					progress->hasFailed = true;
+					progress->isCompleted = true;
+					return result;
+				}
+
+				hr = deferredContext->FinishCommandList(FALSE, &result.commandList);
+				if (FAILED(hr))
+				{
+					progress->errorMessage = "Failed to finish command list";
+					progress->hasFailed = true;
+					progress->isCompleted = true;
+					return result;
+				}
+				progress->isCompleted = true;
+			}
+			catch (const std::exception& e)
+			{
+				progress->errorMessage = e.what();
+				progress->hasFailed = true;
+				progress->isCompleted = true;
+			}
+
+			return result;
+		});
+}
+
+void Texture::finalizeAsyncLoad(AsyncTextureResult&& result, ComPtr<ID3D11DeviceContext> immContext)
+{
+	if (result.progress && result.progress->hasFailed)
+	{
+		std::cerr << "Async texture load failed: " << result.progress->errorMessage << std::endl;
+		return;
+	}
+	if (result.commandList)
+	{
+		immContext->ExecuteCommandList(result.commandList.Get(), FALSE);
+	}
 }
 
 uint32_t GetBytesPerPixel(DXGI_FORMAT format)

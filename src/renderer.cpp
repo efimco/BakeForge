@@ -47,8 +47,8 @@ Renderer::Renderer(const HWND& hwnd)
 		}
 	}
 #endif
-	m_device = std::make_unique<DXDevice>(hwnd);
-	m_shaderManager = std::make_unique<ShaderManager>(m_device->getDevice());
+	m_dxDevice = std::make_unique<DXDevice>(hwnd);
+	m_shaderManager = std::make_unique<ShaderManager>(m_dxDevice->getDevice());
 
 	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
 	m_camera = std::make_unique<Camera>(cameraPosition);
@@ -56,28 +56,28 @@ Renderer::Renderer(const HWND& hwnd)
 	m_view = m_camera->getViewMatrix();
 
 	m_prevTime = std::chrono::system_clock::now();
-	m_scene = std::make_unique<Scene>("Main Scene");
+	m_scene = std::make_unique<Scene>("Main Scene", m_dxDevice->getDevice());
 	auto pointLight = std::make_unique<Light>(POINT_LIGHT, glm::vec3(0.0f, 1.0f, 1.0f));
 	m_scene->addChild(std::move(pointLight));
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
 
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
-	m_zPrePass = std::make_unique<ZPrePass>(m_device->getDevice(), m_device->getContext());
-	m_gBuffer = std::make_unique<GBuffer>(m_device->getDevice(), m_device->getContext());
-	m_objectPicker = std::make_unique<ObjectPicker>(m_device->getDevice(), m_device->getContext());
-	m_fsquad = std::make_unique<FSQuad>(m_device->getDevice(), m_device->getContext());
-	m_deferredPass = std::make_unique<DeferredPass>(m_device->getDevice(), m_device->getContext());
-	m_cubeMapPass = std::make_unique<CubeMapPass>(m_device->getDevice(), m_device->getContext(),
+	m_zPrePass = std::make_unique<ZPrePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_gBuffer = std::make_unique<GBuffer>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_objectPicker = std::make_unique<ObjectPicker>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_fsquad = std::make_unique<FSQuad>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_deferredPass = std::make_unique<DeferredPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(),
 		"..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
-	m_previewGenerator = std::make_unique<PreviewGenerator>(m_device->getDevice(), m_device->getContext());
-	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_device->getDevice(), m_device->getContext());
-	m_rayTracePass = std::make_unique<RayTracePass>(m_device->getDevice(), m_device->getContext());
-	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_device->getDevice(), m_device->getContext());
-	m_bakerPass = std::make_unique<BakerPass>(m_device->getDevice(), m_device->getContext());
+	m_previewGenerator = std::make_unique<PreviewGenerator>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 
 
-	m_uiManager = std::make_unique<UIManager>(m_device->getDevice(), m_device->getContext(), hwnd);
+	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hwnd);
 	resize();
 }
 
@@ -92,7 +92,7 @@ void Renderer::draw()
 #ifdef _DEBUG
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
-		m_rdocAPI->StartFrameCapture(m_device->getDevice().Get(), nullptr);
+		m_rdocAPI->StartFrameCapture(m_dxDevice->getDevice().Get(), nullptr);
 	}
 #endif
 	if (AppConfig::needsResize)
@@ -112,7 +112,7 @@ void Renderer::draw()
 	}
 
 	// --- CPU Updates ---
-	m_scene->updateAsyncImport();
+	m_scene->updateState();
 	const std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;
@@ -123,15 +123,16 @@ void Renderer::draw()
 	const auto vWidth = static_cast<float>(AppConfig::viewportWidth);
 	const auto vHeight = static_cast<float>(AppConfig::viewportHeight);
 	const float aspectRatio = vWidth / vHeight;
-	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov), aspectRatio, 0.1f, 100.0f);
+	m_projection = glm::perspectiveLH(glm::radians(m_scene->getActiveCamera()->fov),
+		aspectRatio,
+		m_scene->getActiveCamera()->nearPlane,
+		m_scene->getActiveCamera()->farPlane);
+
 	static int frameCount = 0;
 	if (++frameCount % 60 == 0) // Check every 60 frames
 	{
 		m_shaderManager->checkForChanges();
 	}
-
-	// Process any pending bake requests (deferred from UI)
-	m_scene->processPendingBakes();
 
 	// --- GPU Work ---
 	m_zPrePass->draw(m_view, m_projection, m_scene.get());
@@ -148,19 +149,19 @@ void Renderer::draw()
 		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
 #if DRAW_DEBUG_BVH
-m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
+	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
 #endif
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 
-	m_device->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
-	m_device->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::clearColor);
-	m_device->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	m_device->getContext()->RSSetState(m_rasterizerState.Get());
-	m_device->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
+	m_dxDevice->getContext()->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
+	m_dxDevice->getContext()->ClearRenderTargetView(m_backBufferRTV.Get(), AppConfig::clearColor);
+	m_dxDevice->getContext()->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	m_dxDevice->getContext()->RSSetState(m_rasterizerState.Get());
+	m_dxDevice->getContext()->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
 	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
-	m_device->getSwapChain()->Present(0, 0);
+	m_dxDevice->getSwapChain()->Present(0, 0);
 #ifdef _DEBUG
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
@@ -190,16 +191,16 @@ void Renderer::resize()
 	m_depthStencilBuffer.Reset();
 	m_depthStencilView.Reset();
 
-	m_device->getSwapChain()->ResizeBuffers(0, AppConfig::windowWidth, AppConfig::windowHeight,
+	m_dxDevice->getSwapChain()->ResizeBuffers(0, AppConfig::windowWidth, AppConfig::windowHeight,
 		DXGI_FORMAT_UNKNOWN, 0);
 
 	{
-		const HRESULT hr = m_device->getSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer);
+		const HRESULT hr = m_dxDevice->getSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
 	{
-		const HRESULT hr = m_device->getDevice()->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_backBufferRTV);
+		const HRESULT hr = m_dxDevice->getDevice()->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_backBufferRTV);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -217,7 +218,7 @@ void Renderer::resize()
 		depthBufferDesc.CPUAccessFlags = 0;
 		depthBufferDesc.MiscFlags = 0;
 
-		const HRESULT hr = m_device->getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &m_depthStencilBuffer);
+		const HRESULT hr = m_dxDevice->getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &m_depthStencilBuffer);
 		assert(SUCCEEDED(hr));
 	}
 	{
@@ -226,7 +227,7 @@ void Renderer::resize()
 		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-		const HRESULT hr = m_device->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(),
+		const HRESULT hr = m_dxDevice->getDevice()->CreateDepthStencilView(m_depthStencilBuffer.Get(),
 			&depthStencilViewDesc, &m_depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
@@ -239,5 +240,5 @@ void Renderer::resize()
 	viewport.MaxDepth = 1.0f;
 	viewport.MinDepth = 0.0f;
 
-	m_device->getContext()->RSSetViewports(1, &viewport);
+	m_dxDevice->getContext()->RSSetViewports(1, &viewport);
 }
