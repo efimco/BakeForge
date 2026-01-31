@@ -113,6 +113,17 @@ void Primitive::fillTriangles()
 	createGPUBuffers();
 }
 
+BVH::BBox Primitive::getWorldBBox()
+{
+	BVH::BBox bbox = m_sharedData->bvhNodes[0].bbox;
+	for (int i = 0; i < 3; ++i)
+	{
+		bbox.min[i] += transform.position[i];
+		bbox.max[i] += transform.position[i];
+	}
+	return bbox;
+}
+
 void Primitive::computeTangents()
 {
 	const auto& indices = getIndexData();

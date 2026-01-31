@@ -49,6 +49,8 @@ public:
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
 	void fillTriangles();
 
+	BVH::BBox getWorldBBox();
+
 	bool isVisible = true;
 
 	const std::vector<uint32_t>& getIndexData() const;
