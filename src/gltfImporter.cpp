@@ -193,7 +193,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			size_t meshIndex = &mesh - &model.meshes[0];
 			Transform transform = getTransformFromNode(meshIndex, model);
 			auto primitive = std::make_unique<Primitive>(m_device);
-			
+
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
 
@@ -208,7 +208,7 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 			else
 			{
 				primitive->material = std::make_shared<Material>();
-				
+
 				primitive->material->name = primitive->name + "_defmat";
 				if (m_scene)
 				{
@@ -493,13 +493,15 @@ Transform GLTFModel::getTransformFromNode(const size_t meshIndex, const tinygltf
 	}
 
 	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
-	if (node.rotation.size() != 0)
+	if (node.rotation.size() >= 4)
 	{
-		const glm::quat quatRot(static_cast<float>(node.rotation[3]),
-			static_cast<float>(node.rotation[0]),
-			static_cast<float>(node.rotation[1]),
-			static_cast<float>(node.rotation[2]));
-		transform.rotation = glm::eulerAngles(quatRot);
+		const glm::quat quatRot(
+			static_cast<float>(node.rotation[3]),  // w
+			static_cast<float>(node.rotation[0]),  // x
+			static_cast<float>(node.rotation[1]),  // y
+			static_cast<float>(node.rotation[2])); // z
+
+		transform.rotation = glm::degrees(glm::eulerAngles(quatRot));
 	}
 
 	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
