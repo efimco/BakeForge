@@ -62,7 +62,7 @@ bool IntersectTri(Ray ray, Tri tri, inout float t, out float2 baryOut)
 		return false;
 
 	float hitT = dot(edge2, qvec) * invDet;
-	if (hitT > 0.0f && hitT < t)
+	if (hitT > 0.0001f && hitT < t)
 	{
 		t = hitT;
 		baryOut = float2(u, v);

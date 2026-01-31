@@ -32,12 +32,13 @@ public:
 
 	std::string name = "Baker Pass";
 
-	void bake(uint32_t width, uint32_t height, float cageOffset);
+	void bake(uint32_t width, uint32_t height, float cageOffset, uint32_t useSmoothedNormals);
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
 	void setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs);
 	std::vector<std::pair<Primitive*, Primitive*>> getPrimitivesToBake() const { return m_primitivePairs; }
-	std::string path = "";
+	std::string directory = "";
+	std::string filename = "";
 
 private:
 	uint32_t m_lastWidth = 0;
@@ -54,14 +55,23 @@ private:
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 
 	float m_cageOffset = 0.1f;
+	uint32_t m_useSmoothedNormals = 0;
 
-	ComPtr<ID3D11Texture2D> m_worldSpaceTexelPositionTexture;
-	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelPositionSRV;
-	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelPositionUAV;
+	ComPtr<ID3D11Texture2D> m_wsTexelPositionTexture;
+	ComPtr<ID3D11ShaderResourceView> m_wsTexelPositionSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_wsTexelPositionUAV;
 
-	ComPtr<ID3D11Texture2D> m_worldSpaceTexelNormalTexture;
-	ComPtr<ID3D11ShaderResourceView> m_worldSpaceTexelNormalSRV;
-	ComPtr<ID3D11UnorderedAccessView> m_worldSpaceTexelNormalUAV;
+	ComPtr<ID3D11Texture2D> m_wsTexelNormalTexture;
+	ComPtr<ID3D11ShaderResourceView> m_wsTexelNormalSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_wsTexelNormalUAV;
+
+	ComPtr<ID3D11Texture2D> m_wsTexelTangentTexture;
+	ComPtr<ID3D11ShaderResourceView> m_wsTexelTangentSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_wsTexelTangentUAV;
+
+	ComPtr<ID3D11Texture2D> m_wsTexelSmoothedNormalTexture;
+	ComPtr<ID3D11ShaderResourceView> m_wsTexelSmoothedNormalSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_wsTexelSmoothedNormalUAV;
 
 	ComPtr<ID3D11Texture2D> m_bakedNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_bakedNormalSRV;
@@ -82,8 +92,10 @@ private:
 	ComPtr<ID3D11Query> m_endQuery;
 
 	// UV Rasterization resources
-	ComPtr<ID3D11RenderTargetView> m_worldSpaceTexelPositionRTV;
-	ComPtr<ID3D11RenderTargetView> m_worldSpaceTexelNormalRTV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelPositionRTV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelNormalRTV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelTangentRTV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelSmoothedNormalRTV;
 	ComPtr<ID3D11InputLayout> m_uvRasterInputLayout;
 	ComPtr<ID3D11RasterizerState> m_uvRasterRasterizerState;
 	ComPtr<ID3D11DepthStencilState> m_uvRasterDepthStencilState;

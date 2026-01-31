@@ -148,7 +148,7 @@ void Renderer::draw()
 		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
 
 #if DRAW_DEBUG_BVH
-	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
+m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);
 #endif
 	m_fsquad->draw(m_deferredPass->getFinalSRV());
 

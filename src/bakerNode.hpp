@@ -48,6 +48,7 @@ public:
 
 	uint32_t textureWidth;
 	float cageOffset;
+	uint32_t useSmoothedNormals;
 
 private:
 	void updateState();

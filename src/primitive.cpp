@@ -21,22 +21,6 @@ void Primitive::setVertexData(std::vector<Vertex>&& vertexData) const
 
 	m_sharedData->vertexData = std::move(vertexData);
 	const auto numVerts = m_sharedData->vertexData.size();
-
-	D3D11_BUFFER_DESC vertexBufferDesc = {};
-	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	vertexBufferDesc.ByteWidth = static_cast<UINT>(numVerts * sizeof(Vertex));
-	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags = 0;
-	vertexBufferDesc.MiscFlags = 0;
-	vertexBufferDesc.StructureByteStride = 0;
-
-	D3D11_SUBRESOURCE_DATA vertexSubresourceData;
-	vertexSubresourceData.pSysMem = m_sharedData->vertexData.data();
-	vertexSubresourceData.SysMemPitch = 0;
-	vertexSubresourceData.SysMemSlicePitch = 0;
-
-	HRESULT hr = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &m_sharedData->vertexBuffer);
-	assert(SUCCEEDED(hr));
 }
 
 void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
@@ -124,7 +108,94 @@ void Primitive::fillTriangles()
 			&m_sharedData->srv_structuredTrisIndicesBuffer);
 		assert(SUCCEEDED(hr));
 	}
+	computeTangents();
+	computeSmoothNormals();
+	createGPUBuffers();
 }
+
+void Primitive::computeTangents()
+{
+	const auto& indices = getIndexData();
+
+	for (auto& v : m_sharedData->vertexData)
+	{
+		v.tangent = glm::vec3(0.0f);
+	}
+
+	for (size_t i = 0; i < indices.size(); i += 3)
+	{
+		uint32_t i0 = indices[i];
+		uint32_t i1 = indices[i + 1];
+		uint32_t i2 = indices[i + 2];
+
+		const glm::vec3& p0 = m_sharedData->vertexData[i0].position;
+		const glm::vec3& p1 = m_sharedData->vertexData[i1].position;
+		const glm::vec3& p2 = m_sharedData->vertexData[i2].position;
+
+		const glm::vec2& uv0 = m_sharedData->vertexData[i0].texCoords;
+		const glm::vec2& uv1 = m_sharedData->vertexData[i1].texCoords;
+		const glm::vec2& uv2 = m_sharedData->vertexData[i2].texCoords;
+
+		glm::vec3 edge1 = p1 - p0;
+		glm::vec3 edge2 = p2 - p0;
+		glm::vec2 deltaUV1 = uv1 - uv0;
+		glm::vec2 deltaUV2 = uv2 - uv0;
+
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y + 1e-8f);
+
+		glm::vec3 tangent;
+		tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		m_sharedData->vertexData[i0].tangent += tangent;
+		m_sharedData->vertexData[i1].tangent += tangent;
+		m_sharedData->vertexData[i2].tangent += tangent;
+	}
+
+	// Normalize and orthogonalize
+	for (auto& v : m_sharedData->vertexData)
+	{
+		v.tangent = glm::normalize(v.tangent);
+		// Gram-Schmidt orthogonalize
+		v.tangent = glm::normalize(v.tangent - v.normal * glm::dot(v.normal, v.tangent));
+	}
+}
+
+void Primitive::computeSmoothNormals()
+{
+	// Map from position to accumulated normal
+	std::unordered_map<size_t, glm::vec3> positionToNormal;
+
+	auto hashPos = [](const glm::vec3& p) -> size_t {
+		// Quantize to avoid floating point issues
+		int x = static_cast<int>(p.x * 10000.0f);
+		int y = static_cast<int>(p.y * 10000.0f);
+		int z = static_cast<int>(p.z * 10000.0f);
+		return std::hash<int>()(x) ^ (std::hash<int>()(y) << 1) ^ (std::hash<int>()(z) << 2);
+		};
+
+	// Accumulate normals by position
+	for (const auto& v : m_sharedData->vertexData)
+	{
+		size_t key = hashPos(v.position);
+		positionToNormal[key] += v.normal;
+	}
+
+	// Normalize accumulated normals
+	for (auto& [key, normal] : positionToNormal)
+	{
+		normal = glm::normalize(normal);
+	}
+
+	// Assign smoothed normals back to vertices
+	for (auto& v : m_sharedData->vertexData)
+	{
+		size_t key = hashPos(v.position);
+		v.smoothNormal = positionToNormal[key];
+	}
+}
+
 
 void Primitive::buildBVH()
 {
@@ -134,6 +205,21 @@ void Primitive::buildBVH()
 	// auto stats = BVH::BVHBuilder::CalculateStats(m_sharedData->bvhNodes);
 	// std::cout << "BVH for: " << name << std::endl;
 	// BVH::BVHBuilder::PrintStats(stats);
+}
+
+void Primitive::createGPUBuffers()
+{
+	D3D11_BUFFER_DESC vertexBufferDesc = {};
+	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	vertexBufferDesc.ByteWidth = static_cast<UINT>(m_sharedData->vertexData.size() * sizeof(Vertex));
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA vertexSubresourceData = {};
+	vertexSubresourceData.pSysMem = m_sharedData->vertexData.data();
+
+	m_sharedData->vertexBuffer.Reset();
+	HRESULT hr = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &m_sharedData->vertexBuffer);
+	assert(SUCCEEDED(hr));
 }
 
 

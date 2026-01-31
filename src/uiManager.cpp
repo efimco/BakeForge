@@ -1153,7 +1153,17 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	ImGui::SameLine();
 	if (material->albedo)
 	{
-		ImGui::Image(material->albedo->srv.Get(), ImVec2(128, 128));
+		if (ImGui::ImageButton("##Albedo", material->albedo->srv.Get(), ImVec2(128, 128)))
+		{
+			std::string selectedFile = openFileDialog(FileType::IMAGE);
+			if (!selectedFile.empty())
+			{
+				std::shared_ptr<Texture> newAlbedo = std::make_shared<Texture>(selectedFile, m_device);
+				m_scene->addTexture(newAlbedo);
+				material->albedo = newAlbedo;
+				material->needsPreviewUpdate = true;
+			}
+		}
 	}
 	ImGui::Text("Albedo Color: ");
 	ImGui::SameLine();
@@ -1168,7 +1178,17 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	ImGui::Checkbox("##Use MetallicRoughness", &material->useMetallicRoughness);
 	if (material->metallicRoughness)
 	{
-		ImGui::Image(material->metallicRoughness->srv.Get(), ImVec2(128, 128));
+		if (ImGui::ImageButton("##MetallicRoughness", material->metallicRoughness->srv.Get(), ImVec2(128, 128)))
+		{
+			std::string selectedFile = openFileDialog(FileType::IMAGE);
+			if (!selectedFile.empty())
+			{
+				std::shared_ptr<Texture> newMetallicRoughness = std::make_shared<Texture>(selectedFile, m_device);
+				m_scene->addTexture(newMetallicRoughness);
+				material->metallicRoughness = newMetallicRoughness;
+				material->needsPreviewUpdate = true;
+			}
+		}
 	}
 	if (ImGui::DragFloat("Metallic", &material->metallicValue, 0.01f, 0.0f, 1.0f))
 	{
@@ -1184,10 +1204,20 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	ImGui::Text("Normal: ");
 	ImGui::Checkbox("##Use Normal", &material->useNormal);
 	ImGui::SameLine();
-	if (material->normal)
+	ImTextureRef normalTex = material->normal ? material->normal->srv.Get() : nullptr;
+
+	if (ImGui::ImageButton("##Normal", normalTex, ImVec2(128, 128)))
 	{
-		ImGui::Image(material->normal->srv.Get(), ImVec2(128, 128));
+		std::string selectedFile = openFileDialog(FileType::IMAGE);
+		if (!selectedFile.empty())
+		{
+			std::shared_ptr<Texture> newNormal = std::make_shared<Texture>(selectedFile, m_device);
+			m_scene->addTexture(newNormal);
+			material->normal = newNormal;
+			material->needsPreviewUpdate = true;
+		}
 	}
+
 }
 
 void UIManager::showLightProperties(Light* light) const
@@ -1221,30 +1251,33 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 		constexpr uint32_t maxVal = 4096;
 		ImGui::Text("Baking Settings:");
 		ImGui::DragFloat("Cage Offset", &bakerNode->cageOffset, 0.01f, 0.0f, 10.0f);
+		bool checkboxValue = bakerNode->useSmoothedNormals;
+		if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
+		{
+			bakerNode->useSmoothedNormals = checkboxValue;
+		}
 		ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &bakerNode->textureWidth, 2.0f, &minVal, &maxVal);
 		for (auto& pass : bakerNode->getPasses())
 		{
-			ImGui::PushID(pass->name.c_str());
+			ImGui::PushID(pass);
 			ImGui::Text("%s", pass->name.c_str());
 
-			std::string fullPath = pass->path;
-			std::string directory;
-			std::string filename;
+			std::string fullPath = pass->directory + "\\" + pass->filename;
 
 			size_t lastSlash = fullPath.find_last_of("\\/");
 			if (lastSlash != std::string::npos)
 			{
-				directory = fullPath.substr(0, lastSlash);
-				filename = fullPath.substr(lastSlash + 1);
+				pass->directory = fullPath.substr(0, lastSlash);
+				pass->filename = fullPath.substr(lastSlash + 1);
 			}
 			else
 			{
-				filename = fullPath;
+				pass->filename = fullPath;
 			}
 
 			// Directory input with browse button
 			char dirBuffer[260];
-			strcpy_s(dirBuffer, directory.c_str());
+			strcpy_s(dirBuffer, pass->directory.c_str());
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 30.0f);
 			bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
 			ImGui::SameLine();
@@ -1260,7 +1293,7 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 
 			// Filename input
 			char nameBuffer[260];
-			strcpy_s(nameBuffer, filename.c_str());
+			strcpy_s(nameBuffer, pass->filename.c_str());
 			bool nameChanged = ImGui::InputText("Filename", nameBuffer, sizeof(nameBuffer));
 
 
@@ -1270,15 +1303,16 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 				std::string newName = nameBuffer;
 				if (!newDir.empty() && !newName.empty())
 				{
-					pass->path = newDir + "\\" + newName;
+					pass->directory = newDir;
+					pass->filename = newName;
 				}
 				else if (!newName.empty())
 				{
-					pass->path = newName;
+					pass->filename = newName;
 				}
 				else
 				{
-					pass->path = newDir;
+					pass->directory = newDir;
 				}
 			}
 

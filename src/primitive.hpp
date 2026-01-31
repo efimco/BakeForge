@@ -44,6 +44,7 @@ public:
 	Primitive& operator=(const Primitive&) = delete;
 	Primitive& operator=(Primitive&&) = delete;
 
+
 	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;
 	void fillTriangles();
@@ -68,7 +69,10 @@ public:
 	std::shared_ptr<Material> material;
 
 private:
+	void computeTangents();
+	void computeSmoothNormals();
 	void buildBVH();
+	void createGPUBuffers();
 	std::shared_ptr<SharedPrimitiveData> m_sharedData;
 	ComPtr<ID3D11Device> m_device;
 };

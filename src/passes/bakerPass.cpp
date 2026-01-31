@@ -21,7 +21,7 @@ struct alignas(16) BakerCB
 	glm::mat4 worldMatrixInvTranspose;
 	glm::uvec2 dimensions;
 	float cageOffset;
-	float padding;
+	uint32_t useSmoothedNormals;
 };
 
 struct alignas(16) RaycastVisCB
@@ -30,6 +30,15 @@ struct alignas(16) RaycastVisCB
 	glm::uvec2 textureDimensions;
 	float rayLength;
 	float padding;
+};
+
+// input layout for UV 	ization (matches Vertex struct)
+static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"NORMAL", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 };
 
 
@@ -56,12 +65,6 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_uvRasterRasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_uvRasterDepthStencilState = createDSState(DepthStencilPreset::Disabled);
 
-	// input layout for UV rasterization (matches Vertex struct)
-	static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	};
 	m_device->CreateInputLayout(uvRasterInputLayoutDesc, ARRAYSIZE(uvRasterInputLayoutDesc),
 		m_shaderManager->getVertexShaderBlob("uvRasterize")->GetBufferPointer(),
 		m_shaderManager->getVertexShaderBlob("uvRasterize")->GetBufferSize(),
@@ -79,9 +82,9 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 
 }
 
-void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
+void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t useSmoothedNormals)
 {
-	if (path.empty())
+	if (directory.empty() || filename.empty())
 	{
 		std::cerr << "BakerPass::bake: No output path specified!" << std::endl;
 		return;
@@ -90,7 +93,7 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset)
 	m_lastWidth = width;
 	m_lastHeight = height;
 	m_cageOffset = cageOffset;
-
+	m_useSmoothedNormals = useSmoothedNormals;
 	createInterpolatedTexturesResources();
 	createBakedNormalResources();
 	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
@@ -129,8 +132,8 @@ void BakerPass::drawRaycastVisualization(const glm::mat4& view, const glm::mat4&
 	m_context->VSSetShader(m_shaderManager->getVertexShader("raycastDebug"), nullptr, 0);
 	m_context->PSSetShader(m_shaderManager->getPixelShader("raycastDebug"), nullptr, 0);
 	m_context->VSSetConstantBuffers(0, 1, m_raycastConstantBuffer.GetAddressOf());
-	m_context->VSSetShaderResources(0, 1, m_worldSpaceTexelPositionSRV.GetAddressOf());
-	m_context->VSSetShaderResources(1, 1, m_worldSpaceTexelNormalSRV.GetAddressOf());
+	m_context->VSSetShaderResources(0, 1, m_wsTexelPositionSRV.GetAddressOf());
+	m_context->VSSetShaderResources(1, 1, m_wsTexelNormalSRV.GetAddressOf());
 	m_context->DrawInstanced(2, numInstances, 0, 0);
 
 	ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
@@ -211,18 +214,24 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 		data->worldMatrix = glm::transpose(lowPoly->getWorldMatrix());
 		data->worldMatrixInvTranspose = glm::inverse(lowPoly->getWorldMatrix());
 		data->cageOffset = m_cageOffset;
+		data->useSmoothedNormals = m_useSmoothedNormals;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	m_context->ClearRenderTargetView(m_worldSpaceTexelPositionRTV.Get(), clearColor);
-	m_context->ClearRenderTargetView(m_worldSpaceTexelNormalRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelPositionRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelNormalRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelTangentRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelSmoothedNormalRTV.Get(), clearColor);
 
 	setViewport(m_lastWidth, m_lastHeight);
 
-	ID3D11RenderTargetView* rtvs[2] = { m_worldSpaceTexelPositionRTV.Get(), m_worldSpaceTexelNormalRTV.Get() };
-	m_context->OMSetRenderTargets(2, rtvs, nullptr);
+	ID3D11RenderTargetView* rtvs[4] = { m_wsTexelPositionRTV.Get(),
+		 m_wsTexelNormalRTV.Get(),
+		 m_wsTexelTangentRTV.Get(),
+		 m_wsTexelSmoothedNormalRTV.Get() };
+	m_context->OMSetRenderTargets(4, rtvs, nullptr);
 
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_context->IASetInputLayout(m_uvRasterInputLayout.Get());
@@ -242,7 +251,7 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 
 	m_context->DrawIndexed(static_cast<UINT>(lowPoly->getIndexData().size()), 0, 0);
 
-	unbindRenderTargets(2);
+	unbindRenderTargets(4);
 
 	endDebugEvent();
 
@@ -284,19 +293,21 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 	ID3D11UnorderedAccessView* bakedNormalUAVs[1] = { m_bakedNormalUAV.Get() };
 	m_context->CSSetUnorderedAccessViews(0, 1, bakedNormalUAVs, nullptr);
-	ID3D11ShaderResourceView* hpSRVs[5] = {
+	ID3D11ShaderResourceView* hpSRVs[7] = {
 		hpBuffers.srv_triangleBuffer.Get(),
 		hpBuffers.srv_triangleIndicesBuffer.Get(),
 		hpBuffers.bvhNodesSRV.Get(),
-		m_worldSpaceTexelPositionSRV.Get(),
-		m_worldSpaceTexelNormalSRV.Get()
+		m_wsTexelPositionSRV.Get(),
+		m_wsTexelNormalSRV.Get(),
+		m_wsTexelTangentSRV.Get(),
+		m_wsTexelSmoothedNormalSRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 5, hpSRVs);
+	m_context->CSSetShaderResources(0, 7, hpSRVs);
 	UINT threadGroupX = (m_lastWidth + 15) / 16;
 	UINT threadGroupY = (m_lastHeight + 15) / 16;
 	m_context->Dispatch(threadGroupX, threadGroupY, 1);
 	unbindComputeUAVs(0, 1);
-	unbindShaderResources(0, 5);
+	unbindShaderResources(0, 7);
 
 	endDebugEvent();
 
@@ -325,6 +336,8 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 
 void BakerPass::saveToTextureFile()
 {
+	std::string fullPath = directory + "\\" + filename;
+	std::cout << "Saving baked normal texture to: " << fullPath << std::endl;
 	DirectX::ScratchImage image;
 	if (FAILED(DirectX::CaptureTexture(m_device.Get(), m_context.Get(),
 		m_bakedNormalTexture.Get(), image)))
@@ -332,24 +345,24 @@ void BakerPass::saveToTextureFile()
 		std::cerr << "Failed to capture texture for saving." << std::endl;
 		return;
 	}
-	if (path.ends_with(".png"))
+	if (filename.ends_with(".png"))
 	{
 		HRESULT hr = DirectX::SaveToWICFile(
 			*image.GetImage(0, 0, 0),
 			DirectX::WIC_FLAGS_NONE,
 			DirectX::GetWICCodec(DirectX::WIC_CODEC_PNG),
-			std::wstring(path.begin(), path.end()).c_str());
+			std::wstring(fullPath.begin(), fullPath.end()).c_str());
 	}
-	else if (path.ends_with(".tga"))
+	else if (filename.ends_with(".tga"))
 	{
 		HRESULT hr = DirectX::SaveToTGAFile(
 			*image.GetImage(0, 0, 0),
 			DirectX::TGA_FLAGS_NONE,
-			std::wstring(path.begin(), path.end()).c_str());
+			std::wstring(fullPath.begin(), fullPath.end()).c_str());
 	}
 	else
 	{
-		std::cerr << "Unsupported file format for saving texture: " << path << std::endl;
+		std::cerr << "Unsupported file format for saving texture: " << filename << std::endl;
 	}
 }
 
@@ -368,32 +381,54 @@ void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat
 
 void BakerPass::createInterpolatedTexturesResources()
 {
-	if (m_worldSpaceTexelPositionTexture != nullptr)
+	if (m_wsTexelPositionTexture != nullptr)
 	{
-		m_worldSpaceTexelPositionTexture.Reset();
-		m_worldSpaceTexelPositionSRV.Reset();
-		m_worldSpaceTexelPositionUAV.Reset();
-		m_worldSpaceTexelPositionRTV.Reset();
+		m_wsTexelPositionTexture.Reset();
+		m_wsTexelPositionSRV.Reset();
+		m_wsTexelPositionUAV.Reset();
+		m_wsTexelPositionRTV.Reset();
 
-		m_worldSpaceTexelNormalTexture.Reset();
-		m_worldSpaceTexelNormalSRV.Reset();
-		m_worldSpaceTexelNormalUAV.Reset();
-		m_worldSpaceTexelNormalRTV.Reset();
+		m_wsTexelNormalTexture.Reset();
+		m_wsTexelNormalSRV.Reset();
+		m_wsTexelNormalUAV.Reset();
+		m_wsTexelNormalRTV.Reset();
+
+		m_wsTexelTangentTexture.Reset();
+		m_wsTexelTangentSRV.Reset();
+		m_wsTexelTangentUAV.Reset();
+		m_wsTexelTangentRTV.Reset();
+
+		m_wsTexelSmoothedNormalTexture.Reset();
+		m_wsTexelSmoothedNormalSRV.Reset();
+		m_wsTexelSmoothedNormalUAV.Reset();
+		m_wsTexelSmoothedNormalRTV.Reset();
 	}
 
 	std::cout << "Creating interpolated textures of size: " << m_lastWidth << "x" << m_lastHeight << std::endl;
-	m_worldSpaceTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
-	m_worldSpaceTexelPositionSRV = createShaderResourceView(m_worldSpaceTexelPositionTexture.Get(), SRVPreset::Texture2D);
-	m_worldSpaceTexelPositionUAV = createUnorderedAccessView(m_worldSpaceTexelPositionTexture.Get(), UAVPreset::Texture2D, 0);
-	m_worldSpaceTexelPositionRTV = createRenderTargetView(m_worldSpaceTexelPositionTexture.Get(), RTVPreset::Texture2D);
+	m_wsTexelPositionTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+	m_wsTexelPositionSRV = createShaderResourceView(m_wsTexelPositionTexture.Get(), SRVPreset::Texture2D);
+	m_wsTexelPositionUAV = createUnorderedAccessView(m_wsTexelPositionTexture.Get(), UAVPreset::Texture2D, 0);
+	m_wsTexelPositionRTV = createRenderTargetView(m_wsTexelPositionTexture.Get(), RTVPreset::Texture2D);
 
-	m_worldSpaceTexelNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
-	m_worldSpaceTexelNormalSRV = createShaderResourceView(m_worldSpaceTexelNormalTexture.Get(), SRVPreset::Texture2D);
-	m_worldSpaceTexelNormalUAV = createUnorderedAccessView(m_worldSpaceTexelNormalTexture.Get(), UAVPreset::Texture2D, 0);
-	m_worldSpaceTexelNormalRTV = createRenderTargetView(m_worldSpaceTexelNormalTexture.Get(), RTVPreset::Texture2D);
+	m_wsTexelNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+	m_wsTexelNormalSRV = createShaderResourceView(m_wsTexelNormalTexture.Get(), SRVPreset::Texture2D);
+	m_wsTexelNormalUAV = createUnorderedAccessView(m_wsTexelNormalTexture.Get(), UAVPreset::Texture2D, 0);
+	m_wsTexelNormalRTV = createRenderTargetView(m_wsTexelNormalTexture.Get(), RTVPreset::Texture2D);
 
-	m_rtvCollector->addRTV(name + "::WorldSpaceTexelPosition", m_worldSpaceTexelPositionSRV.Get());
-	m_rtvCollector->addRTV(name + "::WorldSpaceTexelNormal", m_worldSpaceTexelNormalSRV.Get());
+	m_wsTexelTangentTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+	m_wsTexelTangentSRV = createShaderResourceView(m_wsTexelTangentTexture.Get(), SRVPreset::Texture2D);
+	m_wsTexelTangentUAV = createUnorderedAccessView(m_wsTexelTangentTexture.Get(), UAVPreset::Texture2D, 0);
+	m_wsTexelTangentRTV = createRenderTargetView(m_wsTexelTangentTexture.Get(), RTVPreset::Texture2D);
+
+	m_wsTexelSmoothedNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+	m_wsTexelSmoothedNormalSRV = createShaderResourceView(m_wsTexelSmoothedNormalTexture.Get(), SRVPreset::Texture2D);
+	m_wsTexelSmoothedNormalUAV = createUnorderedAccessView(m_wsTexelSmoothedNormalTexture.Get(), UAVPreset::Texture2D, 0);
+	m_wsTexelSmoothedNormalRTV = createRenderTargetView(m_wsTexelSmoothedNormalTexture.Get(), RTVPreset::Texture2D);
+
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelPosition", m_wsTexelPositionSRV.Get());
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelNormal", m_wsTexelNormalSRV.Get());
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelTangent", m_wsTexelTangentSRV.Get());
+	m_rtvCollector->addRTV(name + "::WorldSpaceTexelSmoothedNormal", m_wsTexelSmoothedNormalSRV.Get());
 }
 
 void BakerPass::createBakedNormalResources()

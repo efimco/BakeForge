@@ -28,6 +28,7 @@ Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPt
 	highPoly = std::make_unique<HighPolyNode>("HighPolyContainer");
 	textureWidth = 1024;
 	cageOffset = 0.1f;
+	useSmoothedNormals = 0;
 }
 
 void Baker::bake()
@@ -35,7 +36,7 @@ void Baker::bake()
 	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
 	{
 		std::cout << "Baking material: " << materialName << std::endl;
-		bakerPass->bake(textureWidth, textureWidth, cageOffset);
+		bakerPass->bake(textureWidth, textureWidth, cageOffset, useSmoothedNormals);
 	}
 }
 

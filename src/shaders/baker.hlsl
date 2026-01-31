@@ -6,6 +6,7 @@ cbuffer Constants : register(b0)
 	float4x4 worldMatrixInvTranspose;
 	uint2 dimensions;
 	float cageOffset;
+	uint useSmoothedNormals;
 };
 
 
@@ -16,6 +17,9 @@ StructuredBuffer<BVHNode> gNodes : register(t2);
 //ray origin/direction textures
 Texture2D<float4> gWorldSpacePositions : register(t3);
 Texture2D<float4> gWorldSpaceNormals : register(t4);
+Texture2D<float4> gWorldSpaceTangents : register(t5);
+Texture2D<float4> gWorldSpaceSmoothedNormals : register(t6);
+
 
 //this one is for baking output
 RWTexture2D<float4> oBakedNormal : register(u0);
@@ -85,21 +89,29 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 
 	float4 worldPos = gWorldSpacePositions.Load(int3(DTid.xy, 0));
 	float4 worldNormal = gWorldSpaceNormals.Load(int3(DTid.xy, 0));
+	float4 worldTangent = gWorldSpaceTangents.Load(int3(DTid.xy, 0));
+	float4 worldSmoothedNormal = gWorldSpaceSmoothedNormals.Load(int3(DTid.xy, 0));
 
-	if (worldPos.a == 0.0f) // i write alpha = 0 for invalid texels
+	float bestT = 1e20f;
+	float3 bestN = float3(0.5, 0.5f, 1.0f);
+
+	if (worldPos.a == 0.0f) // i clear alpha = 0 for invalid texels
+	{
+		bestN = pow(bestN, float3(2.2f, 2.2f, 2.2f)); // gamma correct
+		oBakedNormal[DTid.xy] = float4(bestN, 1.0f);
 		return;
+	}
+
 
 	Ray ray;
 	ray.origin = worldPos.xyz;
-	ray.dir = -normalize(worldNormal.xyz);
+	ray.dir = -normalize(useSmoothedNormals != 0 ? worldSmoothedNormal.xyz : worldNormal.xyz);
 	ray.origin -= ray.dir * cageOffset; // offset to avoid self-intersection
 	ray.invDir = 1.0f / ray.dir;
-	float bestT = cageOffset * 6.0f;
-	float3 bestN = 0.0f;
-	TraverseBVH(ray, bestT, bestN);
 
+	TraverseBVH(ray, bestT, bestN);
 	float3 N = normalize(worldNormal.xyz);
-	float3 T = normalize(cross(N, abs(N.y) < 0.999f ? float3(0, 1, 0) : float3(1, 0, 0)));
+	float3 T = normalize(worldTangent.xyz);
 	float3 B = cross(N, T); // build tangent frame from the low-poly normal
 
 
@@ -108,7 +120,9 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	tangentSpaceNormal.y = dot(bestN, B);
 	tangentSpaceNormal.z = dot(bestN, N);
 
+	tangentSpaceNormal = tangentSpaceNormal * 0.5f + 0.5f; // remap from [-1,1] to [0,1] for storage
+	tangentSpaceNormal = pow(tangentSpaceNormal, float3(2.2f, 2.2f, 2.2f)); // gamma correct
 
-	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal * 0.5f + 0.5f, 1.0f); // remap from [-1,1] to [0,1] for storage
+	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal, 1.0f); // remap from [-1,1] to [0,1] for storage
 
 }

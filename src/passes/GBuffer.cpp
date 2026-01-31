@@ -18,7 +18,9 @@
 static constexpr D3D11_INPUT_ELEMENT_DESC s_gBufferInputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0} };
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
 
 struct alignas(16) ConstantBufferData
 {
@@ -33,7 +35,7 @@ struct alignas(16) ConstantBufferData
 	uint32_t useAlbedoTexture;
 	uint32_t useMetallicRoughnessTexture;
 	uint32_t useNormalTexture;
-	float padding[3]; 
+	float padding[3];
 };
 
 GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)

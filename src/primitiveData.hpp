@@ -6,18 +6,22 @@
 using Position = glm::vec3;
 using Normal = glm::vec3;
 using TexCoords = glm::vec2;
+using Tangent = glm::vec3;
 
 struct Vertex
 {
 	Position position;
 	Normal normal;
 	TexCoords texCoords;
+	Tangent tangent;
+	Normal smoothNormal; // for normal baking
 	Vertex() = default;
 
-	Vertex(const Position position_, const Normal normal_, const TexCoords texCoords_)
+	Vertex(const Position position_, const Normal normal_, const TexCoords texCoords_, const Tangent tangent_)
 		: position(position_)
 		, normal(normal_)
-		, texCoords(texCoords_) {};
+		, texCoords(texCoords_)
+		, tangent(tangent_) {};
 };
 
 

@@ -27,6 +27,7 @@ struct VertexInput
 	float3 position : POSITION;
 	float3 normal : NORMAL;
 	float2 texCoord : TEXCOORD;
+	float3 tangent : TANGENT;
 };
 
 struct VertexOutput
@@ -34,6 +35,7 @@ struct VertexOutput
 	float4 position : SV_POSITION;
 	float2 texCoord : TEXCOORD;
 	float3 normal : NORMAL;
+	float3 tangent : TANGENT0;
 	float4 fragPos : NORMAL1;
 };
 
@@ -54,6 +56,7 @@ VertexOutput VS(VertexInput input)
 	output.fragPos = mul(float4(input.position, 1.0f), model);
 	output.texCoord = input.texCoord;
 	output.normal = normalize(mul((float3x3)inverseTransposedModel, input.normal));
+	output.tangent = normalize(mul((float3x3)inverseTransposedModel, input.tangent));
 	return output;
 }
 
@@ -64,13 +67,9 @@ float3 getNormalFromMap(VertexOutput input, bool hasNormalMap = true)
 		return input.normal;
 	// Invert Y for DirectX normal maps
 	tangentNormal.y = -tangentNormal.y;
-	float3 Q1 = ddx(input.fragPos.xyz);
-	float3 Q2 = ddy(input.fragPos.xyz);
-	float2 st1 = ddx(input.texCoord);
-	float2 st2 = ddy(input.texCoord);
 
 	float3 N = normalize(input.normal);
-	float3 T = normalize(Q1 * st2.y - Q2 * st1.y);
+	float3 T = normalize(input.tangent);
 	T.y = -T.y;
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
