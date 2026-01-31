@@ -236,24 +236,29 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Open...", "Ctrl+O"))
 			{
-				const std::string filepath = openFileDialog(FileType::SCENE);
-				if (!filepath.empty())
+				const FileDialogResult result = openFileDialog(FileType::SCENE);
+				if (result)
 				{
-					m_scene->loadScene(filepath);
+					m_scene->loadScene(result.fullPath);
 					std::cout << "Open scene triggered from menu\n";
 				}
 			}
 			if (ImGui::MenuItem("Save", "Ctrl+S"))
 			{
-				m_scene->saveScene("scene.ttdx");
+				const FileDialogResult result = openFileDialog(FileType::SCENE, true);
+				if (result)
+				{
+					m_scene->saveScene(result.fullPath);
+					std::cout << "Save scene triggered from menu\n";
+				}
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Import Model...", "Ctrl+I"))
 			{
-				const std::string filepath = openFileDialog(FileType::MODEL);
-				if (!filepath.empty())
+				const FileDialogResult result = openFileDialog(FileType::MODEL);
+				if (result)
 				{
-					m_scene->importModel(filepath, m_device);
+					m_scene->importModel(result.fullPath, m_device);
 					std::cout << "Import model triggered from menu\n";
 					m_importProgress = m_scene->getImportProgress();
 				}
@@ -1155,10 +1160,10 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	{
 		if (ImGui::ImageButton("##Albedo", material->albedo->srv.Get(), ImVec2(128, 128)))
 		{
-			std::string selectedFile = openFileDialog(FileType::IMAGE);
-			if (!selectedFile.empty())
+			FileDialogResult result = openFileDialog(FileType::IMAGE);
+			if (result)
 			{
-				std::shared_ptr<Texture> newAlbedo = std::make_shared<Texture>(selectedFile, m_device);
+				std::shared_ptr<Texture> newAlbedo = std::make_shared<Texture>(result.fullPath, m_device);
 				m_scene->addTexture(newAlbedo);
 				material->albedo = newAlbedo;
 				material->needsPreviewUpdate = true;
@@ -1180,10 +1185,10 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 	{
 		if (ImGui::ImageButton("##MetallicRoughness", material->metallicRoughness->srv.Get(), ImVec2(128, 128)))
 		{
-			std::string selectedFile = openFileDialog(FileType::IMAGE);
-			if (!selectedFile.empty())
+			FileDialogResult result = openFileDialog(FileType::IMAGE);
+			if (result)
 			{
-				std::shared_ptr<Texture> newMetallicRoughness = std::make_shared<Texture>(selectedFile, m_device);
+				std::shared_ptr<Texture> newMetallicRoughness = std::make_shared<Texture>(result.fullPath, m_device);
 				m_scene->addTexture(newMetallicRoughness);
 				material->metallicRoughness = newMetallicRoughness;
 				material->needsPreviewUpdate = true;
@@ -1208,10 +1213,10 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 
 	if (ImGui::ImageButton("##Normal", normalTex, ImVec2(128, 128)))
 	{
-		std::string selectedFile = openFileDialog(FileType::IMAGE);
-		if (!selectedFile.empty())
+		FileDialogResult result = openFileDialog(FileType::IMAGE);
+		if (result)
 		{
-			std::shared_ptr<Texture> newNormal = std::make_shared<Texture>(selectedFile, m_device);
+			std::shared_ptr<Texture> newNormal = std::make_shared<Texture>(result.fullPath, m_device);
 			m_scene->addTexture(newNormal);
 			material->normal = newNormal;
 			material->needsPreviewUpdate = true;
@@ -1278,29 +1283,31 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 			// Directory input with browse button
 			char dirBuffer[260];
 			strcpy_s(dirBuffer, pass->directory.c_str());
-			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 30.0f);
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
 			bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
 			ImGui::SameLine();
 			if (ImGui::Button("..."))
 			{
-				std::string selectedDir = openFileDialog(FileType::UNKNOWN);
-				if (!selectedDir.empty())
+				FileDialogResult result = openFileDialog(FileType::UNKNOWN, true);
+				if (result)
 				{
-					strcpy_s(dirBuffer, selectedDir.c_str());
+					strcpy_s(dirBuffer, result.directory.c_str());
+					pass->filename = result.filename;
+					pass->directory = result.directory;
 					dirChanged = true;
 				}
 			}
 
 			// Filename input
-			char nameBuffer[260];
-			strcpy_s(nameBuffer, pass->filename.c_str());
-			bool nameChanged = ImGui::InputText("Filename", nameBuffer, sizeof(nameBuffer));
+			char fileNameBuffer[260];
+			strcpy_s(fileNameBuffer, pass->filename.c_str());
+			bool nameChanged = ImGui::InputText("Filename", fileNameBuffer, sizeof(fileNameBuffer));
 
 
 			if (dirChanged || nameChanged)
 			{
 				std::string newDir = dirBuffer;
-				std::string newName = nameBuffer;
+				std::string newName = fileNameBuffer;
 				if (!newDir.empty() && !newName.empty())
 				{
 					pass->directory = newDir;
@@ -1326,7 +1333,7 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 	}
 }
 
-std::string UIManager::openFileDialog(const FileType outFileType)
+FileDialogResult UIManager::openFileDialog(const FileType outFileType, bool saveFile)
 {
 	OPENFILENAME ofn;
 	char fileName[260] = { 0 };
@@ -1350,13 +1357,28 @@ std::string UIManager::openFileDialog(const FileType outFileType)
 	}
 	ofn.nFilterIndex = 1;
 	ofn.lpstrTitle = "Select a Texture";
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | (saveFile ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST);
 
-	// Open the dialog box
-	if (GetOpenFileNameA(&ofn) == TRUE)
+	bool success = saveFile ? GetSaveFileNameA(&ofn) == TRUE : GetOpenFileNameA(&ofn) == TRUE;
+
+	if (success)
 	{
-		return std::string(ofn.lpstrFile);
+		FileDialogResult result;
+		result.fullPath = std::string(ofn.lpstrFile);
+
+		size_t lastSlash = result.fullPath.find_last_of("\\/");
+		if (lastSlash != std::string::npos)
+		{
+			result.directory = result.fullPath.substr(0, lastSlash);
+			result.filename = result.fullPath.substr(lastSlash + 1);
+		}
+		else
+		{
+			result.filename = result.fullPath;
+		}
+
+		return result;
 	}
 
-	return std::string();
+	return FileDialogResult();
 }

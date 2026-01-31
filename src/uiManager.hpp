@@ -39,6 +39,16 @@ enum class FileType
 	SCENE
 };
 
+struct FileDialogResult
+{
+	std::string fullPath;
+	std::string directory;
+	std::string filename;
+
+	bool isEmpty() const { return fullPath.empty(); }
+	operator bool() const { return !isEmpty(); }
+};
+
 class UIManager
 {
 public:
@@ -46,7 +56,7 @@ public:
 	~UIManager();
 
 	void
-	draw(const ComPtr<ID3D11ShaderResourceView>& srv, Scene* scene, const glm::mat4& view, const glm::mat4& projection);
+		draw(const ComPtr<ID3D11ShaderResourceView>& srv, Scene* scene, const glm::mat4& view, const glm::mat4& projection);
 	uint32_t* getMousePos();
 
 private:
@@ -93,7 +103,7 @@ private:
 
 	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
 
-	static std::string openFileDialog(FileType outFileType);
+	static FileDialogResult openFileDialog(FileType outFileType, bool saveFile = false);
 
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
