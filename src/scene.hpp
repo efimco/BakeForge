@@ -37,7 +37,7 @@ public:
 	bool isNameUsed(std::string_view name) const;
 	uint32_t& getNameCounter(std::string_view name);
 
-	void addChild(std::unique_ptr<SceneNode>&& child) override;
+	void addChild(std::unique_ptr<SceneNode>&& child, int index = -1) override;
 
 	SceneUnorderedMap<Primitive*>& getPrimitives();
 	Primitive* getPrimitiveByID(size_t id);

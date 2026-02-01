@@ -38,7 +38,7 @@ namespace Command
 	class ReparentSceneNode final : public CommandBase
 	{
 	public:
-		ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent);
+		ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent, int index = -1);
 
 	protected:
 		std::unique_ptr<CommandBase> exec() override;
@@ -49,6 +49,7 @@ namespace Command
 		SceneNodeHandle m_oldParentHandle;
 		bool m_oldParentIsScene = false;
 		bool m_newParentIsScene = false;
+		int m_index = -1;
 	};
 
 };

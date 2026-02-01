@@ -869,15 +869,96 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 		ImGui::Text("%s", node->name.c_str());
 		ImGui::EndDragDropSource();
 	}
+
+	const ImVec2 itemMin = ImGui::GetItemRectMin();
+	const ImVec2 itemMax = ImGui::GetItemRectMax();
+	const float itemHeight = itemMax.y - itemMin.y;
+	const float mouseY = ImGui::GetMousePos().y;
+
+	const float upperThreshold = itemMin.y + itemHeight * 0.25f;
+	const float lowerThreshold = itemMax.y - itemHeight * 0.25f;
+
+	enum class DropZone { Above, AsChild, Below };
+	DropZone dropZone = DropZone::AsChild;
+
+	if (mouseY < upperThreshold)
+		dropZone = DropZone::Above;
+	else if (mouseY > lowerThreshold)
+		dropZone = DropZone::Below;
+
+	// If target is Scene (root), always treat as "AsChild" without position change
+	const bool targetIsScene = dynamic_cast<Scene*>(node) != nullptr;
+	if (targetIsScene)
+		dropZone = DropZone::AsChild;
+
 	if (ImGui::BeginDragDropTarget())
 	{
+		// Draw visual indicator for drop position (only for above/below)
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		const ImU32 lineColor = IM_COL32(100, 150, 255, 255);
+		const float lineThickness = 3.0f;
+
+		if (dropZone == DropZone::Above)
+		{
+			drawList->AddLine(ImVec2(itemMin.x, itemMin.y), ImVec2(itemMax.x, itemMin.y), lineColor, lineThickness);
+		}
+		else if (dropZone == DropZone::Below)
+		{
+			drawList->AddLine(ImVec2(itemMin.x, itemMax.y), ImVec2(itemMax.x, itemMax.y), lineColor, lineThickness);
+		}
+		else
+		{
+			drawList->AddRect(itemMin, itemMax, lineColor, 0.0f, 0, lineThickness);
+		}
+
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 		{
 			SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
 			if (draggedNode && draggedNode != node && draggedNode->parent)
 			{
-				auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, node);
-				m_commandManager->commitCommand(std::move(reparentSceneNode));
+				// Check we're not dropping a parent into its own child
+				SceneNode* checkParent = node->parent;
+				bool isDescendant = false;
+				while (checkParent)
+				{
+					if (checkParent == draggedNode)
+					{
+						isDescendant = true;
+						break;
+					}
+					checkParent = checkParent->parent;
+				}
+
+				if (!isDescendant)
+				{
+					if (dropZone == DropZone::AsChild)
+					{
+						auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, node);
+						m_commandManager->commitCommand(std::move(reparentSceneNode));
+					}
+					else
+					{
+						SceneNode* targetParent = node->parent;
+						if (targetParent)
+						{
+							int targetIndex = targetParent->getChildIndex(node);
+							if (dropZone == DropZone::Below)
+							{
+								targetIndex++;
+							}
+							if (draggedNode->parent == targetParent)
+							{
+								int draggedIndex = targetParent->getChildIndex(draggedNode);
+								if (draggedIndex < targetIndex)
+								{
+									targetIndex--;
+								}
+							}
+							auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetParent, targetIndex);
+							m_commandManager->commitCommand(std::move(reparentSceneNode));
+						}
+					}
+				}
 			}
 		}
 		ImGui::EndDragDropTarget();

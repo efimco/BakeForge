@@ -30,8 +30,9 @@ public:
 	virtual void copyFrom(const SceneNode& node);
 	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
-	virtual void addChild(std::unique_ptr<SceneNode>&& child);
+	virtual void addChild(std::unique_ptr<SceneNode>&& child, int index = -1);
 	virtual void clearChildren();
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
+	int getChildIndex(SceneNode* child) const;
 	glm::mat4 getWorldMatrix();
 };

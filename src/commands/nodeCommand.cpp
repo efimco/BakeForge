@@ -42,7 +42,7 @@ namespace Command
 		return createCommand;
 	}
 
-	ReparentSceneNode::ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent)
+	ReparentSceneNode::ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent, int index)
 	{
 		m_scene = inScene;
 		m_nodeHandle = inScene->findHandleOfNode(inSceneNode);
@@ -50,6 +50,7 @@ namespace Command
 		m_oldParentIsScene = inSceneNode->parent == inScene;
 		m_newParentHandle = inScene->findHandleOfNode(inNewParent);
 		m_oldParentHandle = inScene->findHandleOfNode(inSceneNode->parent);
+		m_index = index;
 	}
 
 	std::unique_ptr<CommandBase> ReparentSceneNode::exec()
@@ -57,9 +58,13 @@ namespace Command
 		SceneNode* node = m_scene->getNodeByHandle(m_nodeHandle);
 		SceneNode* newParentNode = m_newParentIsScene ? m_scene : m_scene->getNodeByHandle(m_newParentHandle);
 		SceneNode* oldParentNode = m_oldParentIsScene ? m_scene : m_scene->getNodeByHandle(m_oldParentHandle);
+
+		int oldIndex = oldParentNode->getChildIndex(node);
+
 		std::unique_ptr<SceneNode> nodePtr = oldParentNode->removeChild(node);
-		newParentNode->addChild(std::move(nodePtr));
-		auto reparentCommand = std::make_unique<ReparentSceneNode>(m_scene, node, oldParentNode);
+		newParentNode->addChild(std::move(nodePtr), m_index);
+
+		auto reparentCommand = std::make_unique<ReparentSceneNode>(m_scene, node, oldParentNode, oldIndex);
 		return reparentCommand;
 	}
 

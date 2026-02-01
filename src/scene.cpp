@@ -129,7 +129,7 @@ uint32_t& Scene::getNameCounter(std::string_view name)
 	return it->second;
 }
 
-void Scene::addChild(std::unique_ptr<SceneNode>&& child)
+void Scene::addChild(std::unique_ptr<SceneNode>&& child, int index)
 {
 	if (const auto light = dynamic_cast<Light*>(child.get()))
 	{
@@ -151,7 +151,7 @@ void Scene::addChild(std::unique_ptr<SceneNode>&& child)
 	{
 		addBakerNode(node);
 	}
-	SceneNode::addChild(std::move(child));
+	SceneNode::addChild(std::move(child), index);
 }
 
 void Scene::addPrimitive(Primitive* primitive)

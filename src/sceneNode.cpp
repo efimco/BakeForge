@@ -46,7 +46,7 @@ std::unique_ptr<SceneNode> SceneNode::clone() const
 	return newNode;
 }
 
-void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
+void SceneNode::addChild(std::unique_ptr<SceneNode>&& child, int index)
 {
 	if (!child)
 		return;
@@ -60,7 +60,18 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child)
 
 	child->parent = this;
 	SceneNode* childPtr = child.get(); // Get a raw pointer before moving
-	children.push_back(std::move(child));
+	
+	// Insert at specific index or append to end
+	if (index >= 0 && index < static_cast<int>(children.size()))
+	{
+		auto it = children.begin();
+		std::advance(it, index);
+		children.insert(it, std::move(child));
+	}
+	else
+	{
+		children.push_back(std::move(child));
+	}
 
 	if (dynamic_cast<Scene*>(this))
 	{
@@ -136,6 +147,18 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 	child->transform.scale = scale;
 	child->transform.updateMatrix();
 	return removedChild;
+}
+
+int SceneNode::getChildIndex(SceneNode* child) const
+{
+	int index = 0;
+	for (const auto& c : children)
+	{
+		if (c.get() == child)
+			return index;
+		++index;
+	}
+	return -1;
 }
 
 glm::mat4 SceneNode::getWorldMatrix()
