@@ -115,13 +115,33 @@ void Primitive::fillTriangles()
 
 BVH::BBox Primitive::getWorldBBox()
 {
-	BVH::BBox bbox = m_sharedData->bvhNodes[0].bbox;
-	for (int i = 0; i < 3; ++i)
+	BVH::BBox localBBox = m_sharedData->bvhNodes[0].bbox;
+	glm::mat4 worldMatrix = getWorldMatrix();
+	
+	// Transform all 8 corners of the local AABB to world space and compute new AABB
+	glm::vec3 corners[8] = {
+		{localBBox.min.x, localBBox.min.y, localBBox.min.z},
+		{localBBox.max.x, localBBox.min.y, localBBox.min.z},
+		{localBBox.min.x, localBBox.max.y, localBBox.min.z},
+		{localBBox.max.x, localBBox.max.y, localBBox.min.z},
+		{localBBox.min.x, localBBox.min.y, localBBox.max.z},
+		{localBBox.max.x, localBBox.min.y, localBBox.max.z},
+		{localBBox.min.x, localBBox.max.y, localBBox.max.z},
+		{localBBox.max.x, localBBox.max.y, localBBox.max.z},
+	};
+	
+	BVH::BBox worldBBox;
+	worldBBox.min = glm::vec3(FLT_MAX);
+	worldBBox.max = glm::vec3(-FLT_MAX);
+	
+	for (int c = 0; c < 8; c++)
 	{
-		bbox.min[i] += transform.position[i];
-		bbox.max[i] += transform.position[i];
+		glm::vec3 worldCorner = glm::vec3(worldMatrix * glm::vec4(corners[c], 1.0f));
+		worldBBox.min = glm::min(worldBBox.min, worldCorner);
+		worldBBox.max = glm::max(worldBBox.max, worldCorner);
 	}
-	return bbox;
+	
+	return worldBBox;
 }
 
 void Primitive::computeTangents()

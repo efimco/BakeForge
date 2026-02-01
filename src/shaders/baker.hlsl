@@ -13,11 +13,13 @@ cbuffer Constants : register(b0)
 
 struct BLASInstance
 {
-	BBox worldBBox;       // 32 bytes
-	uint triangleOffset;   // offset into combined triangle buffer
-	uint triIndicesOffset; // offset into combined indices buffer
-	uint bvhNodeOffset;    // offset into combined BVH nodes buffer
-	uint numTriangles;     // number of triangles in this BLAS
+	BBox worldBBox;           // 32 bytes - for early TLAS culling
+	float4x4 worldMatrixInv;  // 64 bytes - transforms ray from world to local space
+	float4x4 normalMatrix;    // 64 bytes - transforms normals from local to world
+	uint triangleOffset;      // offset into combined triangle buffer
+	uint triIndicesOffset;    // offset into combined indices buffer
+	uint bvhNodeOffset;       // offset into combined BVH nodes buffer
+	uint numTriangles;        // number of triangles in this BLAS
 };
 
 //those are for actual baking
@@ -73,8 +75,28 @@ void TestBLASInstances(Ray ray, out uint blasIndex)
 
 #define MAX_STACK_SIZE 64
 
-void TraverseBLAS(Ray ray, BLASInstance inst, inout float bestT, inout float3 bestN)
+// Transform ray from world space to local space for this BLAS instance
+Ray TransformRayToLocal(Ray worldRay, BLASInstance inst)
 {
+	Ray localRay;
+	localRay.origin = mul(float4(worldRay.origin, 1.0f), inst.worldMatrixInv).xyz;
+	localRay.dir = normalize(mul(float4(worldRay.dir, 0.0f), inst.worldMatrixInv).xyz);
+	localRay.invDir = 1.0f / localRay.dir;
+	return localRay;
+}
+
+// Transform normal from local space to world space
+float3 TransformNormalToWorld(float3 localNormal, BLASInstance inst)
+{
+	// normalMatrix = transpose(inverse(worldMatrix)) stored row-major
+	return normalize(mul(float4(localNormal, 0.0f), inst.normalMatrix).xyz);
+}
+
+void TraverseBLAS(Ray worldRay, BLASInstance inst, inout float bestT, inout float3 bestN)
+{
+	// Transform ray to local space of this BLAS
+	Ray localRay = TransformRayToLocal(worldRay, inst);
+	
 	uint stack[MAX_STACK_SIZE];
 	uint stackPtr = 0;
 	stack[stackPtr++] = 0; // push root node
@@ -85,8 +107,8 @@ void TraverseBLAS(Ray ray, BLASInstance inst, inout float bestT, inout float3 be
 		uint globalNodeIdx = inst.bvhNodeOffset + localNodeIdx;
 		BVHNode node = gNodes[globalNodeIdx];
 
-		// early cull with current best t
-		float tBox = IntersectBox(ray, node.bbox, bestT);
+		// early cull with current best t (using local-space ray)
+		float tBox = IntersectBox(localRay, node.bbox, bestT);
 		if (tBox >= bestT)
 			continue;
 
@@ -99,11 +121,12 @@ void TraverseBLAS(Ray ray, BLASInstance inst, inout float bestT, inout float3 be
 				// Triangle index is also local, add offset to get global
 				Tri tri = gTris[inst.triangleOffset + localTriIdx];
 				float2 bary;
-				if (IntersectTri(ray, tri, bestT, bary))
+				if (IntersectTri(localRay, tri, bestT, bary))
 				{
-					// Interpolate vertex normals using barycentric coordinates
-					// bary.x = u (weight for v1), bary.y = v (weight for v2), (1-u-v) = weight for v0
-					bestN = normalize((1.0f - bary.x - bary.y) * tri.n0 + bary.x * tri.n1 + bary.y * tri.n2);
+					// Interpolate vertex normals using barycentric coordinates (in local space)
+					float3 localN = normalize((1.0f - bary.x - bary.y) * tri.n0 + bary.x * tri.n1 + bary.y * tri.n2);
+					// Transform normal to world space
+					bestN = TransformNormalToWorld(localN, inst);
 				}
 			}
 		}
@@ -117,8 +140,8 @@ void TraverseBLAS(Ray ray, BLASInstance inst, inout float bestT, inout float3 be
 			uint leftGlobal = inst.bvhNodeOffset + leftLocal;
 			uint rightGlobal = inst.bvhNodeOffset + rightLocal;
 
-			float tLeft = IntersectBox(ray, gNodes[leftGlobal].bbox, bestT);
-			float tRight = IntersectBox(ray, gNodes[rightGlobal].bbox, bestT);
+			float tLeft = IntersectBox(localRay, gNodes[leftGlobal].bbox, bestT);
+			float tRight = IntersectBox(localRay, gNodes[rightGlobal].bbox, bestT);
 
 			// Push in far-to-near order so we pop near first
 			if (tLeft < tRight)
@@ -194,6 +217,7 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	{
 		tangentSpaceNormal = float3(0.5f, 0.5f, 1.0f); // default normal if no intersection
 	}
+	
 
 	tangentSpaceNormal = pow(tangentSpaceNormal, float3(2.2f, 2.2f, 2.2f)); // gamma correct
 

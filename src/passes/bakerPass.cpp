@@ -99,6 +99,12 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 	createInterpolatedTexturesResources();
 	createBakedNormalResources();
 	m_combinedHighPolyBuffers = createCombinedHighPolyBuffers();
+
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	m_context->ClearRenderTargetView(m_wsTexelPositionRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelNormalRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelTangentRTV.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_wsTexelSmoothedNormalRTV.Get(), clearColor);
 	for (size_t i = 0; i < m_primitivesToBake.first.size(); ++i)
 	{
 		Primitive* lowPoly = m_primitivesToBake.first[i];
@@ -213,23 +219,27 @@ CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()
 	{
 		if (!hp) continue;
 
-		const auto tris = hp->getWorldSpaceTriangles();
+		// Use references - NO COPY! Triangles/BVH stay in local space
+		const auto& tris = hp->getTriangles();         // reference, not copy
 		const auto& indices = hp->getTriangleIndices();
-		const auto nodes = hp->getWorldSpaceBVHNodes();
+		const auto& nodes = hp->getBVHNodes();         // reference, not copy
 
-		// Create BLAS instance
+		// Create BLAS instance with transforms for GPU-side ray transformation
 		BLASInstance inst;
-		inst.worldBBox = hp->getWorldBBox();
+		inst.worldBBox = hp->getWorldBBox();  // Only this needs world-space (cheap)
+		glm::mat4 worldMatrix = hp->getWorldMatrix();
+		inst.worldMatrixInv = glm::transpose(glm::inverse(worldMatrix));  // Row-major for HLSL
+		inst.normalMatrix = inst.worldMatrixInv;  // Same matrix for normal transformation
 		inst.triangleOffset = triangleOffset;
 		inst.triIndicesOffset = triIndicesOffset;
 		inst.bvhNodeOffset = bvhNodeOffset;
 		inst.numTriangles = static_cast<uint32_t>(tris.size());
 		blasInstances.push_back(inst);
 
+		// Append local-space data directly (no transform!)
 		allTriangles.insert(allTriangles.end(), tris.begin(), tris.end());
 		allTriIndices.insert(allTriIndices.end(), indices.begin(), indices.end());
 		allBVHNodes.insert(allBVHNodes.end(), nodes.begin(), nodes.end());
-
 
 		triangleOffset += static_cast<uint32_t>(tris.size());
 		triIndicesOffset += static_cast<uint32_t>(indices.size());
@@ -292,13 +302,6 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 		data->useSmoothedNormals = m_useSmoothedNormals;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
-
-
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_context->ClearRenderTargetView(m_wsTexelPositionRTV.Get(), clearColor);
-	m_context->ClearRenderTargetView(m_wsTexelNormalRTV.Get(), clearColor);
-	m_context->ClearRenderTargetView(m_wsTexelTangentRTV.Get(), clearColor);
-	m_context->ClearRenderTargetView(m_wsTexelSmoothedNormalRTV.Get(), clearColor);
 
 	setViewport(m_lastWidth, m_lastHeight);
 

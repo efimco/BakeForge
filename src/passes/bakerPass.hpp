@@ -45,13 +45,16 @@ struct CombinedHighPolyBuffers
 };
 
 // Instance data for TLAS - references into combined buffers
+// Triangles/BVH nodes stay in local space, ray is transformed to local space on GPU
 struct BLASInstance
 {
-	BVH::BBox worldBBox;       // 32 bytes
-	uint32_t triangleOffset;   // offset into combined triangle buffer
-	uint32_t triIndicesOffset; // offset into combined indices buffer
-	uint32_t bvhNodeOffset;    // offset into combined BVH nodes buffer
-	uint32_t numTriangles;     // number of triangles in this BLAS
+	BVH::BBox worldBBox;         // 32 bytes - for early TLAS culling
+	glm::mat4 worldMatrixInv;    // 64 bytes - transforms ray from world to local space
+	glm::mat4 normalMatrix;      // 64 bytes - transforms normals from local to world (transpose of inverse)
+	uint32_t triangleOffset;     // offset into combined triangle buffer
+	uint32_t triIndicesOffset;   // offset into combined indices buffer
+	uint32_t bvhNodeOffset;      // offset into combined BVH nodes buffer
+	uint32_t numTriangles;       // number of triangles in this BLAS
 };
 
 class BakerPass : public BasePass
@@ -134,7 +137,7 @@ private:
 	void bakeNormals(const CombinedHighPolyBuffers& hpBuffers);
 
 	void updateBakerCB(const CombinedHighPolyBuffers& combinedBuffers);
-	
+
 	void saveToTextureFile();
 	void asyncSaveTextureToFile(const std::string& fullPath,
 		ComPtr<ID3D11Device> device,

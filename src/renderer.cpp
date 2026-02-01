@@ -30,7 +30,7 @@
 #include "light.hpp"
 #include "scene.hpp"
 
-#define DRAW_DEBUG_BVH 1
+#define DRAW_DEBUG_BVH 0
 
 #define ENABLE_RENDERDOC_CAPTURE 0
 

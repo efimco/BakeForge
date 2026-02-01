@@ -190,11 +190,11 @@ void UIManager::showSceneSettings() const
 {
 
 	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 0.1f, 0.0f, 10.0f);
+	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
 	ImGui::DragFloat("IBL Rotation", &AppConfig::IBLrotation);
-	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 0.1f, 0.0f, 1.0f);
+	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
 	ImGui::Separator();
-
+	
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
 	if (AppConfig::isBackgroundBlurred)
 	{
