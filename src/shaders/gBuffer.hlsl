@@ -13,7 +13,8 @@ cbuffer ConstantBuffer : register(b0)
 	uint useAlbedoTexture;
 	uint useMetallicRoughnessTexture;
 	uint useNormalTexture;
-	float3 padding;
+	uint flipY;
+	float2 padding;
 };
 
 Texture2D albedoTexture : register(t0);
@@ -66,11 +67,12 @@ float3 getNormalFromMap(VertexOutput input, bool hasNormalMap = true)
 	if (!hasNormalMap || !useNormalTexture)
 		return input.normal;
 	// Invert Y for DirectX normal maps
-	tangentNormal.y = -tangentNormal.y;
+	if (flipY == 1)
+		tangentNormal.y = -tangentNormal.y;
 
 	float3 N = normalize(input.normal);
 	float3 T = normalize(input.tangent);
-	T.y = -T.y;
+	T = normalize(T - N * dot(N, T));
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
 

@@ -194,7 +194,7 @@ void UIManager::showSceneSettings() const
 	ImGui::DragFloat("IBL Rotation", &AppConfig::IBLrotation);
 	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
 	ImGui::Separator();
-	
+
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
 	if (AppConfig::isBackgroundBlurred)
 	{
@@ -1222,6 +1222,7 @@ void UIManager::showMaterialProperties(std::shared_ptr<Material> material) const
 			material->needsPreviewUpdate = true;
 		}
 	}
+	ImGui::Checkbox("Flip Y", &material->flipY);
 
 }
 

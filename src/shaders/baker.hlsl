@@ -89,7 +89,7 @@ Ray TransformRayToLocal(Ray worldRay, BLASInstance inst)
 float3 TransformNormalToWorld(float3 localNormal, BLASInstance inst)
 {
 	// normalMatrix = transpose(inverse(worldMatrix)) stored row-major
-	return normalize(mul(float4(localNormal, 0.0f), inst.normalMatrix).xyz);
+	return normalize(mul(float4(localNormal, 0.0f), transpose(inst.normalMatrix)).xyz);
 }
 
 void TraverseBLAS(Ray worldRay, BLASInstance inst, inout float bestT, inout float3 bestN)
@@ -217,9 +217,6 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	{
 		tangentSpaceNormal = float3(0.5f, 0.5f, 1.0f); // default normal if no intersection
 	}
-	
-
-	tangentSpaceNormal = pow(tangentSpaceNormal, float3(2.2f, 2.2f, 2.2f)); // gamma correct
 
 	oBakedNormal[DTid.xy] = float4(tangentSpaceNormal, 1.0f);
 

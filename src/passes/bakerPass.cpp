@@ -229,7 +229,7 @@ CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()
 		inst.worldBBox = hp->getWorldBBox();  // Only this needs world-space (cheap)
 		glm::mat4 worldMatrix = hp->getWorldMatrix();
 		inst.worldMatrixInv = glm::transpose(glm::inverse(worldMatrix));  // Row-major for HLSL
-		inst.normalMatrix = inst.worldMatrixInv;  // Same matrix for normal transformation
+		inst.normalMatrix =  glm::transpose(inst.worldMatrixInv); 
 		inst.triangleOffset = triangleOffset;
 		inst.triIndicesOffset = triIndicesOffset;
 		inst.bvhNodeOffset = bvhNodeOffset;

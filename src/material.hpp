@@ -26,6 +26,7 @@ struct Material
 	bool useAlbedo = true;
 	bool useMetallicRoughness = true;
 	bool useNormal = true;
+	bool flipY = false;
 	bool needsPreviewUpdate = true;
 
 	ID3D11ShaderResourceView* const* getSRVs();

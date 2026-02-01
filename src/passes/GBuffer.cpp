@@ -35,7 +35,8 @@ struct alignas(16) ConstantBufferData
 	uint32_t useAlbedoTexture;
 	uint32_t useMetallicRoughnessTexture;
 	uint32_t useNormalTexture;
-	float padding[3];
+	uint32_t flipY;
+	float padding[2];
 };
 
 GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
@@ -137,6 +138,7 @@ void GBuffer::update(const glm::mat4& view,
 			cbData->useAlbedoTexture = prim->material->useAlbedo ? 1 : 0;
 			cbData->useMetallicRoughnessTexture = prim->material->useMetallicRoughness ? 1 : 0;
 			cbData->useNormalTexture = prim->material->useNormal ? 1 : 0;
+			cbData->flipY = prim->material->flipY ? 1 : 0;
 		}
 		m_context->Unmap(m_constantbuffer.Get(), 0);
 	}
