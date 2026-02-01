@@ -36,6 +36,24 @@ Texture2D<float4> gWorldSpaceSmoothedNormals : register(t7);
 RWTexture2D<float4> oBakedNormal : register(u0);
 
 
+float hash(uint2 p) // Hash function for dithering
+{
+	uint h = p.x * 1597334673u ^ p.y * 3812015801u;
+	h = h * 1103515245u + 12345u;
+	return float(h) / 4294967295.0f;
+}
+
+
+float3 ditherNoise(uint2 pixel) // Triangular dither noise - better distribution than uniform
+{
+	float3 noise;
+	noise.x = hash(pixel + uint2(0, 0)) + hash(pixel + uint2(1234, 5678)) - 1.0f;
+	noise.y = hash(pixel + uint2(4321, 8765)) + hash(pixel + uint2(9999, 1111)) - 1.0f;
+	noise.z = hash(pixel + uint2(2468, 1357)) + hash(pixel + uint2(7531, 8642)) - 1.0f;
+	return noise;
+}
+
+
 void TestBLASInstances(Ray ray, out uint blasIndex)
 {
 	blasIndex = 0xFFFFFFFF;
@@ -148,18 +166,22 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	float bestT = 1e20f;
 	float3 bestN = float3(0.0f, 0.0f, 0.0f);
 
-	Ray ray;
-	ray.origin = worldPos.xyz;
-	ray.dir = -normalize(useSmoothedNormals != 0 ? worldSmoothedNormal.xyz : worldNormal.xyz);
-	ray.origin -= ray.dir * cageOffset; // offset to avoid self-intersection
-	ray.invDir = 1.0f / ray.dir;
-
-
-	TraverseTLAS(ray, bestT, bestN);
-
 	float3 N = normalize(worldNormal.xyz);
 	float3 T = normalize(worldTangent.xyz);
 	float3 B = cross(N, T);
+
+	// Jitter ray origin in tangent plane (within ~half a texel)
+	float3 jitter = ditherNoise(DTid.xy);
+	float jitterScale = cageOffset * 0.01f; // 1% of cage offset
+	float3 originJitter = (jitter.x * T + jitter.y * B) * jitterScale;
+
+	Ray ray;
+	ray.origin = worldPos.xyz + originJitter;
+	ray.dir = -normalize(useSmoothedNormals != 0 ? worldSmoothedNormal.xyz : worldNormal.xyz);
+	ray.origin -= ray.dir * cageOffset; // offset ray origin back by cage distance
+	ray.invDir = 1.0f / ray.dir;
+
+	TraverseTLAS(ray, bestT, bestN);
 
 	float3 tangentSpaceNormal; 	// transforms bestN from world space to tangent space
 	tangentSpaceNormal.x = dot(bestN, T);
