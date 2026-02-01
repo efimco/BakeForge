@@ -269,6 +269,32 @@ const std::vector<Triangle>& Primitive::getTriangles() const
 	return m_sharedData->triangles;
 }
 
+std::vector<Triangle> Primitive::getWorldSpaceTriangles()
+{
+	std::vector<Triangle> worldTris;
+	worldTris.reserve(m_sharedData->triangles.size());
+
+	glm::mat4 worldMatrix = getWorldMatrix();
+
+	for (const Triangle& tri : m_sharedData->triangles)
+	{
+		Triangle worldTri;
+		worldTri.v0 = glm::vec3(worldMatrix * glm::vec4(tri.v0, 1.0f));
+		worldTri.v1 = glm::vec3(worldMatrix * glm::vec4(tri.v1, 1.0f));
+		worldTri.v2 = glm::vec3(worldMatrix * glm::vec4(tri.v2, 1.0f));
+
+		// Transform normals (ignore translation)
+		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
+		worldTri.n0 = glm::normalize(normalMatrix * tri.n0);
+		worldTri.n1 = glm::normalize(normalMatrix * tri.n1);
+		worldTri.n2 = glm::normalize(normalMatrix * tri.n2);
+
+		worldTris.push_back(worldTri);
+	}
+
+	return worldTris;
+}
+
 const std::vector<uint32_t>& Primitive::getTriangleIndices() const
 {
 	return m_sharedData->triangleIndices;
@@ -277,6 +303,50 @@ const std::vector<uint32_t>& Primitive::getTriangleIndices() const
 std::vector<BVH::Node>& Primitive::getBVHNodes() const
 {
 	return m_sharedData->bvhNodes;
+}
+std::vector<BVH::Node> Primitive::getWorldSpaceBVHNodes()
+{
+	std::vector<BVH::Node> worldNodes;
+	worldNodes.reserve(m_sharedData->bvhNodes.size());
+
+	glm::mat4 worldMatrix = getWorldMatrix();
+
+	for (const BVH::Node& node : m_sharedData->bvhNodes)
+	{
+		BVH::Node worldNode = node;
+
+		// Transform bbox corners to world space and recompute AABB
+		glm::vec3 localMin = node.bbox.min;
+		glm::vec3 localMax = node.bbox.max;
+
+		glm::vec3 corners[8] = {
+			{localMin.x, localMin.y, localMin.z},
+			{localMax.x, localMin.y, localMin.z},
+			{localMin.x, localMax.y, localMin.z},
+			{localMax.x, localMax.y, localMin.z},
+			{localMin.x, localMin.y, localMax.z},
+			{localMax.x, localMin.y, localMax.z},
+			{localMin.x, localMax.y, localMax.z},
+			{localMax.x, localMax.y, localMax.z},
+		};
+
+		glm::vec3 worldMin(FLT_MAX);
+		glm::vec3 worldMax(-FLT_MAX);
+
+		for (int c = 0; c < 8; c++)
+		{
+			glm::vec3 worldCorner = glm::vec3(worldMatrix * glm::vec4(corners[c], 1.0f));
+			worldMin = glm::min(worldMin, worldCorner);
+			worldMax = glm::max(worldMax, worldCorner);
+		}
+
+		worldNode.bbox.min = worldMin;
+		worldNode.bbox.max = worldMax;
+
+		worldNodes.push_back(worldNode);
+	}
+
+	return worldNodes;
 }
 
 void Primitive::copyFrom(const SceneNode& node)

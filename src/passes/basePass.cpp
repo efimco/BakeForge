@@ -31,9 +31,9 @@ ComPtr<ID3D11RasterizerState> BasePass::createRSState(const RasterizerPreset pre
 }
 
 ComPtr<ID3D11RasterizerState> BasePass::createRSState(const D3D11_CULL_MODE cullMode,
-													  const D3D11_FILL_MODE fillMode,
-													  const bool depthClipEnable,
-													  const bool antialiasedLineEnable) const
+	const D3D11_FILL_MODE fillMode,
+	const bool depthClipEnable,
+	const bool antialiasedLineEnable) const
 {
 	D3D11_RASTERIZER_DESC desc = {};
 	desc.CullMode = cullMode;
@@ -70,8 +70,8 @@ ComPtr<ID3D11DepthStencilState> BasePass::createDSState(DepthStencilPreset prese
 }
 
 ComPtr<ID3D11DepthStencilState> BasePass::createDSState(const bool depthEnable,
-														const D3D11_DEPTH_WRITE_MASK writeMask,
-														const D3D11_COMPARISON_FUNC depthFunc) const
+	const D3D11_DEPTH_WRITE_MASK writeMask,
+	const D3D11_COMPARISON_FUNC depthFunc) const
 {
 	D3D11_DEPTH_STENCIL_DESC desc = {};
 	desc.DepthEnable = depthEnable;
@@ -116,7 +116,7 @@ ComPtr<ID3D11DepthStencilView> BasePass::createDSView(ID3D11Texture2D* texture, 
 }
 
 ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const D3D11_FILTER filter,
-														const D3D11_TEXTURE_ADDRESS_MODE addressMode)
+	const D3D11_TEXTURE_ADDRESS_MODE addressMode)
 {
 	D3D11_SAMPLER_DESC desc = {};
 	desc.Filter = filter;
@@ -139,30 +139,30 @@ ComPtr<ID3D11BlendState> BasePass::createBlendState(BlendPreset preset)
 	{
 	case BlendPreset::Opaque:
 		return createBlendState(false, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD,
-								D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
+			D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
 	case BlendPreset::AlphaBlend:
 		return createBlendState(true, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD,
-								D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD);
+			D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD);
 	case BlendPreset::Additive:
 		return createBlendState(true, D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
-								D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD);
+			D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD);
 	case BlendPreset::Multiply:
 		return createBlendState(true, D3D11_BLEND_DEST_COLOR, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD,
-								D3D11_BLEND_DEST_ALPHA, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
+			D3D11_BLEND_DEST_ALPHA, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
 	default:
 		return createBlendState(false, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD,
-								D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
+			D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD);
 	}
 }
 
 ComPtr<ID3D11BlendState> BasePass::createBlendState(bool blendEnable,
-													D3D11_BLEND srcBlend,
-													D3D11_BLEND destBlend,
-													D3D11_BLEND_OP blendOp,
-													D3D11_BLEND srcBlendAlpha,
-													D3D11_BLEND destBlendAlpha,
-													D3D11_BLEND_OP blendOpAlpha,
-													UINT sampleMask) const
+	D3D11_BLEND srcBlend,
+	D3D11_BLEND destBlend,
+	D3D11_BLEND_OP blendOp,
+	D3D11_BLEND srcBlendAlpha,
+	D3D11_BLEND destBlendAlpha,
+	D3D11_BLEND_OP blendOpAlpha,
+	UINT sampleMask) const
 {
 	D3D11_BLEND_DESC desc = {};
 	desc.RenderTarget[0].BlendEnable = blendEnable;
@@ -182,13 +182,13 @@ ComPtr<ID3D11BlendState> BasePass::createBlendState(bool blendEnable,
 }
 
 ComPtr<ID3D11Texture2D> BasePass::createTexture2D(UINT width,
-												  UINT height,
-												  DXGI_FORMAT format,
-												  UINT bindFlags,
-												  UINT mipLevels,
-												  D3D11_USAGE usage,
-												  UINT cpuAccessFlags,
-												  UINT miscFlags) const
+	UINT height,
+	DXGI_FORMAT format,
+	UINT bindFlags,
+	UINT mipLevels,
+	D3D11_USAGE usage,
+	UINT cpuAccessFlags,
+	UINT miscFlags) const
 {
 	// Detect typeless depth formats and adjust bind flags accordingly
 	UINT finalBindFlags = bindFlags;
@@ -292,9 +292,9 @@ ComPtr<ID3D11Buffer> BasePass::createIndexBuffer(UINT byteSize, const void* init
 }
 
 ComPtr<ID3D11Buffer> BasePass::createStructuredBuffer(UINT elementSize,
-													  UINT elementCount,
-													  SBPreset preset,
-													  const void* initialData) const
+	UINT elementCount,
+	SBPreset preset,
+	const void* initialData) const
 {
 	D3D11_BUFFER_DESC desc = {};
 	desc.ByteWidth = elementSize * elementCount;
@@ -303,26 +303,33 @@ ComPtr<ID3D11Buffer> BasePass::createStructuredBuffer(UINT elementSize,
 	switch (preset)
 	{
 	case SBPreset::CpuRead:
-		{
-			desc.Usage = D3D11_USAGE_STAGING;
-			desc.BindFlags = 0;
-			desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-			break;
-		}
+	{
+		desc.Usage = D3D11_USAGE_STAGING;
+		desc.BindFlags = 0;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		break;
+	}
 	case SBPreset::CpuWrite:
-		{
-			desc.Usage = D3D11_USAGE_DYNAMIC;
-			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			break;
-		}
+	{
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		break;
+	}
+	case SBPreset::Immutable:
+	{
+		desc.Usage = D3D11_USAGE_IMMUTABLE;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		break;
+	}
 	default:
-		{
-			desc.Usage = D3D11_USAGE_DEFAULT;
-			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			break;
-		}
+	{
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		break;
+	}
 	}
 
 	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -351,31 +358,31 @@ ComPtr<ID3D11RenderTargetView> BasePass::createRenderTargetView(ID3D11Texture2D*
 	switch (preset)
 	{
 	case RTVPreset::Texture2D:
-		{
-			desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-			desc.Texture2D.MipSlice = mipSlice;
-			break;
-		}
+	{
+		desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		desc.Texture2D.MipSlice = mipSlice;
+		break;
+	}
 	case RTVPreset::Texture2DArray:
-		{
-			desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-			desc.Texture2DArray.MipSlice = mipSlice;
-			desc.Texture2DArray.FirstArraySlice = arraySlice;
-			desc.Texture2DArray.ArraySize = 1;
-			break;
-		}
+	{
+		desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+		desc.Texture2DArray.MipSlice = mipSlice;
+		desc.Texture2DArray.FirstArraySlice = arraySlice;
+		desc.Texture2DArray.ArraySize = 1;
+		break;
+	}
 	case RTVPreset::Texture2DMS:
 		desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
 		break;
 	case RTVPreset::Texture3D:
-		{
+	{
 
-			desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
-			desc.Texture3D.MipSlice = mipSlice;
-			desc.Texture3D.FirstWSlice = 0;
-			desc.Texture3D.WSize = -1;
-			break;
-		}
+		desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+		desc.Texture3D.MipSlice = mipSlice;
+		desc.Texture3D.FirstWSlice = 0;
+		desc.Texture3D.WSize = -1;
+		break;
+	}
 	default:
 		return nullptr;
 	}

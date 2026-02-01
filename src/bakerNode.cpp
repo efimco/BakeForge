@@ -86,59 +86,29 @@ void Baker::updateState()
 
 	for (const auto& material : m_materialsToBake)
 	{
-		std::vector<std::pair<Primitive*, Primitive*>> primitivePairs;
+		std::pair<std::vector<Primitive*>, std::vector<Primitive*>> lowHighPrimsPair;
 
 		for (const auto& child : lowPoly->children)
 		{
-			const auto prim = dynamic_cast<Primitive*>(child.get());
-			if (!prim)
+			const auto lowPolyPrim = dynamic_cast<Primitive*>(child.get());
+			if (!lowPolyPrim || !lowPolyPrim->material || lowPolyPrim->material->name != material->name)
 				continue;
-			if (!prim->material || prim->material->name != material->name)
-				continue;
-
-			std::string baseName = prim->name;
-			for (const auto& suffix : { "_low", "_LP", "_lo", "_Low", "_LOW" })
-			{
-				if (baseName.ends_with(suffix))
-				{
-					baseName = baseName.substr(0, baseName.length() - strlen(suffix));
-					break;
-				}
-			}
-
-			Primitive* matchedHighPoly = nullptr;
-			for (const auto& highPolyChild : highPoly->children)
-			{
-				const auto highPolyPrim = dynamic_cast<Primitive*>(highPolyChild.get());
-				if (!highPolyPrim)
-					continue;
-
-				std::string highPolyBaseName = highPolyPrim->name;
-				for (const auto& suffix : { "_high", "_HP", "_hi", "_High", "_HIGH" })
-				{
-					if (highPolyBaseName.ends_with(suffix))
-					{
-						highPolyBaseName = highPolyBaseName.substr(0, highPolyBaseName.length() - strlen(suffix));
-						break;
-					}
-				}
-
-				if (highPolyBaseName == baseName)
-				{
-					matchedHighPoly = highPolyPrim;
-					break;
-				}
-			}
-
-			primitivePairs.emplace_back(prim, matchedHighPoly);
+			lowHighPrimsPair.first.push_back(lowPolyPrim);
 		}
-
-		m_materialsPrimitivesMap[material->name] = std::move(primitivePairs);
+		for (const auto& highPolyChild : highPoly->children)
+		{
+			const auto highPolyPrim = dynamic_cast<Primitive*>(highPolyChild.get());
+			if (!highPolyPrim)
+				continue;
+			lowHighPrimsPair.second.push_back(highPolyPrim);
+		}
+		m_materialsPrimitivesMap[material->name] = std::move(lowHighPrimsPair);
 	}
 
 	for (const auto& material : m_materialsToBake)
 	{
-		if (m_materialsBakerPasses.contains(material->name) && m_materialsPrimitivesMap[material->name] == m_materialsBakerPasses[material->name]->getPrimitivesToBake())
+		if (m_materialsBakerPasses.contains(material->name) &&
+			m_materialsPrimitivesMap[material->name] == m_materialsBakerPasses[material->name]->getPrimitivesToBake())
 			continue;
 		if (m_materialsBakerPasses[material->name] == nullptr)
 		{

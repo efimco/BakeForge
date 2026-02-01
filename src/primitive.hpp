@@ -51,6 +51,7 @@ public:
 
 	BVH::BBox getWorldBBox();
 
+
 	bool isVisible = true;
 
 	const std::vector<uint32_t>& getIndexData() const;
@@ -61,8 +62,10 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getTrisIndicesBufferSRV() const;
 
 	const std::vector<Triangle>& getTriangles() const;
+	std::vector<Triangle> getWorldSpaceTriangles();
 	const std::vector<uint32_t>& getTriangleIndices() const;
 	std::vector<BVH::Node>& getBVHNodes() const;
+	std::vector<BVH::Node> getWorldSpaceBVHNodes();
 
 	void copyFrom(const SceneNode& node) override;
 	bool differsFrom(const SceneNode& node) const override;

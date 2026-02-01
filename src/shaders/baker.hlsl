@@ -7,27 +7,55 @@ cbuffer Constants : register(b0)
 	uint2 dimensions;
 	float cageOffset;
 	uint useSmoothedNormals;
+	uint numBLASInstances;
+	uint3 _pad;
 };
 
+struct BLASInstance
+{
+	BBox worldBBox;       // 32 bytes
+	uint triangleOffset;   // offset into combined triangle buffer
+	uint triIndicesOffset; // offset into combined indices buffer
+	uint bvhNodeOffset;    // offset into combined BVH nodes buffer
+	uint numTriangles;     // number of triangles in this BLAS
+};
 
 //those are for actual baking
-StructuredBuffer<Tri> gTris : register(t0);
-StructuredBuffer<uint> gTrisIndices : register(t1);
-StructuredBuffer<BVHNode> gNodes : register(t2);
+StructuredBuffer<BLASInstance> gBlasInstances : register(t0);
+StructuredBuffer<Tri> gTris : register(t1);
+StructuredBuffer<uint> gTrisIndices : register(t2);
+StructuredBuffer<BVHNode> gNodes : register(t3);
 //ray origin/direction textures
-Texture2D<float4> gWorldSpacePositions : register(t3);
-Texture2D<float4> gWorldSpaceNormals : register(t4);
-Texture2D<float4> gWorldSpaceTangents : register(t5);
-Texture2D<float4> gWorldSpaceSmoothedNormals : register(t6);
+Texture2D<float4> gWorldSpacePositions : register(t4);
+Texture2D<float4> gWorldSpaceNormals : register(t5);
+Texture2D<float4> gWorldSpaceTangents : register(t6);
+Texture2D<float4> gWorldSpaceSmoothedNormals : register(t7);
 
 
 //this one is for baking output
 RWTexture2D<float4> oBakedNormal : register(u0);
 
 
+void TestBLASInstances(Ray ray, out uint blasIndex)
+{
+	blasIndex = 0xFFFFFFFF;
+	float tMin = 1e20f;
+	for (uint i = 0; i < gBlasInstances.Length; i++)
+	{
+		BLASInstance instance = gBlasInstances[i];
+		float tBox = IntersectBox(ray, instance.worldBBox, tMin);
+		if (tBox < tMin)
+		{
+			blasIndex = i;
+			return;
+		}
+	}
+}
+
+
 #define MAX_STACK_SIZE 64
 
-void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
+void TraverseBLAS(Ray ray, BLASInstance inst, inout float bestT, inout float3 bestN)
 {
 	uint stack[MAX_STACK_SIZE];
 	uint stackPtr = 0;
@@ -35,8 +63,9 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 
 	while (stackPtr > 0)
 	{
-		uint nodeIdx = stack[--stackPtr];
-		BVHNode node = gNodes[nodeIdx];
+		uint localNodeIdx = stack[--stackPtr];
+		uint globalNodeIdx = inst.bvhNodeOffset + localNodeIdx;
+		BVHNode node = gNodes[globalNodeIdx];
 
 		// early cull with current best t
 		float tBox = IntersectBox(ray, node.bbox, bestT);
@@ -47,8 +76,10 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 		{
 			for (uint i = 0; i < node.numTris; i++)
 			{
-				uint triIdx = gTrisIndices[node.firstTriIndex + i];
-				Tri tri = gTris[triIdx];
+				// firstTriIndex is local to this BLAS's index buffer section
+				uint localTriIdx = gTrisIndices[inst.triIndicesOffset + node.firstTriIndex + i];
+				// Triangle index is also local, add offset to get global
+				Tri tri = gTris[inst.triangleOffset + localTriIdx];
 				float2 bary;
 				if (IntersectTri(ray, tri, bestT, bary))
 				{
@@ -61,23 +92,45 @@ void TraverseBVH(Ray ray, inout float bestT, inout float3 bestN)
 		else
 		{
 
-			uint leftIdx = node.leftChild;
-			uint rightIdx = leftIdx + 1;
+			// leftChild is relative within this BLAS
+			uint leftLocal = node.leftChild;
+			uint rightLocal = leftLocal + 1;
 
-			float tLeft = IntersectBox(ray, gNodes[leftIdx].bbox, bestT);
-			float tRight = IntersectBox(ray, gNodes[rightIdx].bbox, bestT);
+			uint leftGlobal = inst.bvhNodeOffset + leftLocal;
+			uint rightGlobal = inst.bvhNodeOffset + rightLocal;
 
+			float tLeft = IntersectBox(ray, gNodes[leftGlobal].bbox, bestT);
+			float tRight = IntersectBox(ray, gNodes[rightGlobal].bbox, bestT);
+
+			// Push in far-to-near order so we pop near first
 			if (tLeft < tRight)
 			{
-				if (tRight < bestT) stack[stackPtr++] = rightIdx;
-				if (tLeft < bestT) stack[stackPtr++] = leftIdx;
+				if (tRight < bestT) stack[stackPtr++] = rightLocal;
+				if (tLeft < bestT) stack[stackPtr++] = leftLocal;
 			}
 			else
 			{
-				if (tLeft < bestT) stack[stackPtr++] = leftIdx;
-				if (tRight < bestT) stack[stackPtr++] = rightIdx;
+				if (tLeft < bestT) stack[stackPtr++] = leftLocal;
+				if (tRight < bestT) stack[stackPtr++] = rightLocal;
 			}
 		}
+	}
+}
+
+// Traverse all BLAS instances (two-level acceleration)
+void TraverseTLAS(Ray ray, inout float bestT, inout float3 bestN)
+{
+	for (uint i = 0; i < numBLASInstances; i++)
+	{
+		BLASInstance inst = gBlasInstances[i];
+
+		// First test instance's world bounding box
+		float tBox = IntersectBox(ray, inst.worldBBox, bestT);
+		if (tBox >= bestT)
+			continue;
+
+		// If hit, traverse this BLAS's BVH
+		TraverseBLAS(ray, inst, bestT, bestN);
 	}
 }
 
@@ -101,7 +154,9 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	ray.origin -= ray.dir * cageOffset; // offset to avoid self-intersection
 	ray.invDir = 1.0f / ray.dir;
 
-	TraverseBVH(ray, bestT, bestN);
+
+	TraverseTLAS(ray, bestT, bestN);
+
 	float3 N = normalize(worldNormal.xyz);
 	float3 T = normalize(worldTangent.xyz);
 	float3 B = cross(N, T);

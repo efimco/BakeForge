@@ -5,10 +5,13 @@
 #include <future>
 
 #include "glm/glm.hpp"
+#include "bvhNode.hpp"
+
 
 class Scene;
 class RTVCollector;
 class Primitive;
+
 
 struct LowPolyPrimitiveBuffers
 {
@@ -26,6 +29,31 @@ struct HighPolyPrimitiveBuffers
 	ComPtr<ID3D11ShaderResourceView> bvhNodesSRV;
 };
 
+struct CombinedHighPolyBuffers
+{
+	ComPtr<ID3D11Buffer> triangleBuffer;
+	ComPtr<ID3D11Buffer> triIndicesBuffer;
+	ComPtr<ID3D11Buffer> bvhNodesBuffer;
+	ComPtr<ID3D11Buffer> blasInstancesBuffer;
+
+	ComPtr<ID3D11ShaderResourceView> trianglesSRV;
+	ComPtr<ID3D11ShaderResourceView> triIndicesSRV;
+	ComPtr<ID3D11ShaderResourceView> bvhNodesSRV;
+	ComPtr<ID3D11ShaderResourceView> blasInstancesSRV;
+
+	uint32_t numBLASInstances = 0;
+};
+
+// Instance data for TLAS - references into combined buffers
+struct BLASInstance
+{
+	BVH::BBox worldBBox;       // 32 bytes
+	uint32_t triangleOffset;   // offset into combined triangle buffer
+	uint32_t triIndicesOffset; // offset into combined indices buffer
+	uint32_t bvhNodeOffset;    // offset into combined BVH nodes buffer
+	uint32_t numTriangles;     // number of triangles in this BLAS
+};
+
 class BakerPass : public BasePass
 {
 public:
@@ -37,8 +65,8 @@ public:
 	void bake(uint32_t width, uint32_t height, float cageOffset, uint32_t useSmoothedNormals);
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
-	void setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs);
-	std::vector<std::pair<Primitive*, Primitive*>> getPrimitivesToBake() const { return m_primitivePairs; }
+	void setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs);
+	std::pair<std::vector<Primitive*>, std::vector<Primitive*>> getPrimitivesToBake() const { return m_primitivesToBake; }
 	std::string directory = "";
 	std::string filename = "";
 
@@ -46,17 +74,8 @@ private:
 	uint32_t m_lastWidth = 0;
 	uint32_t m_lastHeight = 0;
 
-	std::vector<std::pair<Primitive*, Primitive*>> m_primitivePairs;
+	std::pair<std::vector<Primitive*>, std::vector<Primitive*>> m_primitivesToBake;
 
-	HighPolyPrimitiveBuffers createHighPolyPrimitiveBuffers(Primitive* prim);
-	void updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers);
-
-	void bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers);
-	void saveToTextureFile();
-	void asyncSaveTextureToFile(const std::string& fullPath,
-		ComPtr<ID3D11Device> device,
-		ComPtr<ID3D11DeviceContext> context,
-		ComPtr<ID3D11Texture2D> texture);
 
 	std::future<void> m_saveTextureFuture;
 
@@ -64,6 +83,8 @@ private:
 
 	float m_cageOffset = 0.1f;
 	uint32_t m_useSmoothedNormals = 0;
+
+	CombinedHighPolyBuffers m_combinedHighPolyBuffers;
 
 	ComPtr<ID3D11Texture2D> m_wsTexelPositionTexture;
 	ComPtr<ID3D11ShaderResourceView> m_wsTexelPositionSRV;
@@ -107,6 +128,18 @@ private:
 	ComPtr<ID3D11InputLayout> m_uvRasterInputLayout;
 	ComPtr<ID3D11RasterizerState> m_uvRasterRasterizerState;
 	ComPtr<ID3D11DepthStencilState> m_uvRasterDepthStencilState;
+
+	CombinedHighPolyBuffers createCombinedHighPolyBuffers();
+
+	void bakeNormals(const CombinedHighPolyBuffers& hpBuffers);
+
+	void updateBakerCB(const CombinedHighPolyBuffers& combinedBuffers);
+	
+	void saveToTextureFile();
+	void asyncSaveTextureToFile(const std::string& fullPath,
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> context,
+		ComPtr<ID3D11Texture2D> texture);
 
 	void rasterizeUVSpace(Primitive* lowPoly);
 	void updateRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);

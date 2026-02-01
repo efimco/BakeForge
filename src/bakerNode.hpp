@@ -58,6 +58,6 @@ private:
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
-	std::unordered_map<std::string, std::vector<std::pair<Primitive*, Primitive*>>> m_materialsPrimitivesMap;
+	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>>> m_materialsPrimitivesMap;
 	std::unordered_map<std::string, std::unique_ptr<BakerPass>> m_materialsBakerPasses;
 };

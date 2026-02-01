@@ -30,12 +30,15 @@
 #include "light.hpp"
 #include "scene.hpp"
 
-#define DRAW_DEBUG_BVH 0
+#define DRAW_DEBUG_BVH 1
+
+#define ENABLE_RENDERDOC_CAPTURE 0
 
 
 Renderer::Renderer(const HWND& hwnd)
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && ENABLE_RENDERDOC_CAPTURE
+
 	const HMODULE rdocModule = LoadLibraryA("..\\..\\thirdparty\\renderdoc.dll");
 	if (rdocModule)
 	{
@@ -89,7 +92,7 @@ void Renderer::draw()
 	{
 		AppConfig::captureNextFrame = true;
 	}
-#ifdef _DEBUG
+#if defined(_DEBUG) && ENABLE_RENDERDOC_CAPTURE
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->StartFrameCapture(m_dxDevice->getDevice().Get(), nullptr);
@@ -162,7 +165,7 @@ void Renderer::draw()
 	m_uiManager->draw(m_fsquad->getSRV(), m_scene.get(), m_view, m_projection);
 	m_objectPicker->dispatchPick(m_gBuffer->getObjectIDSRV(), m_uiManager->getMousePos(), m_scene.get());
 	m_dxDevice->getSwapChain()->Present(0, 0);
-#ifdef _DEBUG
+#if defined(_DEBUG) && ENABLE_RENDERDOC_CAPTURE
 	if (m_rdocAPI && AppConfig::captureNextFrame)
 	{
 		m_rdocAPI->EndFrameCapture(nullptr, nullptr);

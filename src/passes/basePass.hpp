@@ -75,7 +75,8 @@ enum class SBPreset
 {
 	CpuRead,
 	CpuWrite,
-	Default
+	Default,
+	Immutable
 };
 
 

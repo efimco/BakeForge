@@ -22,6 +22,8 @@ struct alignas(16) BakerCB
 	glm::uvec2 dimensions;
 	float cageOffset;
 	uint32_t useSmoothedNormals;
+	uint32_t numBLASInstances;
+	float padding[3];
 };
 
 struct alignas(16) RaycastVisCB
@@ -96,22 +98,21 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 	m_useSmoothedNormals = useSmoothedNormals;
 	createInterpolatedTexturesResources();
 	createBakedNormalResources();
-	for (const auto& [lowPoly, highPoly] : m_primitivePairs)
+	m_combinedHighPolyBuffers = createCombinedHighPolyBuffers();
+	for (size_t i = 0; i < m_primitivesToBake.first.size(); ++i)
 	{
-		if (!lowPoly || !highPoly)
+		Primitive* lowPoly = m_primitivesToBake.first[i];
+		if (!lowPoly)
 			continue;
 
-		auto hpBuffers = createHighPolyPrimitiveBuffers(highPoly);
-		updateHighPolyPrimitiveBuffers(highPoly, hpBuffers);
-
 		rasterizeUVSpace(lowPoly);
-
-		bakeNormals(hpBuffers);
-		asyncSaveTextureToFile(directory + "\\" + filename,
-			m_device,
-			m_context,
-			m_bakedNormalTexture);
+		updateBakerCB(m_combinedHighPolyBuffers);
+		bakeNormals(m_combinedHighPolyBuffers);
 	}
+	asyncSaveTextureToFile(directory + "\\" + filename,
+		m_device,
+		m_context,
+		m_bakedNormalTexture);
 }
 
 void BakerPass::drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
@@ -166,37 +167,108 @@ void BakerPass::createOrResize()
 	m_rtvCollector->addRTV(name + "::RaycastVisualization", m_raycastVisualizationSRV.Get());
 }
 
-void BakerPass::setPrimitivesToBake(const std::vector<std::pair<Primitive*, Primitive*>>& primitivePairs)
+void BakerPass::setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs)
 {
-	m_primitivePairs = primitivePairs;
+	m_primitivesToBake = primitivePairs;
 }
 
-
-HighPolyPrimitiveBuffers BakerPass::createHighPolyPrimitiveBuffers(Primitive* prim)
+CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()
 {
-	const auto& triangleBufferSRV = prim->getTrisBufferSRV();
-	const auto& triangleIndicesBufferSRV = prim->getTrisIndicesBufferSRV();
+	CombinedHighPolyBuffers combinedBuffers;
 
-	HighPolyPrimitiveBuffers buffers;
-	buffers.srv_triangleBuffer = triangleBufferSRV;
-	buffers.srv_triangleIndicesBuffer = triangleIndicesBufferSRV;
-	buffers.bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), static_cast<UINT>(prim->getBVHNodes().size()), SBPreset::CpuWrite);
-	buffers.bvhNodesSRV = createShaderResourceView(buffers.bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
-	return buffers;
-}
+	size_t totalTriangles = 0;
+	size_t totalTriIndices = 0;
+	size_t totalBVHNodes = 0;
 
-void BakerPass::updateHighPolyPrimitiveBuffers(Primitive* prim, const HighPolyPrimitiveBuffers& buffers)
-{
-	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
-	if (SUCCEEDED(m_context->Map(buffers.bvhNodesBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+	for (Primitive* hp : m_primitivesToBake.second)
 	{
-		auto* nodes = static_cast<BVH::Node*>(mappedResource.pData);
-		for (int i = 0; i < prim->getBVHNodes().size(); ++i)
-		{
-			nodes[i] = prim->getBVHNodes()[i];
-		}
-		m_context->Unmap(buffers.bvhNodesBuffer.Get(), 0);
+		if (!hp) continue;
+		totalTriangles += hp->getTriangles().size();
+		totalTriIndices += hp->getTriangleIndices().size();
+		totalBVHNodes += hp->getBVHNodes().size();
 	}
+
+	std::cout << "Building combined high-poly buffers:" << std::endl;
+	std::cout << "  Total triangles: " << totalTriangles << std::endl;
+	std::cout << "  Total tri indices: " << totalTriIndices << std::endl;
+	std::cout << "  Total BVH nodes: " << totalBVHNodes << std::endl;
+	std::cout << "  Number of BLAS instances: " << m_primitivesToBake.second.size() << std::endl;
+
+	// Allocate combined CPU-side vectors
+	std::vector<Triangle> allTriangles;
+	std::vector<uint32_t> allTriIndices;
+	std::vector<BVH::Node> allBVHNodes;
+	std::vector<BLASInstance> blasInstances;
+
+	allTriangles.reserve(totalTriangles);
+	allTriIndices.reserve(totalTriIndices);
+	allBVHNodes.reserve(totalBVHNodes);
+	blasInstances.reserve(m_primitivesToBake.second.size());
+
+	uint32_t triangleOffset = 0;
+	uint32_t triIndicesOffset = 0;
+	uint32_t bvhNodeOffset = 0;
+
+	for (Primitive* hp : m_primitivesToBake.second)
+	{
+		if (!hp) continue;
+
+		const auto tris = hp->getWorldSpaceTriangles();
+		const auto& indices = hp->getTriangleIndices();
+		const auto nodes = hp->getWorldSpaceBVHNodes();
+
+		// Create BLAS instance
+		BLASInstance inst;
+		inst.worldBBox = hp->getWorldBBox();
+		inst.triangleOffset = triangleOffset;
+		inst.triIndicesOffset = triIndicesOffset;
+		inst.bvhNodeOffset = bvhNodeOffset;
+		inst.numTriangles = static_cast<uint32_t>(tris.size());
+		blasInstances.push_back(inst);
+
+		allTriangles.insert(allTriangles.end(), tris.begin(), tris.end());
+		allTriIndices.insert(allTriIndices.end(), indices.begin(), indices.end());
+		allBVHNodes.insert(allBVHNodes.end(), nodes.begin(), nodes.end());
+
+
+		triangleOffset += static_cast<uint32_t>(tris.size());
+		triIndicesOffset += static_cast<uint32_t>(indices.size());
+		bvhNodeOffset += static_cast<uint32_t>(nodes.size());
+	}
+	combinedBuffers.numBLASInstances = static_cast<uint32_t>(blasInstances.size());
+
+
+	// Create GPU buffers
+	if (!allTriangles.empty())
+	{
+		combinedBuffers.triangleBuffer = createStructuredBuffer(sizeof(Triangle),
+			static_cast<UINT>(allTriangles.size()), SBPreset::Immutable, allTriangles.data());
+		combinedBuffers.trianglesSRV = createShaderResourceView(combinedBuffers.triangleBuffer.Get(), SRVPreset::StructuredBuffer);
+	}
+
+	if (!allTriIndices.empty())
+	{
+		combinedBuffers.triIndicesBuffer = createStructuredBuffer(sizeof(uint32_t),
+			static_cast<UINT>(allTriIndices.size()), SBPreset::Immutable, allTriIndices.data());
+		combinedBuffers.triIndicesSRV = createShaderResourceView(combinedBuffers.triIndicesBuffer.Get(), SRVPreset::StructuredBuffer);
+	}
+
+	if (!allBVHNodes.empty())
+	{
+		combinedBuffers.bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node),
+			static_cast<UINT>(allBVHNodes.size()), SBPreset::Immutable, allBVHNodes.data());
+		combinedBuffers.bvhNodesSRV = createShaderResourceView(combinedBuffers.bvhNodesBuffer.Get(), SRVPreset::StructuredBuffer);
+	}
+
+	if (!blasInstances.empty())
+	{
+		combinedBuffers.blasInstancesBuffer = createStructuredBuffer(sizeof(BLASInstance),
+			static_cast<UINT>(blasInstances.size()), SBPreset::Immutable, blasInstances.data());
+		combinedBuffers.blasInstancesSRV = createShaderResourceView(combinedBuffers.blasInstancesBuffer.Get(), SRVPreset::StructuredBuffer);
+	}
+
+
+	return combinedBuffers;
 }
 
 void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
@@ -283,7 +355,7 @@ void BakerPass::rasterizeUVSpace(Primitive* lowPoly)
 }
 
 
-void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
+void BakerPass::bakeNormals(const CombinedHighPolyBuffers& combinedBuffers)
 {
 	beginDebugEvent(L"Baker::Bake Normals");
 
@@ -294,23 +366,27 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 
 	m_context->CSSetShader(m_shaderManager->getComputeShader("bakerBakeNormal"), nullptr, 0);
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+
 	ID3D11UnorderedAccessView* bakedNormalUAVs[1] = { m_bakedNormalUAV.Get() };
 	m_context->CSSetUnorderedAccessViews(0, 1, bakedNormalUAVs, nullptr);
-	ID3D11ShaderResourceView* hpSRVs[7] = {
-		hpBuffers.srv_triangleBuffer.Get(),
-		hpBuffers.srv_triangleIndicesBuffer.Get(),
-		hpBuffers.bvhNodesSRV.Get(),
+
+	ID3D11ShaderResourceView* hpSRVs[8] = {
+		combinedBuffers.blasInstancesSRV.Get(),
+		combinedBuffers.trianglesSRV.Get(),
+		combinedBuffers.triIndicesSRV.Get(),
+		combinedBuffers.bvhNodesSRV.Get(),
 		m_wsTexelPositionSRV.Get(),
 		m_wsTexelNormalSRV.Get(),
 		m_wsTexelTangentSRV.Get(),
 		m_wsTexelSmoothedNormalSRV.Get()
 	};
-	m_context->CSSetShaderResources(0, 7, hpSRVs);
+
+	m_context->CSSetShaderResources(0, 8, hpSRVs);
 	UINT threadGroupX = (m_lastWidth + 15) / 16;
 	UINT threadGroupY = (m_lastHeight + 15) / 16;
 	m_context->Dispatch(threadGroupX, threadGroupY, 1);
 	unbindComputeUAVs(0, 1);
-	unbindShaderResources(0, 7);
+	unbindShaderResources(0, 8);
 
 	endDebugEvent();
 
@@ -335,6 +411,23 @@ void BakerPass::bakeNormals(const HighPolyPrimitiveBuffers& hpBuffers)
 		std::cout << "GPU baking took " << gpuTimeMs << " ms" << std::endl;
 	}
 #endif
+}
+
+void BakerPass::updateBakerCB(const CombinedHighPolyBuffers& combinedBuffers)
+{
+	// Update constant buffer with numBLASInstances
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+	{
+		auto* data = static_cast<BakerCB*>(mapped.pData);
+		data->dimensions = glm::uvec2(m_lastWidth, m_lastHeight);
+		data->worldMatrix = glm::mat4(1.0f); // Identity - triangles already in world space
+		data->worldMatrixInvTranspose = glm::mat4(1.0f);
+		data->cageOffset = m_cageOffset;
+		data->useSmoothedNormals = m_useSmoothedNormals;
+		data->numBLASInstances = combinedBuffers.numBLASInstances;
+		m_context->Unmap(m_constantBuffer.Get(), 0);
+	}
 }
 
 void BakerPass::saveToTextureFile()
