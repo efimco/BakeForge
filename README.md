@@ -33,6 +33,8 @@ An open source GPU-accelerated texture baker built with DirectX 11. Bake high-po
 
 ![alt text](image-1.png)
 
+3D Asset is Done by [Igor Oskolskiy](https://www.artstation.com/dark_igorek)
+
 ## Quick Start
 
 ### 1. Import Your Meshes
