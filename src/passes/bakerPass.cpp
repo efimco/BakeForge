@@ -110,11 +110,10 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 		Primitive* lowPoly = m_primitivesToBake.first[i];
 		if (!lowPoly)
 			continue;
-
 		rasterizeUVSpace(lowPoly);
-		updateBakerCB(m_combinedHighPolyBuffers);
-		bakeNormals(m_combinedHighPolyBuffers);
 	}
+	updateBakerCB(m_combinedHighPolyBuffers);
+	bakeNormals(m_combinedHighPolyBuffers);
 	asyncSaveTextureToFile(directory + "\\" + filename,
 		m_device,
 		m_context,
@@ -229,7 +228,7 @@ CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()
 		inst.worldBBox = hp->getWorldBBox();  // Only this needs world-space (cheap)
 		glm::mat4 worldMatrix = hp->getWorldMatrix();
 		inst.worldMatrixInv = glm::transpose(glm::inverse(worldMatrix));  // Row-major for HLSL
-		inst.normalMatrix =  glm::transpose(inst.worldMatrixInv); 
+		inst.normalMatrix = glm::transpose(inst.worldMatrixInv);
 		inst.triangleOffset = triangleOffset;
 		inst.triIndicesOffset = triIndicesOffset;
 		inst.bvhNodeOffset = bvhNodeOffset;
