@@ -49,8 +49,8 @@ GBuffer::GBuffer(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> contex
 	m_samplerState = createSamplerState(SamplerPreset::AnisotropicWrap);
 
 	// Load shaders via inherited m_shaderManager
-	m_shaderManager->LoadPixelShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("gBuffer", L"../../src/shaders/gBuffer.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("gBuffer", ShaderManager::GetShaderPath(L"gBuffer.hlsl"), "PS");
+	m_shaderManager->LoadVertexShader("gBuffer", ShaderManager::GetShaderPath(L"gBuffer.hlsl"), "VS");
 
 	createOrResize();
 

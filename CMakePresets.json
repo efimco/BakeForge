@@ -13,6 +13,20 @@
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
 				"CMAKE_CXX_COMPILER": "cl.exe"
 			}
+		},
+		{
+			"name": "release",
+			"displayName": "Release Build (Distributable)",
+			"description": "Build for release with shaders and resources copied to output directory",
+			"generator": "Visual Studio 17 2022",
+			"toolset": "host=x64",
+			"architecture": "x64",
+			"binaryDir": "${sourceDir}/build-release",
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+				"CMAKE_CXX_COMPILER": "cl.exe",
+				"RELEASE_BUILD": "ON"
+			}
 		}
 	],
 	"buildPresets": [
@@ -26,6 +40,12 @@
 			"name": "main-release",
 			"displayName": "Visual Studio Community 2022 Release",
 			"configurePreset": "main",
+			"configuration": "Release"
+		},
+		{
+			"name": "release-build",
+			"displayName": "Distributable Release Build",
+			"configurePreset": "release",
 			"configuration": "Release"
 		}
 	]

@@ -20,7 +20,7 @@ ObjectPicker::ObjectPicker(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 	m_device = device;
 	m_context = context;
 
-	m_shaderManager->LoadComputeShader("colorPicker", L"../../src/shaders/colorPicker.hlsl", "CS");
+	m_shaderManager->LoadComputeShader("colorPicker", ShaderManager::GetShaderPath(L"colorPicker.hlsl"), "CS");
 
 	m_constantBuffer = createConstantBuffer(sizeof(cbPicking));
 

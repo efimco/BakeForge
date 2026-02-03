@@ -17,8 +17,8 @@ inline static constexpr D3D11_INPUT_ELEMENT_DESC FSQuadInputLayoutDesc[] = {
 FSQuad::FSQuad(ComPtr<ID3D11Device> _device, ComPtr<ID3D11DeviceContext> _context) : BasePass(_device, _context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_shaderManager->LoadPixelShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("toFSQuad", L"../../src/shaders/toFSQuad.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("toFSQuad", ShaderManager::GetShaderPath(L"toFSQuad.hlsl"), "PS");
+	m_shaderManager->LoadVertexShader("toFSQuad", ShaderManager::GetShaderPath(L"toFSQuad.hlsl"), "VS");
 
 	HRESULT hr = m_device->CreateInputLayout(FSQuadInputLayoutDesc, ARRAYSIZE(FSQuadInputLayoutDesc),
 		m_shaderManager->getVertexShaderBlob("toFSQuad")->GetBufferPointer(),

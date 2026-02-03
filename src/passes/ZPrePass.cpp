@@ -31,8 +31,8 @@ ZPrePass::ZPrePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 
 	createOrResize();
 
-	m_shaderManager->LoadVertexShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "VS");
-	m_shaderManager->LoadPixelShader("zPrePass", L"../../src/shaders/ZPrePass.hlsl", "PS");
+	m_shaderManager->LoadVertexShader("zPrePass", ShaderManager::GetShaderPath(L"ZPrePass.hlsl"), "VS");
+	m_shaderManager->LoadPixelShader("zPrePass", ShaderManager::GetShaderPath(L"ZPrePass.hlsl"), "PS");
 
 	{
 		HRESULT hr = m_device->CreateInputLayout(s_zPrePassInputLayoutDesc, ARRAYSIZE(s_zPrePassInputLayoutDesc),

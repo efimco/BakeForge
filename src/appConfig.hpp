@@ -1,5 +1,12 @@
 #pragma once
 
+#include <string>
+
+// Default paths if not defined by CMake (relative from build output directory)
+#ifndef RESOURCE_PATH
+#define RESOURCE_PATH L"../../res/"
+#endif
+
 namespace AppConfig
 {
 	inline int windowWidth = 2;
@@ -28,5 +35,21 @@ namespace AppConfig
 	inline float getAspectRatio()
 	{
 		return static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);
+	}
+
+	// Helper to build full resource path from just the resource filename/subfolder
+	inline std::wstring GetResourcePath(const std::wstring& resourcePath)
+	{
+		return std::wstring(RESOURCE_PATH) + resourcePath;
+	}
+
+	// Narrow string version for compatibility
+	inline std::string GetResourcePathA(const std::string& resourcePath)
+	{
+#ifdef RELEASE_BUILD
+		return std::string("res/") + resourcePath;
+#else
+		return std::string("../../res/") + resourcePath;
+#endif
 	}
 } // namespace AppConfig

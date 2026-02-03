@@ -37,7 +37,7 @@ RayTracePass::RayTracePass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_shaderManager->LoadComputeShader("rayTrace", L"..\\..\\src\\shaders\\rayTrace.hlsl");
+	m_shaderManager->LoadComputeShader("rayTrace", ShaderManager::GetShaderPath(L"rayTrace.hlsl"));
 	m_constantBuffer = createConstantBuffer(sizeof(RayTraceConstantBuffer));
 
 	m_bvhNodesBuffer = createStructuredBuffer(sizeof(BVH::Node), 4096 * 4, SBPreset::CpuWrite);

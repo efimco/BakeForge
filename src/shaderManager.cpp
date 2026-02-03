@@ -11,6 +11,11 @@ static std::unordered_map<std::string, ShaderInfo> m_vertexShaders;
 static std::unordered_map<std::string, ShaderInfo> m_pixelShaders;
 static std::unordered_map<std::string, ShaderInfo> m_computeShaders;
 
+std::wstring ShaderManager::GetShaderPath(const std::wstring& shaderFilename)
+{
+	return std::wstring(SHADER_PATH) + shaderFilename;
+}
+
 ShaderManager::ShaderManager(ComPtr<ID3D11Device> device)
 {
 	m_device = device;
@@ -206,6 +211,14 @@ bool ShaderManager::compileShader(ShaderInfo& info, const ShaderType shaderType)
 {
 	ComPtr<ID3DBlob> shaderBlob;
 	ComPtr<ID3DBlob> errorBlob;
+
+	// Debug: Check if file exists
+	if (!std::filesystem::exists(info.filename))
+	{
+		std::wcerr << L"Shader file not found: " << info.filename << std::endl;
+		std::wcerr << L"Current working directory: " << std::filesystem::current_path().wstring() << std::endl;
+		return false;
+	}
 
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #ifdef _DEBUG

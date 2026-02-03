@@ -10,6 +10,11 @@
 
 using namespace Microsoft::WRL;
 
+// Default shader path if not defined by CMake (relative from build output directory)
+#ifndef SHADER_PATH
+#define SHADER_PATH L"../../src/shaders/"
+#endif
+
 enum ShaderType
 {
 	COMPUTE,
@@ -21,6 +26,9 @@ class ShaderManager
 {
 public:
 	explicit ShaderManager(ComPtr<ID3D11Device> device);
+
+	// Helper to build full shader path from just the shader filename
+	static std::wstring GetShaderPath(const std::wstring& shaderFilename);
 
 	bool LoadVertexShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "VS");
 	bool LoadPixelShader(const std::string& name, const std::wstring& filename, const std::string& entryPoint = "PS");

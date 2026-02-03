@@ -48,9 +48,9 @@ WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_lightIconTexture = std::make_shared<Texture>("../../res/icons/PointLight.png", m_device);
-	m_shaderManager->LoadPixelShader("wordSpaceUIPS", L"../../src/shaders/wordSpaceUI.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("wordSpaceUIVS", L"../../src/shaders/wordSpaceUI.hlsl", "VS");
+	m_lightIconTexture = std::make_shared<Texture>(AppConfig::GetResourcePathA("icons/PointLight.png"), m_device);
+	m_shaderManager->LoadPixelShader("wordSpaceUIPS", ShaderManager::GetShaderPath(L"wordSpaceUI.hlsl"), "PS");
+	m_shaderManager->LoadVertexShader("wordSpaceUIVS", ShaderManager::GetShaderPath(L"wordSpaceUI.hlsl"), "VS");
 	m_vertexBuffer = createVertexBuffer(sizeof(verts), verts);
 	m_indexBuffer = createIndexBuffer(sizeof(idx), idx);
 	createOrResize();

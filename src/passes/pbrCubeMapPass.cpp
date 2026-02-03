@@ -57,12 +57,12 @@ CubeMapPass::CubeMapPass(ComPtr<ID3D11Device> device,
 	m_rtvCollector = std::make_unique<RTVCollector>();
 	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device);
 
-	m_shaderManager->LoadVertexShader("cubemapVS", L"../../src/shaders/cubemap.hlsl", "VS");
-	m_shaderManager->LoadPixelShader("cubemapPS", L"../../src/shaders/cubemap.hlsl", "PS");
-	m_shaderManager->LoadComputeShader("equirectToCubempCS", L"../../src/shaders/equirectToCubemp.hlsl", "CS");
-	m_shaderManager->LoadComputeShader("irradianceMapCS", L"../../src/shaders/irradianceConvolution.hlsl", "CS");
-	m_shaderManager->LoadComputeShader("prefilteredMapCS", L"../../src/shaders/prefilteredMap.hlsl", "CS");
-	m_shaderManager->LoadComputeShader("brdfLUTCS", L"../../src/shaders/LUT4BRDF.hlsl", "CS");
+	m_shaderManager->LoadVertexShader("cubemapVS", ShaderManager::GetShaderPath(L"cubemap.hlsl"), "VS");
+	m_shaderManager->LoadPixelShader("cubemapPS", ShaderManager::GetShaderPath(L"cubemap.hlsl"), "PS");
+	m_shaderManager->LoadComputeShader("equirectToCubempCS", ShaderManager::GetShaderPath(L"equirectToCubemp.hlsl"), "CS");
+	m_shaderManager->LoadComputeShader("irradianceMapCS", ShaderManager::GetShaderPath(L"irradianceConvolution.hlsl"), "CS");
+	m_shaderManager->LoadComputeShader("prefilteredMapCS", ShaderManager::GetShaderPath(L"prefilteredMap.hlsl"), "CS");
+	m_shaderManager->LoadComputeShader("brdfLUTCS", ShaderManager::GetShaderPath(L"LUT4BRDF.hlsl"), "CS");
 
 	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);
 

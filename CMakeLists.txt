@@ -7,6 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_definitions(-DNOMINMAX)
 
+# Option to enable release mode shader handling (shaders copied next to executable)
+option(RELEASE_BUILD "Build for release with shaders next to executable" OFF)
+
 file(GLOB SOURCE_FILES
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
@@ -60,6 +63,32 @@ target_include_directories(TimeToDX
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/ImGui
 				${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Include/DXTEX
 )
+
+# Configure shader path based on build type
+if(RELEASE_BUILD)
+	target_compile_definitions(TimeToDX PRIVATE SHADER_PATH=L"shaders/")
+	target_compile_definitions(TimeToDX PRIVATE RESOURCE_PATH=L"res/")
+	
+	# Copy shaders to output directory
+	file(GLOB SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl")
+	
+	add_custom_command(TARGET TimeToDX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:TimeToDX>/shaders"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_FILES} "$<TARGET_FILE_DIR:TimeToDX>/shaders/"
+		COMMENT "Copying shaders to output directory"
+	)
+	
+	# Copy resources to output directory
+	add_custom_command(TARGET TimeToDX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/res" "$<TARGET_FILE_DIR:TimeToDX>/res"
+		COMMENT "Copying resources to output directory"
+	)
+else()
+	# Development build - paths relative from build output directory (build/Debug or build/Release)
+	target_compile_definitions(TimeToDX PRIVATE SHADER_PATH=L"../../src/shaders/")
+	target_compile_definitions(TimeToDX PRIVATE RESOURCE_PATH=L"../../res/")
+endif()
+
 set_target_properties(TimeToDX PROPERTIES
 				WIN32_EXECUTABLE TRUE
 				VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"

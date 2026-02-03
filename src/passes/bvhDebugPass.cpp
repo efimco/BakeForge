@@ -50,8 +50,8 @@ BVHDebugPass::BVHDebugPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceConte
 
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
-	m_shaderManager->LoadVertexShader("debugBVH", L"../../src/shaders/debugBVH.hlsl", "VS");
-	m_shaderManager->LoadPixelShader("debugBVH", L"../../src/shaders/debugBVH.hlsl", "PS");
+	m_shaderManager->LoadVertexShader("debugBVH", ShaderManager::GetShaderPath(L"debugBVH.hlsl"), "VS");
+	m_shaderManager->LoadPixelShader("debugBVH", ShaderManager::GetShaderPath(L"debugBVH.hlsl"), "PS");
 
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_blendState = createBlendState(BlendPreset::AlphaBlend);

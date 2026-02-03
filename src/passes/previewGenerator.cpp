@@ -58,8 +58,8 @@ PreviewGenerator::PreviewGenerator(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_shaderManager->LoadPixelShader("previewGenerator", L"../../src/shaders/previewGenerator.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("previewGenerator", L"../../src/shaders/previewGenerator.hlsl", "VS");
+	m_shaderManager->LoadPixelShader("previewGenerator", ShaderManager::GetShaderPath(L"previewGenerator.hlsl"), "PS");
+	m_shaderManager->LoadVertexShader("previewGenerator", ShaderManager::GetShaderPath(L"previewGenerator.hlsl"), "VS");
 	m_rasterizerState = createRSState(RasterizerPreset::NoCullNoClip);
 	m_depthStencilState = createDSState(DepthStencilPreset::WriteDepth);
 	m_samplerState = createSamplerState(SamplerPreset::LinearWrap);

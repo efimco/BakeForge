@@ -27,7 +27,7 @@ struct alignas(16) DeferredConstantBuffer
 DeferredPass::DeferredPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_shaderManager->LoadComputeShader("deferred", L"../../src/shaders/deferred.hlsl", "CS");
+	m_shaderManager->LoadComputeShader("deferred", ShaderManager::GetShaderPath(L"deferred.hlsl"), "CS");
 	m_lightsBuffer = createStructuredBuffer(sizeof(LightData), MAX_LIGHTS, SBPreset::CpuWrite);
 	m_lightsSRV = createShaderResourceView(m_lightsBuffer.Get(), SRVPreset::StructuredBuffer, 0, MAX_LIGHTS);
 	m_samplerState = createSamplerState(SamplerPreset::LinearClamp);

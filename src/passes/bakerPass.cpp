@@ -53,11 +53,11 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
 	m_shaderManager = std::make_unique<ShaderManager>(device);
-	m_shaderManager->LoadComputeShader("bakerBakeNormal", L"../../src/shaders/baker.hlsl", "CSBakeNormal");
-	m_shaderManager->LoadVertexShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "VS");
-	m_shaderManager->LoadPixelShader("raycastDebug", L"../../src/shaders/raycastDebug.hlsl", "PS");
-	m_shaderManager->LoadVertexShader("uvRasterize", L"../../src/shaders/uvRasterize.hlsl", "VS");
-	m_shaderManager->LoadPixelShader("uvRasterize", L"../../src/shaders/uvRasterize.hlsl", "PS");
+	m_shaderManager->LoadComputeShader("bakerBakeNormal", ShaderManager::GetShaderPath(L"baker.hlsl"), "CSBakeNormal");
+	m_shaderManager->LoadVertexShader("raycastDebug", ShaderManager::GetShaderPath(L"raycastDebug.hlsl"), "VS");
+	m_shaderManager->LoadPixelShader("raycastDebug", ShaderManager::GetShaderPath(L"raycastDebug.hlsl"), "PS");
+	m_shaderManager->LoadVertexShader("uvRasterize", ShaderManager::GetShaderPath(L"uvRasterize.hlsl"), "VS");
+	m_shaderManager->LoadPixelShader("uvRasterize", ShaderManager::GetShaderPath(L"uvRasterize.hlsl"), "PS");
 
 	m_constantBuffer = createConstantBuffer(sizeof(BakerCB));
 	m_raycastConstantBuffer = createConstantBuffer(sizeof(RaycastVisCB));
