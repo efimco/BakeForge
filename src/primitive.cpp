@@ -3,18 +3,28 @@
 #include <d3d11.h>
 #include <d3d11shader.h>
 #include <iostream>
+#include <cmath>
 
 #include "assert.h"
 
 #include "bvhBuilder.hpp"
 #include "primitiveData.hpp"
 
-Primitive::Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName)
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
+
+
+
+Primitive::Primitive(ComPtr<ID3D11Device> device, BasePrimitiveType type, std::string_view nodeName)
 	: SceneNode(nodeName)
 	, m_sharedData(std::make_shared<SharedPrimitiveData>())
 	, m_device(device)
 {
 }
+
 
 void Primitive::setVertexData(std::vector<Vertex>&& vertexData) const
 {
@@ -399,4 +409,168 @@ std::unique_ptr<SceneNode> Primitive::clone() const
 	std::unique_ptr<Primitive> primitive = std::make_unique<Primitive>(m_device);
 	primitive->copyFrom(*this);
 	return primitive;
+}
+
+void Primitive::GenerateCube(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float size)
+{
+	outVertices.clear();
+	outIndices.clear();
+
+	float hs = size * 0.5f; // half size
+
+	auto addVertex = [&outVertices](glm::vec3 pos, glm::vec3 normal, glm::vec2 uv, glm::vec3 tangent) {
+		Vertex v;
+		v.position = pos;
+		v.normal = normal;
+		v.texCoords = uv;
+		v.tangent = tangent;
+		v.smoothNormal = normal;
+		outVertices.push_back(v);
+	};
+
+	// Front face (+Z)
+	addVertex({-hs, -hs,  hs}, {0, 0, 1}, {0, 0}, {1, 0, 0});
+	addVertex({ hs, -hs,  hs}, {0, 0, 1}, {1, 0}, {1, 0, 0});
+	addVertex({ hs,  hs,  hs}, {0, 0, 1}, {1, 1}, {1, 0, 0});
+	addVertex({-hs,  hs,  hs}, {0, 0, 1}, {0, 1}, {1, 0, 0});
+
+	// Back face (-Z)
+	addVertex({ hs, -hs, -hs}, {0, 0, -1}, {0, 0}, {-1, 0, 0});
+	addVertex({-hs, -hs, -hs}, {0, 0, -1}, {1, 0}, {-1, 0, 0});
+	addVertex({-hs,  hs, -hs}, {0, 0, -1}, {1, 1}, {-1, 0, 0});
+	addVertex({ hs,  hs, -hs}, {0, 0, -1}, {0, 1}, {-1, 0, 0});
+
+	// Top face (+Y)
+	addVertex({-hs,  hs,  hs}, {0, 1, 0}, {0, 0}, {1, 0, 0});
+	addVertex({ hs,  hs,  hs}, {0, 1, 0}, {1, 0}, {1, 0, 0});
+	addVertex({ hs,  hs, -hs}, {0, 1, 0}, {1, 1}, {1, 0, 0});
+	addVertex({-hs,  hs, -hs}, {0, 1, 0}, {0, 1}, {1, 0, 0});
+
+	// Bottom face (-Y)
+	addVertex({-hs, -hs, -hs}, {0, -1, 0}, {0, 0}, {1, 0, 0});
+	addVertex({ hs, -hs, -hs}, {0, -1, 0}, {1, 0}, {1, 0, 0});
+	addVertex({ hs, -hs,  hs}, {0, -1, 0}, {1, 1}, {1, 0, 0});
+	addVertex({-hs, -hs,  hs}, {0, -1, 0}, {0, 1}, {1, 0, 0});
+
+	// Right face (+X)
+	addVertex({ hs, -hs,  hs}, {1, 0, 0}, {0, 0}, {0, 0, -1});
+	addVertex({ hs, -hs, -hs}, {1, 0, 0}, {1, 0}, {0, 0, -1});
+	addVertex({ hs,  hs, -hs}, {1, 0, 0}, {1, 1}, {0, 0, -1});
+	addVertex({ hs,  hs,  hs}, {1, 0, 0}, {0, 1}, {0, 0, -1});
+
+	// Left face (-X)
+	addVertex({-hs, -hs, -hs}, {-1, 0, 0}, {0, 0}, {0, 0, 1});
+	addVertex({-hs, -hs,  hs}, {-1, 0, 0}, {1, 0}, {0, 0, 1});
+	addVertex({-hs,  hs,  hs}, {-1, 0, 0}, {1, 1}, {0, 0, 1});
+	addVertex({-hs,  hs, -hs}, {-1, 0, 0}, {0, 1}, {0, 0, 1});
+
+	// Indices for all 6 faces (2 triangles per face)
+	for (uint32_t face = 0; face < 6; face++)
+	{
+		uint32_t base = face * 4;
+		outIndices.push_back(base + 0);
+		outIndices.push_back(base + 1);
+		outIndices.push_back(base + 2);
+		outIndices.push_back(base + 0);
+		outIndices.push_back(base + 2);
+		outIndices.push_back(base + 3);
+	}
+}
+
+void Primitive::GenerateSphere(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float radius, uint32_t segments, uint32_t rings)
+{
+	outVertices.clear();
+	outIndices.clear();
+
+	// Generate vertices
+	for (uint32_t ring = 0; ring <= rings; ring++)
+	{
+		float phi = static_cast<float>(M_PI) * static_cast<float>(ring) / static_cast<float>(rings);
+		float sinPhi = std::sin(phi);
+		float cosPhi = std::cos(phi);
+
+		for (uint32_t seg = 0; seg <= segments; seg++)
+		{
+			float theta = 2.0f * static_cast<float>(M_PI) * static_cast<float>(seg) / static_cast<float>(segments);
+			float sinTheta = std::sin(theta);
+			float cosTheta = std::cos(theta);
+
+			glm::vec3 normal(sinPhi * cosTheta, cosPhi, sinPhi * sinTheta);
+			glm::vec3 position = normal * radius;
+			glm::vec2 texCoord(static_cast<float>(seg) / static_cast<float>(segments),
+				static_cast<float>(ring) / static_cast<float>(rings));
+
+			// Calculate tangent
+			glm::vec3 tangent(-sinTheta, 0.0f, cosTheta);
+			if (glm::length(tangent) < 0.001f)
+			{
+				tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+			}
+			tangent = glm::normalize(tangent);
+
+			Vertex v;
+			v.position = position;
+			v.normal = normal;
+			v.texCoords = texCoord;
+			v.tangent = tangent;
+			v.smoothNormal = normal;
+			outVertices.push_back(v);
+		}
+	}
+
+	// Generate indices
+	for (uint32_t ring = 0; ring < rings; ring++)
+	{
+		for (uint32_t seg = 0; seg < segments; seg++)
+		{
+			uint32_t current = ring * (segments + 1) + seg;
+			uint32_t next = current + segments + 1;
+
+			// First triangle
+			outIndices.push_back(current);
+			outIndices.push_back(next);
+			outIndices.push_back(current + 1);
+
+			// Second triangle
+			outIndices.push_back(current + 1);
+			outIndices.push_back(next);
+			outIndices.push_back(next + 1);
+		}
+	}
+}
+
+void Primitive::GeneratePlane(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float width, float height)
+{
+	outVertices.clear();
+	outIndices.clear();
+
+	float hw = width * 0.5f;
+	float hh = height * 0.5f;
+
+	glm::vec3 normal(0.0f, 1.0f, 0.0f);
+	glm::vec3 tangent(1.0f, 0.0f, 0.0f);
+
+	auto addVertex = [&outVertices](glm::vec3 pos, glm::vec3 normal_, glm::vec2 uv, glm::vec3 tangent_) {
+		Vertex v;
+		v.position = pos;
+		v.normal = normal_;
+		v.texCoords = uv;
+		v.tangent = tangent_;
+		v.smoothNormal = normal_;
+		outVertices.push_back(v);
+	};
+
+	// 4 vertices for a simple quad
+	addVertex({-hw, 0.0f, -hh}, normal, {0.0f, 0.0f}, tangent);
+	addVertex({ hw, 0.0f, -hh}, normal, {1.0f, 0.0f}, tangent);
+	addVertex({ hw, 0.0f,  hh}, normal, {1.0f, 1.0f}, tangent);
+	addVertex({-hw, 0.0f,  hh}, normal, {0.0f, 1.0f}, tangent);
+
+	// Two triangles
+	outIndices.push_back(0);
+	outIndices.push_back(2);
+	outIndices.push_back(1);
+	outIndices.push_back(0);
+	outIndices.push_back(3);
+	outIndices.push_back(2);
 }

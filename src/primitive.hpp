@@ -34,16 +34,28 @@ struct SharedPrimitiveData
 	ComPtr<ID3D11ShaderResourceView> srv_structuredTrisIndicesBuffer;
 };
 
+enum class BasePrimitiveType
+{
+	EMPTY,
+	CUBE,
+	SPHERE,
+	PLANE
+};
+
 class Primitive : public SceneNode
 {
 public:
-	explicit Primitive(ComPtr<ID3D11Device> device, std::string_view nodeName = "Primitive");
+	explicit Primitive(ComPtr<ID3D11Device> device, BasePrimitiveType type = BasePrimitiveType::EMPTY, std::string_view nodeName = "Primitive");
 	~Primitive() override = default;
 	Primitive(const Primitive&) = delete;
 	Primitive(Primitive&&) = default;
 	Primitive& operator=(const Primitive&) = delete;
 	Primitive& operator=(Primitive&&) = delete;
 
+	// Generate basic primitive geometry
+	static void GenerateCube(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float size = 1.0f);
+	static void GenerateSphere(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float radius = 0.5f, uint32_t segments = 32, uint32_t rings = 16);
+	static void GeneratePlane(std::vector<Vertex>& outVertices, std::vector<uint32_t>& outIndices, float width = 1.0f, float height = 1.0f);
 
 	void setVertexData(std::vector<Vertex>&& vertexData) const;
 	void setIndexData(std::vector<uint32_t>&& indexData) const;

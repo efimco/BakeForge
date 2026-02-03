@@ -24,6 +24,7 @@
 #include "light.hpp"
 #include "material.hpp"
 #include "primitive.hpp"
+#include "primitiveData.hpp"
 #include "scene.hpp"
 #include "texture.hpp"
 
@@ -288,7 +289,10 @@ void UIManager::showMainMenuBar()
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Duplicate", "Shift+D", false, false))
-			{ /* TODO: Copy */
+			{
+				SceneNode* activeNode = m_scene->getActiveNode();
+				auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
+				m_commandManager->commitCommand(std::move(createSceneNode));
 			}
 			if (ImGui::MenuItem("Delete", "Del"))
 			{
@@ -298,7 +302,7 @@ void UIManager::showMainMenuBar()
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Select All", "Ctrl+A"))
-			{ /* TODO: Select all */
+			{
 			}
 			if (ImGui::MenuItem("Deselect All", "Ctrl+D"))
 			{
@@ -317,7 +321,8 @@ void UIManager::showMainMenuBar()
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Reset Layout"))
-			{ /* TODO: Reset docking layout */
+			{
+				ImGui::LoadIniSettingsFromDisk("imgui.ini");
 			}
 			ImGui::EndMenu();
 		}
@@ -326,8 +331,52 @@ void UIManager::showMainMenuBar()
 		{
 			if (ImGui::BeginMenu("Mesh"))
 			{
+				auto getOrCreateDefaultMaterial = [this]() -> std::shared_ptr<Material> {
+					auto mat = m_scene->getMaterial("Default");
+					if (!mat)
+					{
+						mat = std::make_shared<Material>();
+						mat->name = "Default";
+						m_scene->addMaterial(mat);
+					}
+					return mat;
+				};
+
 				if (ImGui::MenuItem("Cube"))
-				{ /* TODO: Add cube */
+				{
+					auto cube = std::make_unique<Primitive>(m_device, BasePrimitiveType::CUBE, "Cube");
+					std::vector<Vertex> vertices;
+					std::vector<uint32_t> indices;
+					Primitive::GenerateCube(vertices, indices);
+					cube->setVertexData(std::move(vertices));
+					cube->setIndexData(std::move(indices));
+					cube->fillTriangles();
+					cube->material = getOrCreateDefaultMaterial();
+					m_scene->addChild(std::move(cube));
+				}
+				if (ImGui::MenuItem("Sphere"))
+				{
+					auto sphere = std::make_unique<Primitive>(m_device, BasePrimitiveType::SPHERE, "Sphere");
+					std::vector<Vertex> vertices;
+					std::vector<uint32_t> indices;
+					Primitive::GenerateSphere(vertices, indices);
+					sphere->setVertexData(std::move(vertices));
+					sphere->setIndexData(std::move(indices));
+					sphere->fillTriangles();
+					sphere->material = getOrCreateDefaultMaterial();
+					m_scene->addChild(std::move(sphere));
+				}
+				if (ImGui::MenuItem("Plane"))
+				{
+					auto plane = std::make_unique<Primitive>(m_device, BasePrimitiveType::PLANE, "Plane");
+					std::vector<Vertex> vertices;
+					std::vector<uint32_t> indices;
+					Primitive::GeneratePlane(vertices, indices);
+					plane->setVertexData(std::move(vertices));
+					plane->setIndexData(std::move(indices));
+					plane->fillTriangles();
+					plane->material = getOrCreateDefaultMaterial();
+					m_scene->addChild(std::move(plane));
 				}
 				ImGui::EndMenu();
 			}
