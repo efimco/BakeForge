@@ -51,9 +51,6 @@ public:
 
 	BVH::BBox getWorldBBox();
 
-
-	bool isVisible = true;
-
 	const std::vector<uint32_t>& getIndexData() const;
 	const std::vector<Vertex>& getVertexData() const;
 	ComPtr<ID3D11Buffer> getIndexBuffer() const;

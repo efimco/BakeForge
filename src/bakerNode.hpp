@@ -23,6 +23,7 @@ class LowPolyNode : public BakerNode
 public:
 	explicit LowPolyNode(const std::string_view nodeName);
 	~LowPolyNode() override = default;
+	std::unique_ptr<SceneNode> clone() const override;
 };
 
 class HighPolyNode : public BakerNode
@@ -30,6 +31,7 @@ class HighPolyNode : public BakerNode
 public:
 	explicit HighPolyNode(const std::string_view nodeName);
 	~HighPolyNode() override = default;
+	std::unique_ptr<SceneNode> clone() const override;
 };
 
 class Baker : public BakerNode
@@ -41,6 +43,11 @@ public:
 	void bake();
 	void requestBake();
 	void processPendingBake();
+
+	void copyFrom(const SceneNode& node) override;
+	bool differsFrom(const SceneNode& node) const override;
+	std::unique_ptr<SceneNode> clone() const override;
+
 	std::vector<BakerPass*> getPasses();
 
 	std::unique_ptr<LowPolyNode> lowPoly;

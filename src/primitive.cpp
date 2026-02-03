@@ -117,7 +117,7 @@ BVH::BBox Primitive::getWorldBBox()
 {
 	BVH::BBox localBBox = m_sharedData->bvhNodes[0].bbox;
 	glm::mat4 worldMatrix = getWorldMatrix();
-	
+
 	// Transform all 8 corners of the local AABB to world space and compute new AABB
 	glm::vec3 corners[8] = {
 		{localBBox.min.x, localBBox.min.y, localBBox.min.z},
@@ -129,18 +129,18 @@ BVH::BBox Primitive::getWorldBBox()
 		{localBBox.min.x, localBBox.max.y, localBBox.max.z},
 		{localBBox.max.x, localBBox.max.y, localBBox.max.z},
 	};
-	
+
 	BVH::BBox worldBBox;
 	worldBBox.min = glm::vec3(FLT_MAX);
 	worldBBox.max = glm::vec3(-FLT_MAX);
-	
+
 	for (int c = 0; c < 8; c++)
 	{
 		glm::vec3 worldCorner = glm::vec3(worldMatrix * glm::vec4(corners[c], 1.0f));
 		worldBBox.min = glm::min(worldBBox.min, worldCorner);
 		worldBBox.max = glm::max(worldBBox.max, worldCorner);
 	}
-	
+
 	return worldBBox;
 }
 
@@ -378,6 +378,7 @@ void Primitive::copyFrom(const SceneNode& node)
 	{
 		m_sharedData = primitiveNode->m_sharedData;
 		material = primitiveNode->material;
+		visible = primitiveNode->visible;
 	}
 }
 

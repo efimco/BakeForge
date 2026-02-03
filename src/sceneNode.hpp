@@ -18,6 +18,7 @@ public:
 	std::list<std::unique_ptr<SceneNode>> children;
 	SceneNode* parent = nullptr;
 	bool movable = true;
+	bool deletable = true;
 
 	explicit SceneNode(std::string_view nodeName = "SceneNode");
 	SceneNode(const SceneNode&) = delete;
@@ -25,6 +26,9 @@ public:
 	SceneNode& operator=(const SceneNode&) = delete;
 	SceneNode& operator=(SceneNode&&) = delete;
 	virtual ~SceneNode();
+
+	virtual bool getVisibility() const;
+	virtual void setVisibility(bool isVisible);
 
 	virtual void onCommitTransaction(Scene& scene);
 	virtual void copyFrom(const SceneNode& node);
@@ -35,4 +39,7 @@ public:
 	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
 	int getChildIndex(SceneNode* child) const;
 	glm::mat4 getWorldMatrix();
+
+protected:
+	bool visible = true;
 };

@@ -23,6 +23,20 @@ SceneNode::SceneNode(std::string_view nodeName)
 
 SceneNode::~SceneNode() = default;
 
+bool SceneNode::getVisibility() const
+{
+	return visible;
+}
+
+void SceneNode::setVisibility(bool isVisible)
+{
+	visible = isVisible;
+	for (auto& child : children)
+	{
+		child->setVisibility(isVisible);
+	}
+}
+
 void SceneNode::onCommitTransaction(Scene& scene)
 {
 	return;
@@ -60,7 +74,7 @@ void SceneNode::addChild(std::unique_ptr<SceneNode>&& child, int index)
 
 	child->parent = this;
 	SceneNode* childPtr = child.get(); // Get a raw pointer before moving
-	
+
 	// Insert at specific index or append to end
 	if (index >= 0 && index < static_cast<int>(children.size()))
 	{

@@ -10,12 +10,28 @@ LowPolyNode::LowPolyNode(const std::string_view nodeName)
 {
 	movable = false;
 	name = nodeName;
+	deletable = false;
 }
 
 HighPolyNode::HighPolyNode(const std::string_view nodeName)
 {
 	movable = false;
 	name = nodeName;
+	deletable = false;
+}
+
+std::unique_ptr<SceneNode> LowPolyNode::clone() const
+{
+	auto newNode = std::make_unique<LowPolyNode>(this->name);
+	newNode->copyFrom(*this);
+	return newNode;
+}
+
+std::unique_ptr<SceneNode> HighPolyNode::clone() const
+{
+	auto newNode = std::make_unique<HighPolyNode>(this->name);
+	newNode->copyFrom(*this);
+	return newNode;
 }
 
 Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
@@ -55,6 +71,54 @@ void Baker::processPendingBake()
 		m_pendingBake = false;
 	}
 }
+
+void Baker::copyFrom(const SceneNode& node)
+{
+	name = node.name;
+	transform = node.transform;
+	if (const auto bakerNode = dynamic_cast<const Baker*>(&node))
+	{
+		textureWidth = bakerNode->textureWidth;
+		cageOffset = bakerNode->cageOffset;
+		useSmoothedNormals = bakerNode->useSmoothedNormals;
+		lowPoly = std::unique_ptr<LowPolyNode>(static_cast<LowPolyNode*>(bakerNode->lowPoly->clone().release()));
+		highPoly = std::unique_ptr<HighPolyNode>(static_cast<HighPolyNode*>(bakerNode->highPoly->clone().release()));
+		m_materialsToBake = bakerNode->m_materialsToBake;
+		m_materialsPrimitivesMap = bakerNode->m_materialsPrimitivesMap;
+		m_materialsBakerPasses.clear();
+	}
+}
+
+bool Baker::differsFrom(const SceneNode& node) const
+{
+	if (!SceneNode::differsFrom(node))
+	{
+		if (const auto baker = dynamic_cast<const Baker*>(&node))
+		{
+			bool lowPolyDiffers = lowPoly->differsFrom(*baker->lowPoly);
+			bool highPolyDiffers = highPoly->differsFrom(*baker->highPoly);
+			bool textureWidthDiffers = textureWidth != baker->textureWidth;
+			bool cageOffsetDiffers = cageOffset != baker->cageOffset;
+			bool useSmoothedNormalsDiffers = useSmoothedNormals != baker->useSmoothedNormals;
+			bool materialsToBakeDiffers = m_materialsToBake != baker->m_materialsToBake;
+			bool materialsPrimitivesMapDiffers = m_materialsPrimitivesMap != baker->m_materialsPrimitivesMap;
+			bool materialsBakerPassesDiffers = m_materialsBakerPasses.size() != baker->m_materialsBakerPasses.size();
+
+			return lowPolyDiffers || highPolyDiffers || textureWidthDiffers
+				|| cageOffsetDiffers || useSmoothedNormalsDiffers || materialsToBakeDiffers
+				|| materialsPrimitivesMapDiffers || materialsBakerPassesDiffers;
+		}
+	}
+	return true;
+}
+
+std::unique_ptr<SceneNode> Baker::clone() const
+{
+	std::unique_ptr<Baker> baker = std::make_unique<Baker>(name, m_device, m_context);
+	baker->copyFrom(*this);
+	return baker;
+}
+
 
 std::vector<BakerPass*> Baker::getPasses()
 {

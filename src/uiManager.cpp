@@ -292,7 +292,9 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Delete", "Del"))
 			{
-				m_scene->deleteNode(m_scene->getActiveNode());
+				SceneNode* activeNode = m_scene->getActiveNode();
+				auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
+				m_commandManager->commitCommand(std::move(removeSceneNode));
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Select All", "Ctrl+A"))
@@ -723,19 +725,14 @@ void UIManager::processNodeDuplication()
 void UIManager::processNodeDeletion()
 {
 	SceneNode* activeNode = m_scene->getActiveNode();
-	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_Delete))
+	if (!activeNode)
+		return;
+	if (!activeNode->deletable)
+		return;
+	if (ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		const bool isPrimitive = dynamic_cast<Primitive*>(activeNode) != nullptr;
-		const bool isLight = dynamic_cast<Light*>(activeNode) != nullptr;
 		auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
 		m_commandManager->commitCommand(std::move(removeSceneNode));
-		if (isPrimitive)
-		{
-		}
-		if (isLight)
-		{
-			m_scene->setLightsDirty();
-		}
 	}
 }
 
@@ -984,16 +981,15 @@ void UIManager::drawNode(SceneNode* node)
 
 	// Column 0: Visibility checkbox (reset indent to align all checkboxes)
 	ImGui::TableNextColumn();
-	if (auto* primitive = dynamic_cast<Primitive*>(node))
+
+	bool isVisible = node->getVisibility();
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ImGui::GetFrameHeight() * 0.2f);
+	if (ImGui::Checkbox("##visible", &isVisible))
 	{
-		bool isVisible = primitive->isVisible;
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ImGui::GetFrameHeight() * 0.2f);
-		if (ImGui::Checkbox("##visible", &isVisible))
-		{
-			primitive->isVisible = isVisible;
-		}
-		ImGui::PopStyleVar();
+		node->setVisibility(isVisible);
 	}
+	ImGui::PopStyleVar();
+
 
 	// Column 1: Tree node
 	ImGui::TableNextColumn();

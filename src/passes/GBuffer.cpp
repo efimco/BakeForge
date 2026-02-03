@@ -97,7 +97,7 @@ void GBuffer::draw(const glm::mat4& view,
 	static const UINT offset = 0;
 	for (auto& [handle, prim] : scene->getPrimitives())
 	{
-		if (!prim->isVisible)
+		if (!prim->getVisibility())
 			continue;
 		const float objectID = static_cast<float>(static_cast<int32_t>(handle));
 		update(view, projection, cameraPosition, scene, objectID, prim);

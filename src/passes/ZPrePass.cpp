@@ -71,7 +71,7 @@ void ZPrePass::draw(const glm::mat4& view, const glm::mat4& projection, Scene* s
 
 		for (auto& [handle, prim] : scene->getPrimitives())
 		{
-			if (!prim->isVisible)
+			if (!prim->getVisibility())
 				continue;
 			update(view, projection, prim);
 

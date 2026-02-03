@@ -419,17 +419,34 @@ void Scene::setActiveCamera(Camera* camera)
 
 void Scene::deleteNode(SceneNode* node)
 {
+
+	while (!node->children.empty())
+	{
+		deleteNode(node->children.back().get());
+	}
+	if (m_nodeNames.contains(node->name))
+	{
+		if (m_nodeNames[node->name] == 0)
+		{
+			m_nodeNames.erase(node->name);
+		}
+		else
+		{
+			m_nodeNames[node->name]--;
+		}
+	}
+
 	const SceneNodeHandle nodeHandle = findHandleOfNode(node);
 	if (dynamic_cast<Primitive*>(node))
 	{
 		m_primitives.erase(nodeHandle);
 	}
-	if (dynamic_cast<Light*>(node))
+	else if (dynamic_cast<Light*>(node))
 	{
 		m_lights.erase(nodeHandle);
 		setLightsDirty();
 	}
-	if (const auto camera = dynamic_cast<Camera*>(node))
+	else if (const auto camera = dynamic_cast<Camera*>(node))
 	{
 		if (m_cameras.size() <= 1)
 		{
@@ -440,6 +457,16 @@ void Scene::deleteNode(SceneNode* node)
 		{
 			m_activeCamera = nullptr;
 		}
+	}
+	else if (dynamic_cast<Baker*>(node))
+	{
+		deleteNode(static_cast<Baker*>(node)->lowPoly.get());
+		deleteNode(static_cast<Baker*>(node)->highPoly.get());
+		m_bakers.erase(nodeHandle);
+	}
+	else if (dynamic_cast<BakerNode*>(node))
+	{
+		m_bakerNodes.erase(nodeHandle);
 	}
 	std::unique_ptr<SceneNode> ptr;
 	if (node->parent)
@@ -485,8 +512,10 @@ SceneNode* Scene::adoptClonedNode(
 	if (auto baker = dynamic_cast<Baker*>(nodeClone))
 	{
 		m_bakers.emplace(preferredHandle, baker);
+		m_bakerNodes.emplace(SceneNodeHandle::generateHandle(), baker->lowPoly.get());
+		m_bakerNodes.emplace(SceneNodeHandle::generateHandle(), baker->highPoly.get());
 	}
-	if (auto bakerNode = dynamic_cast<BakerNode*>(nodeClone))
+	else if (auto bakerNode = dynamic_cast<BakerNode*>(nodeClone))
 	{
 		m_bakerNodes.emplace(preferredHandle, bakerNode);
 	}
