@@ -88,15 +88,14 @@ Ray TransformRayToLocal(Ray worldRay, BLASInstance inst)
 // Transform normal from local space to world space
 float3 TransformNormalToWorld(float3 localNormal, BLASInstance inst)
 {
-	// normalMatrix = transpose(inverse(worldMatrix)) stored row-major
-	return normalize(mul(float4(localNormal, 0.0f), transpose(inst.normalMatrix)).xyz);
+	return normalize(mul(float4(localNormal, 0.0f), inst.normalMatrix).xyz);
 }
 
 void TraverseBLAS(Ray worldRay, BLASInstance inst, inout float bestT, inout float3 bestN)
 {
 	// Transform ray to local space of this BLAS
 	Ray localRay = TransformRayToLocal(worldRay, inst);
-	
+
 	uint stack[MAX_STACK_SIZE];
 	uint stackPtr = 0;
 	stack[stackPtr++] = 0; // push root node

@@ -205,11 +205,13 @@ void UIManager::showSceneSettings() const
 	ImGui::Separator();
 
 	// Debug BVH visualization
+#ifdef DRAW_DEBUG_BVH
 	ImGui::TextWrapped("Debug Visualization");
 	ImGui::Checkbox("Show Leafs only", &AppConfig::showLeafsOnly);
 	ImGui::SliderInt("BVH Max Depth", &AppConfig::maxBVHDepth, 0, 64, "%d");
 	ImGui::SliderInt("BVH Min Depth", &AppConfig::minBVHDepth, 0, AppConfig::maxBVHDepth, "%d");
-
+	ImGui::Separator();
+#endif
 
 	ImGui::Text("Theme: ");
 	ImGui::Combo("Theme", &currentTheme, "Light\0Dark\0Classic\0");

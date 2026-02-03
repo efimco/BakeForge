@@ -65,14 +65,16 @@ float3 getNormalFromMap(VertexOutput input, bool hasNormalMap = true)
 {
 	float3 tangentNormal = normalTexture.Sample(samplerState, input.texCoord).xyz * 2.0f - 1.0f;
 	if (!hasNormalMap || !useNormalTexture)
-		return input.normal;
+	{
+		float3 N = normalize(input.normal);
+		return N;
+	}
 	// Invert Y for DirectX normal maps
 	if (flipY == 1)
 		tangentNormal.y = -tangentNormal.y;
 
 	float3 N = normalize(input.normal);
 	float3 T = normalize(input.tangent);
-	T = normalize(T - N * dot(N, T));
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
 
@@ -103,12 +105,9 @@ PSOutput PS(VertexOutput input)
 		output.albedo = albedoTexture.Sample(samplerState, input.texCoord);
 	}
 
-
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
 	float3 worldNormal = getNormalFromMap(input, hasNormalTexture);
-	float3 N = worldNormal;
 	float3 V = normalize(cameraPosition - input.fragPos.xyz);
-	float NdotV = dot(N, V);
 	float3 selectionColor = float3(1.9, 0.5, 0.0);
 	if (output.albedo.a < 0.1f)
 	{

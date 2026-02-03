@@ -91,6 +91,11 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 		std::cerr << "BakerPass::bake: No output path specified!" << std::endl;
 		return;
 	}
+	if(m_primitivesToBake.first.empty() || m_primitivesToBake.second.empty())
+	{
+		std::cerr << "BakerPass::bake: No primitives to bake!" << std::endl;
+		return;
+	}
 	std::cout << "Started baking: " << name << std::endl;
 	m_lastWidth = width;
 	m_lastHeight = height;

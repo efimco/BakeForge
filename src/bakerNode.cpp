@@ -110,17 +110,19 @@ void Baker::updateState()
 		if (m_materialsBakerPasses.contains(material->name) &&
 			m_materialsPrimitivesMap[material->name] == m_materialsBakerPasses[material->name]->getPrimitivesToBake())
 			continue;
+		if (m_materialsPrimitivesMap[material->name].first.empty())
+		{
+			m_materialsBakerPasses.erase(material->name);
+			continue;
+		}
 		if (m_materialsBakerPasses[material->name] == nullptr)
 		{
 			auto bakerPass = std::make_unique<BakerPass>(m_device, m_context);
 			bakerPass->name = "BKR for " + material->name;
-			bakerPass->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
 			m_materialsBakerPasses[material->name] = std::move(bakerPass);
 		}
-		else
-		{
-			m_materialsBakerPasses[material->name]->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
-		}
+		m_materialsBakerPasses[material->name]->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
+
 	}
 }
 

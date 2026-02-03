@@ -126,7 +126,7 @@ void GBuffer::update(const glm::mat4& view,
 	{
 		const auto cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 		cbData->modelViewProjection = glm::transpose(mvp);
-		cbData->inverseTransposedModel = glm::inverse(prim->getWorldMatrix());
+		cbData->inverseTransposedModel = glm::transpose(glm::inverse(prim->getWorldMatrix()));
 		cbData->model = glm::transpose(prim->getWorldMatrix());
 		cbData->cameraPosition = cameraPosition;
 		cbData->objectID = objectID;
