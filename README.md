@@ -164,4 +164,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - HDR environment maps from [Poly Haven](https://polyhaven.com/)
 - Inspired by [Marmoset Toolbag](https://marmoset.co/toolbag/) and [xNormal](https://xnormal.net/)
-- Test models from [Khronos glTF Sample Models](https://github.com/KhronosGroup/glTF-Sample-Models)
+- Test models from Igor Oskolskiy
