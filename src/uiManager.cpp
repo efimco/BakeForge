@@ -894,8 +894,6 @@ void UIManager::drawSceneGraph()
 
 void UIManager::handleNodeSelection(SceneNode* node)
 {
-	bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
-
 	bool isCtrlPressed = InputEvents::isKeyDown(KeyButtons::KEY_LCTRL);
 	float readBackID = m_scene->getReadBackID();
 
@@ -920,7 +918,7 @@ void UIManager::handleNodeSelection(SceneNode* node)
 		auto* selectedNode = m_scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID)));
 		if (!selectedNode)
 			return;
-		m_scene->setActiveNode(selectedNode, !isCtrlPressed);
+		m_scene->setActiveNode(selectedNode, isCtrlPressed);
 		const auto prim = dynamic_cast<Primitive*>(selectedNode);
 		if (prim)
 		{
