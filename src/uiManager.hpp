@@ -94,6 +94,8 @@ private:
 	void showPassesWindow();
 	static const char* getNodeIcon(SceneNode* node);
 
+	void handleNodeMultiSelection(ImGuiMultiSelectIO* multiSelectIO);
+
 	void showProperties() const;
 	void showPrimitiveProperties(Primitive* primitive) const;
 	void showMaterialProperties(std::shared_ptr<Material> material) const;
@@ -107,4 +109,7 @@ private:
 
 	glm::mat4 m_view;
 	glm::mat4 m_projection;
+
+	std::vector<SceneNode*> lastNodesDrawn;
+
 };

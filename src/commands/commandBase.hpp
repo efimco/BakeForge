@@ -15,6 +15,7 @@ public:
 
 protected:
 	friend class CommandManager;
+	friend class CommandGroup;
 
 	// Executes this command and returns a new negation command
 	virtual std::unique_ptr<CommandBase> exec() = 0;

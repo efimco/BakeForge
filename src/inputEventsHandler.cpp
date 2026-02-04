@@ -21,6 +21,7 @@ static bool isKeyQPressed = false;
 static bool isKeyEPressed = false;
 static bool isKeyFPressed = false;
 static bool isKeyLShiftPressed = false;
+static bool isKeyLCtrlPressed = false;
 static bool isKeyF11Pressed = false;
 static bool isKeyF12Pressed = false;
 
@@ -128,6 +129,8 @@ bool InputEvents::isKeyDown(const KeyButtons key)
 		return isKeyFPressed;
 	case KeyButtons::KEY_LSHIFT:
 		return isKeyLShiftPressed;
+	case KeyButtons::KEY_LCTRL:
+		return isKeyLCtrlPressed;
 	case KeyButtons::KEY_F11:
 		return isKeyF11Pressed;
 	case KeyButtons::KEY_F12:
@@ -164,6 +167,9 @@ void InputEvents::setKeyDown(const KeyButtons key, const bool state)
 		break;
 	case KeyButtons::KEY_LSHIFT:
 		isKeyLShiftPressed = state;
+		break;
+	case KeyButtons::KEY_LCTRL:
+		isKeyLCtrlPressed = state;
 		break;
 	case KeyButtons::KEY_F11:
 		isKeyF11Pressed = state;

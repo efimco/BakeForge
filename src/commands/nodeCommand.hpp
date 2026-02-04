@@ -23,6 +23,22 @@ namespace Command
 		bool m_validateName = true;
 	};
 
+	class RestoreSceneNode final : public CommandBase
+	{
+	public:
+		RestoreSceneNode(Scene* inScene, SceneNode* inSceneNode);
+
+		void addChild(SceneNode* childNode);
+
+	protected:
+		std::unique_ptr<CommandBase> exec() override;
+
+		Scene* m_scene = nullptr;
+		SceneNodeHandle m_nodeHandle;
+		std::vector<SceneNodeHandle> m_childHandles;
+		std::unique_ptr<SceneNode> m_sceneNodeClone = nullptr;
+	};
+
 	class RemoveSceneNode final : public CommandBase
 	{
 	public:

@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <wrl.h>
 
 #include "gltfImporter.hpp"
@@ -61,6 +62,7 @@ public:
 	void deselectNode(SceneNode* node);
 	void clearSelectedNodes();
 	bool isNodeSelected(SceneNode* node) const;
+	const std::unordered_set<SceneNode*>& getAllSelectedNodes() const { return m_selectedNodes; }
 
 	bool areLightsDirty() const;
 	void setLightsDirty(bool dirty = true);
@@ -111,7 +113,7 @@ private:
 	ComPtr<ID3D11Device> m_device;
 	std::vector<PendingTextureReload> m_pendingTextureReloads;
 
-	std::unordered_map<SceneNode*, bool> m_selectedNodes;
+	std::unordered_set<SceneNode*> m_selectedNodes;
 
 	Camera* m_activeCamera = nullptr;
 	SceneNode* m_activeNode = nullptr;

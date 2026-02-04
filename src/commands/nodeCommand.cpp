@@ -26,6 +26,32 @@ namespace Command
 		return std::make_unique<RemoveSceneNode>(m_scene, clonedNode);
 	}
 
+	RestoreSceneNode::RestoreSceneNode(Scene* inScene, SceneNode* inSceneNode)
+		: m_scene(inScene)
+		, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
+	{
+		assert(inSceneNode);
+		m_sceneNodeClone = inSceneNode->clone();
+	}
+
+	void RestoreSceneNode::addChild(SceneNode* childNode)
+	{
+		m_childHandles.push_back(m_scene->findHandleOfNode(childNode));
+	}
+
+	std::unique_ptr<CommandBase> RestoreSceneNode::exec()
+	{
+		SceneNode* clonedNode = m_scene->adoptClonedNode(std::move(m_sceneNodeClone), m_nodeHandle);
+		for (SceneNodeHandle childHandle : m_childHandles)
+		{
+			SceneNode* child = m_scene->getNodeByHandle(childHandle);
+			int childIndex = child->getChildIndex(child);
+			std::unique_ptr<SceneNode> childNode = child->parent->removeChild(child);
+			clonedNode->addChild(std::move(childNode), childIndex);
+		}
+		return std::make_unique<RemoveSceneNode>(m_scene, clonedNode);
+	}
+
 	RemoveSceneNode::RemoveSceneNode(Scene* inScene, SceneNode* inSceneNode)
 		: m_scene(inScene)
 		, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
@@ -37,9 +63,19 @@ namespace Command
 	{
 		SceneNode* sceneNode = m_scene->getNodeByHandle(m_nodeHandle);
 		assert(sceneNode);
-		auto createCommand = std::make_unique<DuplicateSceneNode>(m_scene, sceneNode, true);
+		auto restoreCommand = std::make_unique<RestoreSceneNode>(m_scene, sceneNode);
+		if (sceneNode->parent)
+		{
+			while (!sceneNode->children.empty())
+			{
+				std::unique_ptr<SceneNode> child = std::move(sceneNode->children.back());
+				restoreCommand->addChild(child.get());
+				sceneNode->parent->addChild(std::move(child));
+				sceneNode->children.pop_back();
+			}
+		}
 		m_scene->deleteNode(sceneNode);
-		return createCommand;
+		return restoreCommand;
 	}
 
 	ReparentSceneNode::ReparentSceneNode(Scene* inScene, SceneNode* inSceneNode, SceneNode* inNewParent, int index)

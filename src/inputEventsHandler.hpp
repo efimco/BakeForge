@@ -16,6 +16,7 @@ enum class KeyButtons
 	KEY_E,
 	KEY_F,
 	KEY_LSHIFT,
+	KEY_LCTRL,
 	KEY_UNKNOWNs,
 	KEY_F12,
 	KEY_F11
