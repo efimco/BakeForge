@@ -31,9 +31,12 @@
 #include "commands/commandManager.hpp"
 #include "commands/nodeCommand.hpp"
 #include "commands/nodeSnapshot.hpp"
+#include "commands/commandGroup.hpp"
 #include "commands/scopedTransaction.hpp"
 
 #include "passes/bakerPass.hpp"
+
+#include "utility/SelectionHelpers.hpp"
 
 enum class Theme
 {
@@ -290,15 +293,13 @@ void UIManager::showMainMenuBar()
 			ImGui::Separator();
 			if (ImGui::MenuItem("Duplicate", "Shift+D", false, false))
 			{
-				SceneNode* activeNode = m_scene->getActiveNode();
-				auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
-				m_commandManager->commitCommand(std::move(createSceneNode));
+				auto duplicationCommands = Selection::makeDuplicationCommands(m_scene, m_scene->getAllSelectedNodes());
+				m_commandManager->commitCommand(std::move(duplicationCommands));
 			}
 			if (ImGui::MenuItem("Delete", "Del"))
 			{
-				SceneNode* activeNode = m_scene->getActiveNode();
-				auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
-				m_commandManager->commitCommand(std::move(removeSceneNode));
+				auto removeCommands = Selection::makeRemoveCommands(m_scene, m_scene->getAllSelectedNodes());
+				m_commandManager->commitCommand(std::move(removeCommands));
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Select All", "Ctrl+A"))
@@ -675,6 +676,7 @@ void UIManager::processInputEvents() const
 	InputEvents::setKeyDown(KeyButtons::KEY_E, ImGui::IsKeyDown(ImGuiKey_E));
 	InputEvents::setKeyDown(KeyButtons::KEY_F, ImGui::IsKeyDown(ImGuiKey_F));
 	InputEvents::setKeyDown(KeyButtons::KEY_LSHIFT, ImGui::IsKeyDown(ImGuiKey_LeftShift));
+	InputEvents::setKeyDown(KeyButtons::KEY_LCTRL, ImGui::IsKeyDown(ImGuiKey_LeftCtrl));
 	InputEvents::setKeyDown(KeyButtons::KEY_F12, ImGui::IsKeyDown(ImGuiKey_F12));
 	InputEvents::setKeyDown(KeyButtons::KEY_F11, ImGui::IsKeyPressed(ImGuiKey_F11, false));
 }
@@ -766,8 +768,8 @@ void UIManager::processNodeDuplication()
 	SceneNode* activeNode = m_scene->getActiveNode();
 	if (activeNode && ImGui::IsKeyPressed(ImGuiKey_D, false) && InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
 	{
-		auto createSceneNode = std::make_unique<Command::DuplicateSceneNode>(m_scene, activeNode);
-		m_commandManager->commitCommand(std::move(createSceneNode));
+		auto duplicationCommands = Selection::makeDuplicationCommands(m_scene, m_scene->getAllSelectedNodes());
+		m_commandManager->commitCommand(std::move(duplicationCommands));
 	}
 }
 
@@ -780,8 +782,8 @@ void UIManager::processNodeDeletion()
 		return;
 	if (ImGui::IsKeyPressed(ImGuiKey_Delete))
 	{
-		auto removeSceneNode = std::make_unique<Command::RemoveSceneNode>(m_scene, activeNode);
-		m_commandManager->commitCommand(std::move(removeSceneNode));
+		auto removeCommands = Selection::makeRemoveCommands(m_scene, m_scene->getAllSelectedNodes());
+		m_commandManager->commitCommand(std::move(removeCommands));
 	}
 }
 
@@ -841,6 +843,8 @@ void UIManager::processThemeSelection() const
 
 void UIManager::drawSceneGraph()
 {
+	lastNodesDrawn.clear();
+
 	ImGui::Begin("Scene Graph");
 	static ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
 		ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
@@ -848,10 +852,21 @@ void UIManager::drawSceneGraph()
 	const ImVec2 availableSize = ImGui::GetContentRegionAvail();
 	if (ImGui::BeginTable("SceneGraph", 2, tableFlags, availableSize))
 	{
+		ImGuiMultiSelectIO* multiSelectIO = ImGui::BeginMultiSelect(
+			ImGuiMultiSelectFlags_SelectOnClickRelease |
+			ImGuiMultiSelectFlags_ClearOnEscape |
+			ImGuiMultiSelectFlags_ClearOnClickVoid |
+			ImGuiMultiSelectFlags_BoxSelect1d);
+		handleNodeMultiSelection(multiSelectIO);
+
 		ImGui::TableSetupColumn("(o)", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_IndentDisable, 25.0f);
 		ImGui::TableSetupColumn(m_scene->name.c_str(), ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_IndentEnable);
 		ImGui::TableHeadersRow();
 		drawNode(m_scene);
+
+		multiSelectIO = ImGui::EndMultiSelect();
+		handleNodeMultiSelection(multiSelectIO);
+
 		ImGui::EndTable();
 
 		if (ImGui::BeginDragDropTarget())
@@ -859,27 +874,33 @@ void UIManager::drawSceneGraph()
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 			{
 				SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
-				if (draggedNode && draggedNode->parent)
+				if (!m_scene->isNodeSelected(draggedNode))
 				{
-					auto reparentSceneNode =
-						std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, m_scene);
-					m_commandManager->commitCommand(std::move(reparentSceneNode));
+					m_scene->setActiveNode(draggedNode, true);
+				}
+
+				auto moveCommands = Selection::makeReparentCommands(m_scene, m_scene, m_scene->getAllSelectedNodes(), Selection::DropZone::AsChild);
+				if (!moveCommands->isEmpty())
+				{
+					m_commandManager->commitCommand(std::move(moveCommands));
 				}
 			}
 			ImGui::EndDragDropTarget();
 		}
 	}
+
 	ImGui::End();
 }
 
 void UIManager::handleNodeSelection(SceneNode* node)
 {
 	bool isShiftPressed = InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT);
+
+	bool isCtrlPressed = InputEvents::isKeyDown(KeyButtons::KEY_LCTRL);
 	float readBackID = m_scene->getReadBackID();
 
-	if (ImGui::IsItemClicked())
+	if (ImGui::IsItemToggledSelection())
 	{
-		m_scene->setActiveNode(node, isShiftPressed);
 		const auto prim = dynamic_cast<Primitive*>(node);
 		if (prim)
 		{
@@ -899,7 +920,7 @@ void UIManager::handleNodeSelection(SceneNode* node)
 		auto* selectedNode = m_scene->getNodeByHandle(SceneNodeHandle(static_cast<int32_t>(readBackID)));
 		if (!selectedNode)
 			return;
-		m_scene->setActiveNode(selectedNode, isShiftPressed);
+		m_scene->setActiveNode(selectedNode, !isCtrlPressed);
 		const auto prim = dynamic_cast<Primitive*>(selectedNode);
 		if (prim)
 		{
@@ -926,7 +947,7 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 	const float upperThreshold = itemMin.y + itemHeight * 0.25f;
 	const float lowerThreshold = itemMax.y - itemHeight * 0.25f;
 
-	enum class DropZone { Above, AsChild, Below };
+	using DropZone = Selection::DropZone;
 	DropZone dropZone = DropZone::AsChild;
 
 	if (mouseY < upperThreshold)
@@ -962,51 +983,15 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE"))
 		{
 			SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
-			if (draggedNode && draggedNode != node && draggedNode->parent)
+			if (!m_scene->isNodeSelected(draggedNode))
 			{
-				// Check we're not dropping a parent into its own child
-				SceneNode* checkParent = node->parent;
-				bool isDescendant = false;
-				while (checkParent)
-				{
-					if (checkParent == draggedNode)
-					{
-						isDescendant = true;
-						break;
-					}
-					checkParent = checkParent->parent;
-				}
+				m_scene->setActiveNode(draggedNode, true);
+			}
 
-				if (!isDescendant)
-				{
-					if (dropZone == DropZone::AsChild)
-					{
-						auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, node);
-						m_commandManager->commitCommand(std::move(reparentSceneNode));
-					}
-					else
-					{
-						SceneNode* targetParent = node->parent;
-						if (targetParent)
-						{
-							int targetIndex = targetParent->getChildIndex(node);
-							if (dropZone == DropZone::Below)
-							{
-								targetIndex++;
-							}
-							if (draggedNode->parent == targetParent)
-							{
-								int draggedIndex = targetParent->getChildIndex(draggedNode);
-								if (draggedIndex < targetIndex)
-								{
-									targetIndex--;
-								}
-							}
-							auto reparentSceneNode = std::make_unique<Command::ReparentSceneNode>(m_scene, draggedNode, targetParent, targetIndex);
-							m_commandManager->commitCommand(std::move(reparentSceneNode));
-						}
-					}
-				}
+			auto moveCommand = Selection::makeReparentCommands(m_scene, node, m_scene->getAllSelectedNodes(), dropZone);
+			if (!moveCommand->isEmpty())
+			{
+				m_commandManager->commitCommand(std::move(moveCommand));
 			}
 		}
 		ImGui::EndDragDropTarget();
@@ -1015,6 +1000,8 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 
 void UIManager::drawNode(SceneNode* node)
 {
+	lastNodesDrawn.emplace_back(node);
+
 	if (dynamic_cast<Scene*>(node))
 	{
 		for (const auto& child : node->children)
@@ -1023,7 +1010,6 @@ void UIManager::drawNode(SceneNode* node)
 		}
 		return;
 	}
-
 
 	ImGui::PushID(node);
 	ImGui::TableNextRow();
@@ -1051,6 +1037,9 @@ void UIManager::drawNode(SceneNode* node)
 	// Build label once
 	char label[256];
 	snprintf(label, sizeof(label), "%s %s", icon, node->name.c_str());
+
+	ImGuiSelectionUserData selectionUserData = lastNodesDrawn.size() - 1;
+	ImGui::SetNextItemSelectionUserData(selectionUserData);
 
 	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth;
 	if (isSelected)
@@ -1119,6 +1108,41 @@ const char* UIManager::getNodeIcon(SceneNode* node)
 	}
 
 	return "[D]"; // Default document icon
+}
+
+void UIManager::handleNodeMultiSelection(ImGuiMultiSelectIO* multiSelectIO)
+{
+	for (const ImGuiSelectionRequest& req : multiSelectIO->Requests)
+	{
+		if (req.Type == ImGuiSelectionRequestType_SetAll)
+		{
+			if (req.Selected)
+			{
+				for (SceneNode* node : lastNodesDrawn)
+				{
+					m_scene->setActiveNode(node, true);
+				}
+			}
+			else
+			{
+				m_scene->clearSelectedNodes();
+			}
+		}
+		if (req.Type == ImGuiSelectionRequestType_SetRange)
+		{
+			for (ImGuiSelectionUserData idx = req.RangeFirstItem; idx <= req.RangeLastItem; idx++)
+			{
+				if (req.Selected)
+				{
+					m_scene->setActiveNode(lastNodesDrawn[idx], true);
+				}
+				else
+				{
+					m_scene->deselectNode(lastNodesDrawn[idx]);
+				}
+			}
+		}
+	}
 }
 
 void UIManager::showPassesWindow()

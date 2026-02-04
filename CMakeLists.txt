@@ -34,6 +34,10 @@ file(GLOB COMMANDS
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.cpp"
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/commands/*.hpp")
 
+file(GLOB UTILITY
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/utility/*.cpp"
+				"${CMAKE_CURRENT_SOURCE_DIR}/src/utility/*.hpp")
+
 if(MSVC)
 	add_compile_options(/MP)
 	# Faster debug info format
@@ -46,7 +50,8 @@ add_library(DXTEX STATIC ${DXTEX})
 add_executable(TimeToDX
 				${SOURCE_FILES}
 				${PASSES}
-				${COMMANDS})
+				${COMMANDS}
+				${UTILITY})
 
 target_link_libraries(TimeToDX
 				d3d11

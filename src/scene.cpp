@@ -372,7 +372,7 @@ void Scene::setActiveNode(SceneNode* node, const bool addToSelection)
 	{
 		clearSelectedNodes();
 	}
-	m_selectedNodes[node] = true;
+	m_selectedNodes.emplace(node);
 
 	m_activeNode = node;
 }
@@ -394,7 +394,7 @@ void Scene::clearSelectedNodes()
 
 bool Scene::isNodeSelected(SceneNode* node) const
 {
-	return m_selectedNodes.contains(node);
+	return !m_selectedNodes.empty() && m_selectedNodes.contains(node);
 }
 
 void Scene::addMaterial(std::shared_ptr<Material> material)
