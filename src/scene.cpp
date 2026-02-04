@@ -265,43 +265,39 @@ void Scene::updateAsyncPendingTextureReloads()
 {
 	for (auto it = m_pendingTextureReloads.begin(); it != m_pendingTextureReloads.end();)
 	{
-		if (it->progress->isCompleted)
-		{
-			try
-			{
-				auto result = it->future.get();
-
-				if (!result.progress->hasFailed && result.texture)
-				{
-					ComPtr<ID3D11DeviceContext> immContext;
-					m_device->GetImmediateContext(&immContext);
-					Texture::finalizeAsyncLoad(std::move(result), immContext);
-
-					auto existingTexture = m_textures[it->name];
-					if (existingTexture)
-					{
-						existingTexture->textureResource = result.texture->textureResource;
-						existingTexture->srv = result.texture->srv;
-						existingTexture->texDesc = result.texture->texDesc;
-					}
-
-					std::cout << "Texture reloaded successfully: " << it->name << std::endl;
-				}
-				else
-				{
-					std::cerr << "Failed to reload texture " << it->name << ": " << result.progress->errorMessage << std::endl;
-				}
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << "Exception while reloading texture " << it->name << ": " << e.what() << std::endl;
-			}
-			it = m_pendingTextureReloads.erase(it);
-		}
-		else
+		if (!it->progress->isCompleted)
 		{
 			++it;
+			continue;
 		}
+		try
+		{
+			auto result = it->future.get();
+
+			if (result.progress->hasFailed && !result.texture)
+			{
+				std::cerr << "Failed to reload texture " << it->name << ": " << result.progress->errorMessage << std::endl;
+				continue;
+			}
+			ComPtr<ID3D11DeviceContext> immContext;
+			m_device->GetImmediateContext(&immContext);
+			Texture::finalizeAsyncLoad(std::move(result), immContext);
+
+			auto existingTexture = m_textures[it->name];
+			if (!existingTexture)
+			{
+				continue;
+			}
+			existingTexture->textureResource = result.texture->textureResource;
+			existingTexture->srv = result.texture->srv;
+			existingTexture->texDesc = result.texture->texDesc;
+			std::cout << "Texture reloaded successfully: " << it->name << std::endl;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "Exception while reloading texture " << it->name << ": " << e.what() << std::endl;
+		}
+		it = m_pendingTextureReloads.erase(it);
 	}
 }
 

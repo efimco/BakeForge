@@ -194,9 +194,9 @@ void UIManager::showSceneSettings() const
 {
 
 	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("IBL Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
-	ImGui::DragFloat("IBL Rotation", &AppConfig::IBLrotation);
-	ImGui::DragFloat("Environment Map Intensity", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
+	ImGui::DragFloat("Env Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
+	ImGui::DragFloat("Env Rotation", &AppConfig::IBLrotation);
+	ImGui::DragFloat("Env Brightness", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
 	ImGui::Separator();
 
 	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
@@ -341,7 +341,7 @@ void UIManager::showMainMenuBar()
 						m_scene->addMaterial(mat);
 					}
 					return mat;
-				};
+					};
 
 				if (ImGui::MenuItem("Cube"))
 				{
@@ -985,7 +985,11 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 			{
 				m_scene->setActiveNode(draggedNode, true);
 			}
-
+			if (!node->canBecomeParent)
+			{
+				ImGui::EndDragDropTarget();
+				return;
+			}
 			auto moveCommand = Selection::makeReparentCommands(m_scene, node, m_scene->getAllSelectedNodes(), dropZone);
 			if (!moveCommand->isEmpty())
 			{

@@ -38,6 +38,7 @@ Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPt
 {
 	name = nodeName;
 	movable = false;
+	canBecomeParent = false;
 	m_device = device;
 	m_context = context;
 	lowPoly = std::make_unique<LowPolyNode>("LowPolyContainer");
@@ -130,7 +131,8 @@ std::vector<BakerPass*> Baker::getPasses()
 	return passes;
 }
 
-void Baker::updateState()
+
+void Baker::collectMaterialsToBake()
 {
 	for (const auto& child : lowPoly->children)
 	{
@@ -147,7 +149,10 @@ void Baker::updateState()
 			m_materialsToBake.push_back(prim->material);
 		}
 	}
+}
 
+void Baker::collectPrimitivesToBake()
+{
 	for (const auto& material : m_materialsToBake)
 	{
 		std::pair<std::vector<Primitive*>, std::vector<Primitive*>> lowHighPrimsPair;
@@ -168,7 +173,10 @@ void Baker::updateState()
 		}
 		m_materialsPrimitivesMap[material->name] = std::move(lowHighPrimsPair);
 	}
+}
 
+void Baker::createOrUpdateBakerPasses()
+{
 	for (const auto& material : m_materialsToBake)
 	{
 		if (m_materialsBakerPasses.contains(material->name) &&
@@ -186,7 +194,15 @@ void Baker::updateState()
 			m_materialsBakerPasses[material->name] = std::move(bakerPass);
 		}
 		m_materialsBakerPasses[material->name]->setPrimitivesToBake(m_materialsPrimitivesMap[material->name]);
-
 	}
+
+}
+
+
+void Baker::updateState()
+{
+	collectMaterialsToBake();
+	collectPrimitivesToBake();
+	createOrUpdateBakerPasses();
 }
 

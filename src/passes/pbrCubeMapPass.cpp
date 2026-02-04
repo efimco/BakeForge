@@ -5,6 +5,7 @@
 #include "appConfig.hpp"
 #include "rtvCollector.hpp"
 #include "shaderManager.hpp"
+#include "inputEventsHandler.hpp"
 
 static D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
@@ -119,6 +120,8 @@ void CubeMapPass::createOrResize()
 
 void CubeMapPass::draw(glm::mat4& view, glm::mat4& projection)
 {
+
+	processEnvironmentRotation();
 
 	beginDebugEvent(L"CubemapBGDrawPass");
 	if (AppConfig::regeneratePrefilteredMap)
@@ -602,4 +605,21 @@ void CubeMapPass::createBRDFLut()
 	m_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 
 	endDebugEvent();
+}
+
+void CubeMapPass::processEnvironmentRotation()
+{
+	if (InputEvents::getMouseInViewport() &&
+		InputEvents::isMouseDown(MouseButtons::RIGHT_BUTTON) &&
+		InputEvents::isKeyDown(KeyButtons::KEY_LSHIFT))
+	{
+		float deltaX = 0;
+		float deltaY = 0;
+		InputEvents::getMouseDelta(deltaX, deltaY);
+		AppConfig::IBLrotation += deltaX * 0.25f; // Adjust sensitivity as needed
+		if (AppConfig::IBLrotation > 360.0f)
+			AppConfig::IBLrotation -= 360.0f;
+		else if (AppConfig::IBLrotation < 0.0f)
+			AppConfig::IBLrotation += 360.0f;
+	}
 }

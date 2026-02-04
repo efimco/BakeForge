@@ -19,6 +19,7 @@ public:
 	SceneNode* parent = nullptr;
 	bool movable = true;
 	bool deletable = true;
+	bool canBecomeParent = true;
 
 	explicit SceneNode(std::string_view nodeName = "SceneNode");
 	SceneNode(const SceneNode&) = delete;

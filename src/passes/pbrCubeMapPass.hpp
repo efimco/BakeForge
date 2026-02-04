@@ -35,6 +35,7 @@ private:
 	void createIrradianceMap();
 	void createPrefilteredMap();
 	void createBRDFLut();
+	void processEnvironmentRotation();
 
 	std::string m_hdrImagePath;
 	std::unique_ptr<Texture> m_hdriTexture;

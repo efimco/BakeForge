@@ -59,6 +59,9 @@ public:
 
 private:
 	void updateState();
+	void collectMaterialsToBake();
+	void collectPrimitivesToBake();
+	void createOrUpdateBakerPasses();
 	bool m_pendingBake = false;
 
 private:
