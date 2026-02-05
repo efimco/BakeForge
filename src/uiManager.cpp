@@ -914,7 +914,8 @@ void UIManager::drawSceneGraph()
 				SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
 				if (!m_scene->isNodeSelected(draggedNode))
 				{
-					m_scene->setActiveNode(draggedNode, true);
+					bool isCtrlPressed = InputEvents::isKeyDown(KeyButtons::KEY_LCTRL);
+					m_scene->setActiveNode(draggedNode, isCtrlPressed);
 				}
 
 				auto moveCommands = Selection::makeReparentCommands(m_scene, m_scene, m_scene->getAllSelectedNodes(), Selection::DropZone::AsChild);
@@ -1014,7 +1015,8 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 			SceneNode* draggedNode = *static_cast<SceneNode**>(payload->Data);
 			if (!m_scene->isNodeSelected(draggedNode))
 			{
-				m_scene->setActiveNode(draggedNode, true);
+				bool isCtrlPressed = InputEvents::isKeyDown(KeyButtons::KEY_LCTRL);
+				m_scene->setActiveNode(draggedNode, isCtrlPressed);
 			}
 			if (!node->canBecomeParent)
 			{
