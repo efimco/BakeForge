@@ -2,6 +2,7 @@
 
 #include <commdlg.h>
 #include <cstddef>
+#include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <memory>
@@ -1517,9 +1518,72 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 			ImGui::PopID();
 		}
 	}
+	static bool showInvalidPathPopup = false;
+	static std::string invalidPathMessage;
+
 	if (ImGui::Button("Start Bake"))
 	{
-		bakerNode->requestBake();
+		// Check if all passes have valid output paths
+		bool hasInvalidPath = false;
+		std::string invalidPassName;
+		for (auto& pass : bakerNode->getPasses())
+		{
+			if (pass->directory.empty() || pass->filename.empty())
+			{
+				hasInvalidPath = true;
+				invalidPassName = pass->name;
+				break;
+			}
+
+			if (!std::filesystem::exists(pass->directory)) // Also check if directory exists
+			{
+				hasInvalidPath = true;
+				invalidPassName = pass->name + " (directory doesn't exist: " + pass->directory + ")";
+				break;
+			}
+		}
+
+		if (hasInvalidPath)
+		{
+			invalidPathMessage = "Invalid output path for: " + invalidPassName + "\n\nPlease set a valid directory and filename before baking.";
+			showInvalidPathPopup = true;
+		}
+		else
+		{
+			bakerNode->requestBake();
+		}
+	}
+
+	// Center the popup on the viewport window
+	ImGuiWindow* viewportWindow = ImGui::FindWindowByName("Viewport");
+	if (viewportWindow)
+	{
+		ImVec2 center(viewportWindow->Pos.x + viewportWindow->Size.x * 0.5f,
+			viewportWindow->Pos.y + viewportWindow->Size.y);
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	}
+	if (showInvalidPathPopup)
+	{
+		ImGui::OpenPopup("Invalid Path##BakeError");
+		showInvalidPathPopup = false;
+	}
+
+	if (ImGui::BeginPopupModal("Invalid Path##BakeError", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextWrapped("%s", invalidPathMessage.c_str());
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		float buttonWidth = 120.0f;
+		float windowWidth = ImGui::GetWindowSize().x;
+		ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+
+		if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 }
 
