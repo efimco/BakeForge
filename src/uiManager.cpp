@@ -206,9 +206,9 @@ void UIManager::showSceneSettings() const
 		ImGui::DragFloat((std::string("##") + label).c_str(), value, speed, min, max);
 		};
 
-	alignedDragFloat("Env Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
+	alignedDragFloat("Env Intensity", &AppConfig::IBLintensity, 0.02f, 0.0f, 10.0f);
 	alignedDragFloat("Env Rotation", &AppConfig::IBLrotation);
-	alignedDragFloat("Env Brightness", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
+	alignedDragFloat("Env Brightness", &AppConfig::backgroundIntensity, 0.02f, 0.0f, 1.0f);
 
 	static char hdriPathBuffer[MAX_PATH] = "";
 	ImGui::Text("HDRI Path");
@@ -980,15 +980,12 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 	const float itemHeight = itemMax.y - itemMin.y;
 	const float mouseY = ImGui::GetMousePos().y;
 
-	const float upperThreshold = itemMin.y + itemHeight * 0.25f;
 	const float lowerThreshold = itemMax.y - itemHeight * 0.25f;
 
 	using DropZone = Selection::DropZone;
 	DropZone dropZone = DropZone::AsChild;
 
-	if (mouseY < upperThreshold)
-		dropZone = DropZone::Above;
-	else if (mouseY > lowerThreshold)
+	if (mouseY > lowerThreshold)
 		dropZone = DropZone::Below;
 
 	// If target is Scene (root), always treat as "AsChild" without position change
@@ -1003,11 +1000,7 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 		const ImU32 lineColor = IM_COL32(100, 150, 255, 255);
 		const float lineThickness = 3.0f;
 
-		if (dropZone == DropZone::Above)
-		{
-			drawList->AddLine(ImVec2(itemMin.x, itemMin.y), ImVec2(itemMax.x, itemMin.y), lineColor, lineThickness);
-		}
-		else if (dropZone == DropZone::Below)
+		if (dropZone == DropZone::Below)
 		{
 			drawList->AddLine(ImVec2(itemMin.x, itemMax.y), ImVec2(itemMax.x, itemMax.y), lineColor, lineThickness);
 		}

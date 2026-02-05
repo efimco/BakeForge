@@ -50,6 +50,9 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData) const
 
 void Primitive::fillTriangles()
 {
+	// Compute smooth normals BEFORE filling triangles so we can use them for baking
+	computeSmoothNormals();
+
 	for (size_t i = 0; i < m_sharedData->indexData.size(); i += 3)
 	{
 		Triangle tri;
@@ -119,7 +122,6 @@ void Primitive::fillTriangles()
 		assert(SUCCEEDED(hr));
 	}
 	computeTangents();
-	computeSmoothNormals();
 	createGPUBuffers();
 }
 

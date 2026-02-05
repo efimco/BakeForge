@@ -9,7 +9,7 @@ class SceneNode;
 
 namespace Selection
 {
-	enum class DropZone { Above, AsChild, Below };
+	enum class DropZone {AsChild, Below };
 
 	struct NodeDepth
 	{
