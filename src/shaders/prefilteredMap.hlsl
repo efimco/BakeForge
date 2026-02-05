@@ -31,6 +31,8 @@ float3 FaceUVToDir(uint face, float2 uv)
 	}
 }
 
+static const uint SAMPLE_COUNT = 1024u * 4u;
+
 float3 PrefilterEnvMap(float roughness, float3 R)
 {
 	float3 N = R;
@@ -41,7 +43,6 @@ float3 PrefilterEnvMap(float roughness, float3 R)
 	float3 prefilteredColor = float3(0.0f, 0.0f, 0.0f);
 	float TotalWeight = 0.0001f;
 
-	const uint SAMPLE_COUNT = 1024 * 4;
 	for (uint i = 0; i < SAMPLE_COUNT; i++)
 	{
 		float2 Xi = Hammersley(i, SAMPLE_COUNT);
@@ -55,7 +56,6 @@ float3 PrefilterEnvMap(float roughness, float3 R)
 			TotalWeight += NoL;
 		}
 	}
-	;
 	return prefilteredColor / TotalWeight;
 }
 
@@ -71,6 +71,7 @@ void CS(uint3 tid : SV_DispatchThreadID)
 
 	// Calculate roughness based on mip level (0 = mirror, higher = rougher)
 	float roughness = float(gMipLevel) / 7.0f; // Assuming 8 mip levels (0-7)
+	roughness = roughness * roughness;
 
 	// Process all 6 faces for this mip level
 	for (uint face = 0; face < 6; ++face)

@@ -408,6 +408,30 @@ void Scene::setLightsDirty(const bool dirty)
 	m_lightsAreDirty = dirty;
 }
 
+void Scene::setEnvironmentMap(const std::string& path)
+{
+	if (m_environmentMapPath != path)
+	{
+		m_environmentMapPath = path;
+		m_environmentMapDirty = true;
+	}
+}
+
+const std::string& Scene::getEnvironmentMapPath() const
+{
+	return m_environmentMapPath;
+}
+
+bool Scene::isEnvironmentMapDirty() const
+{
+	return m_environmentMapDirty;
+}
+
+void Scene::clearEnvironmentMapDirty()
+{
+	m_environmentMapDirty = false;
+}
+
 void Scene::setActiveCamera(Camera* camera)
 {
 	m_activeCamera = camera;

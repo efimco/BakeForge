@@ -33,7 +33,9 @@ struct alignas(16) CubeMapConstantBufferData
 	float mapRotationY;
 	uint32_t isBlurred;
 	float blurAmount;
-	float padding;
+	float backgroundIntensity;
+	float maxMipLevel;
+	float _pad[3];
 };
 
 struct alignas(16) EquirectToCubempConstantBufferData
@@ -183,9 +185,36 @@ ComPtr<ID3D11ShaderResourceView> CubeMapPass::getBRDFLutSRV()
 	return m_brdfLutSRV;
 }
 
-std::string& CubeMapPass::getHDRIPath()
+const std::string& CubeMapPass::getHDRIPath() const
 {
 	return m_hdrImagePath;
+}
+
+void CubeMapPass::setHDRIPath(const std::string& hdrImagePath)
+{
+	if (hdrImagePath.empty() || m_hdrImagePath == hdrImagePath)
+		return;
+
+	m_hdrImagePath = hdrImagePath;
+
+	// Release old resources
+	m_hdriTexture.reset();
+	m_CubeMapTexture.Reset();
+	m_CubeMapUAV.Reset();
+	m_CubeMapSRV.Reset();
+	m_irradianceTexture.Reset();
+	m_irradianceUAV.Reset();
+	m_irradianceSRV.Reset();
+	m_prefilteredTexture.Reset();
+	m_prefilteredUAV.Reset();
+	m_prefilteredSRV.Reset();
+	// Note: BRDF LUT doesn't depend on HDRI, no need to recreate
+
+	// Create new resources
+	m_hdriTexture = std::make_unique<Texture>(m_hdrImagePath, m_device);
+	createCubeMapResources();
+	createIrradianceMap();
+	createPrefilteredMap();
 }
 
 void CubeMapPass::update(const glm::mat4& view, const glm::mat4& projection) const
@@ -204,6 +233,10 @@ void CubeMapPass::update(const glm::mat4& view, const glm::mat4& projection) con
 	data->mapRotationY = AppConfig::IBLrotation;
 	data->isBlurred = AppConfig::isBackgroundBlurred ? 1 : 0;
 	data->blurAmount = AppConfig::isBackgroundBlurred ? AppConfig::blurAmount : 0.0f;
+	data->backgroundIntensity = AppConfig::backgroundIntensity;
+	// Calculate max mip level from HDRI texture dimensions
+	uint32_t maxDim = std::max(m_hdriTexture->getWidth(), m_hdriTexture->getHeight());
+	data->maxMipLevel = std::floor(std::log2(static_cast<float>(maxDim)));
 	m_context->Unmap(m_backgroundConstantBuffer.Get(), 0);
 }
 
@@ -427,8 +460,8 @@ void CubeMapPass::createPrefilteredMap()
 		m_prefilteredSRV.Reset();
 	}
 
-	constexpr uint32_t prefilteredMapSize = 512;
-	constexpr uint32_t numMips = 9; // 0-8 mip levels to match shader
+	constexpr uint32_t prefilteredMapSize = 1024;
+	constexpr uint32_t numMips = 10; // 0-9 mip levels to match shader
 
 	D3D11_TEXTURE2D_DESC prefilteredMapDesc = {};
 	prefilteredMapDesc.ArraySize = 6; // 6 faces for cubemap

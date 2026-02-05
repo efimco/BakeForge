@@ -67,6 +67,11 @@ public:
 	bool areLightsDirty() const;
 	void setLightsDirty(bool dirty = true);
 
+	void setEnvironmentMap(const std::string& path);
+	const std::string& getEnvironmentMapPath() const;
+	bool isEnvironmentMapDirty() const;
+	void clearEnvironmentMapDirty();
+
 	void setActiveCamera(Camera* camera);
 	Camera* getActiveCamera() const;
 
@@ -119,4 +124,7 @@ private:
 	SceneNode* m_activeNode = nullptr;
 
 	bool m_lightsAreDirty = false;
+
+	std::string m_environmentMapPath;
+	bool m_environmentMapDirty = false;
 };

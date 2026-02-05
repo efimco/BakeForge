@@ -116,6 +116,13 @@ void Renderer::draw()
 
 	// --- CPU Updates ---
 	m_scene->updateState();
+
+	if (m_scene->isEnvironmentMapDirty()) 	// Check for environment map changes
+	{
+		m_cubeMapPass->setHDRIPath(m_scene->getEnvironmentMapPath());
+		m_scene->clearEnvironmentMapDirty();
+	}
+
 	const std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 	m_deltaTime = currentTime - m_prevTime;
 	m_prevTime = currentTime;

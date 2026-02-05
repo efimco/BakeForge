@@ -194,18 +194,56 @@ void UIManager::showSceneSettings() const
 {
 
 	ImGui::Begin("SceneSettings");
-	ImGui::DragFloat("Env Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
-	ImGui::DragFloat("Env Rotation", &AppConfig::IBLrotation);
-	ImGui::DragFloat("Env Brightness", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
 	ImGui::Separator();
 
-	ImGui::Checkbox("Blur Environment Map", &AppConfig::isBackgroundBlurred);
-	if (AppConfig::isBackgroundBlurred)
+	constexpr float labelWidth = 150.0f;
+	constexpr float fieldWidth = 80.0f;
+	auto alignedDragFloat = [&](const char* label, float* value, float speed = 0.05f, float min = 0.0f, float max = 0.0f) {
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(label);
+		ImGui::SameLine(labelWidth);
+		ImGui::SetNextItemWidth(fieldWidth);
+		ImGui::DragFloat((std::string("##") + label).c_str(), value, speed, min, max);
+		};
+
+	alignedDragFloat("Env Intensity", &AppConfig::IBLintensity, 0.05f, 0.0f, 10.0f);
+	alignedDragFloat("Env Rotation", &AppConfig::IBLrotation);
+	alignedDragFloat("Env Brightness", &AppConfig::backgroundIntensity, 0.05f, 0.0f, 1.0f);
+
+	static char hdriPathBuffer[MAX_PATH] = "";
+	ImGui::Text("HDRI Path");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50.0f);
+	bool hdriPathChanged = ImGui::InputText("##HDRI Path", hdriPathBuffer, MAX_PATH);
+	ImGui::SameLine();
+	if (ImGui::Button("..."))
 	{
-		ImGui::SliderFloat("Blur Amount", &AppConfig::blurAmount, 0.0f, 5.0f);
+		const FileDialogResult result = openFileDialog(FileType::HDRI);
+		if (result)
+		{
+			strncpy_s(hdriPathBuffer, MAX_PATH, result.fullPath.c_str(), _TRUNCATE);
+			hdriPathChanged = true;
+		}
+	}
+	if (hdriPathChanged)
+	{
+		m_scene->setEnvironmentMap(hdriPathBuffer);
+		hdriPathChanged = false;
 	}
 
+	ImGui::Text("Blur");
+	ImGui::SameLine();
+	ImGui::Checkbox("##Blur Environment Map", &AppConfig::isBackgroundBlurred);
+	if (AppConfig::isBackgroundBlurred)
+	{
+
+		alignedDragFloat("Blur Amount", &AppConfig::blurAmount, 0.02f, 0.0f, 1.0f);
+	}
+
+#ifdef _DEBUG
+	ImGui::Separator();
 	ImGui::Checkbox("Regenerate Prefiltered Map", &AppConfig::regeneratePrefilteredMap);
+#endif
 	ImGui::Separator();
 
 	// Debug BVH visualization
@@ -1503,6 +1541,10 @@ FileDialogResult UIManager::openFileDialog(const FileType outFileType, bool save
 	if (outFileType == FileType::IMAGE)
 	{
 		ofn.lpstrFilter = "Image Files\0*.png;*.jpg;*.jpeg;*.bmp;*.hdr;*.exr\0All Files\0*.*\0";
+	}
+	else if (outFileType == FileType::HDRI)
+	{
+		ofn.lpstrFilter = "HDRI Files\0*.hdr\0";
 	}
 	else if (outFileType == FileType::MODEL)
 	{

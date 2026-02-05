@@ -160,6 +160,13 @@ Texture::Texture(std::string filepath, ComPtr<ID3D11Device> _device, ComPtr<ID3D
 			tempImage);
 	}
 
+	DirectX::ScratchImage mipChain;
+	hr = DirectX::GenerateMipMaps(tempImage.GetImages(), tempImage.GetImageCount(), tempImage.GetMetadata(), DirectX::TEX_FILTER_DITHER, 0, mipChain);
+	if (SUCCEEDED(hr))
+	{
+		tempImage = std::move(mipChain);
+	}
+
 	lastModifiedTime = std::filesystem::last_write_time(filepath);
 	name = filepath.find_last_of("/\\") != std::string::npos ?
 		filepath.substr(filepath.find_last_of("/\\") + 1) : filepath;

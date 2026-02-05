@@ -39,11 +39,9 @@ cbuffer CB : register(b0)
 	float IBLrotationY;
 	float IBLintensity;
 	float selectedID;
-	float backgroundIntensity;
+	int numLights;
 	float3 cameraPosition;
 	int drawWSUI;
-	int numLights;
-	int3 _pad;
 };
 
 StructuredBuffer<Light> lights : register(t6);
@@ -90,7 +88,7 @@ void applyDitheredNoise(uint2 DTid, inout float4 outcol)
 
 	float3 rnd = hash32(seed);
 
-	outcol += float4((rnd - 0.) / 128.0, 0.0);
+	outcol += float4((rnd - 0.) / 64.0, 0.0);
 }
 
 float3x3 getIrradianceMapRotation()
@@ -314,9 +312,8 @@ void drawBackground(uint2 DTid)
 {
 	float3 background = tBackground.Load(int3(DTid, 0)).xyz;
 	linearRGBtoSRGB(background);
-	float4 finalBackground = float4(background * backgroundIntensity, 1.0);
+	float4 finalBackground = float4(background, 1.0);
 	aces(finalBackground.rgb);
-	applyDitheredNoise(DTid, finalBackground);
 	outColor[DTid] = finalBackground;
 }
 

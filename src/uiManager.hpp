@@ -34,6 +34,7 @@ struct ImportProgress;
 enum class FileType
 {
 	IMAGE,
+	HDRI,
 	MODEL,
 	UNKNOWN,
 	SCENE

@@ -26,7 +26,8 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getIrradianceSRV();
 	ComPtr<ID3D11ShaderResourceView> getPrefilteredSRV();
 	ComPtr<ID3D11ShaderResourceView> getBRDFLutSRV();
-	std::string& getHDRIPath();
+	const std::string& getHDRIPath() const;
+	void setHDRIPath(const std::string& hdrImagePath);
 
 private:
 	void update(const glm::mat4& view, const glm::mat4& projection) const;

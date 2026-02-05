@@ -13,7 +13,7 @@ cbuffer CB : register(b0)
 }
 
 
-static const uint NumSamples = 64 * 1024;
+static const uint NumSamples = 1024u * 64u; // Adjust this value for a balance between quality and performance	
 static const float InvNumSamples = 1.0 / float(NumSamples);
 static const float Epsilon = 0.00001;
 
