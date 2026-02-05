@@ -1438,95 +1438,96 @@ void UIManager::showCameraProperties(Camera* camera) const
 	ImGui::DragFloat("Far Clip", &camera->farPlane, 1.0f, 10.0f, 10000.0f);
 }
 
-void UIManager::showBakerProperties(BakerNode* baker) const
+void UIManager::showBakerProperties(BakerNode* bakerNode) const
 {
-	auto bakerNode = dynamic_cast<Baker*>(baker);
-	if (bakerNode)
+	auto baker = dynamic_cast<Baker*>(bakerNode);
+	if (!baker)
 	{
-		constexpr uint32_t minVal = 2;
-		constexpr uint32_t maxVal = 4096;
-		ImGui::Text("Baking Settings:");
-		ImGui::DragFloat("Cage Offset", &bakerNode->cageOffset, 0.01f, 0.0f, 10.0f);
-		bool checkboxValue = bakerNode->useSmoothedNormals;
-		if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
+		return;
+	}
+	constexpr uint32_t minVal = 2;
+	constexpr uint32_t maxVal = 4096;
+	static bool showInvalidPathPopup = false;
+	static std::string invalidPathMessage;
+	ImGui::Text("Baking Settings:");
+	ImGui::DragFloat("Cage Offset", &baker->cageOffset, 0.01f, 0.0f, 10.0f);
+	bool checkboxValue = baker->useSmoothedNormals;
+	if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
+	{
+		baker->useSmoothedNormals = checkboxValue;
+	}
+	ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &baker->textureWidth, 2.0f, &minVal, &maxVal);
+	for (auto& pass : baker->getPasses())
+	{
+		ImGui::PushID(pass);
+		ImGui::Text("%s", pass->name.c_str());
+
+		std::string fullPath = pass->directory + "\\" + pass->filename;
+
+		size_t lastSlash = fullPath.find_last_of("\\/");
+		if (lastSlash != std::string::npos)
 		{
-			bakerNode->useSmoothedNormals = checkboxValue;
+			pass->directory = fullPath.substr(0, lastSlash);
+			pass->filename = fullPath.substr(lastSlash + 1);
 		}
-		ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &bakerNode->textureWidth, 2.0f, &minVal, &maxVal);
-		for (auto& pass : bakerNode->getPasses())
+		else
 		{
-			ImGui::PushID(pass);
-			ImGui::Text("%s", pass->name.c_str());
+			pass->filename = fullPath;
+		}
 
-			std::string fullPath = pass->directory + "\\" + pass->filename;
-
-			size_t lastSlash = fullPath.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
+		// Directory input with browse button
+		char dirBuffer[260];
+		strcpy_s(dirBuffer, pass->directory.c_str());
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
+		bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
+		ImGui::SameLine();
+		if (ImGui::Button("..."))
+		{
+			FileDialogResult result = openFileDialog(FileType::UNKNOWN, true);
+			if (result)
 			{
-				pass->directory = fullPath.substr(0, lastSlash);
-				pass->filename = fullPath.substr(lastSlash + 1);
+				strcpy_s(dirBuffer, result.directory.c_str());
+				pass->filename = result.filename;
+				pass->directory = result.directory;
+				dirChanged = true;
+			}
+		}
+
+		// Filename input
+		char fileNameBuffer[260];
+		strcpy_s(fileNameBuffer, pass->filename.c_str());
+		bool nameChanged = ImGui::InputText("Filename", fileNameBuffer, sizeof(fileNameBuffer));
+
+
+		if (dirChanged || nameChanged)
+		{
+			std::string newDir = dirBuffer;
+			std::string newName = fileNameBuffer;
+			if (!newDir.empty() && !newName.empty())
+			{
+				pass->directory = newDir;
+				pass->filename = newName;
+			}
+			else if (!newName.empty())
+			{
+				pass->filename = newName;
 			}
 			else
 			{
-				pass->filename = fullPath;
+				pass->directory = newDir;
 			}
-
-			// Directory input with browse button
-			char dirBuffer[260];
-			strcpy_s(dirBuffer, pass->directory.c_str());
-			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
-			bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
-			ImGui::SameLine();
-			if (ImGui::Button("..."))
-			{
-				FileDialogResult result = openFileDialog(FileType::UNKNOWN, true);
-				if (result)
-				{
-					strcpy_s(dirBuffer, result.directory.c_str());
-					pass->filename = result.filename;
-					pass->directory = result.directory;
-					dirChanged = true;
-				}
-			}
-
-			// Filename input
-			char fileNameBuffer[260];
-			strcpy_s(fileNameBuffer, pass->filename.c_str());
-			bool nameChanged = ImGui::InputText("Filename", fileNameBuffer, sizeof(fileNameBuffer));
-
-
-			if (dirChanged || nameChanged)
-			{
-				std::string newDir = dirBuffer;
-				std::string newName = fileNameBuffer;
-				if (!newDir.empty() && !newName.empty())
-				{
-					pass->directory = newDir;
-					pass->filename = newName;
-				}
-				else if (!newName.empty())
-				{
-					pass->filename = newName;
-				}
-				else
-				{
-					pass->directory = newDir;
-				}
-			}
-
-			ImGui::Separator();
-			ImGui::PopID();
 		}
-	}
-	static bool showInvalidPathPopup = false;
-	static std::string invalidPathMessage;
 
+		ImGui::Separator();
+		ImGui::PopID();
+	}
+	
 	if (ImGui::Button("Start Bake"))
 	{
 		// Check if all passes have valid output paths
 		bool hasInvalidPath = false;
 		std::string invalidPassName;
-		for (auto& pass : bakerNode->getPasses())
+		for (auto& pass : baker->getPasses())
 		{
 			if (pass->directory.empty() || pass->filename.empty())
 			{
@@ -1550,7 +1551,7 @@ void UIManager::showBakerProperties(BakerNode* baker) const
 		}
 		else
 		{
-			bakerNode->requestBake();
+			baker->requestBake();
 		}
 	}
 
