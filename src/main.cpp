@@ -13,7 +13,7 @@ static void SetHighDpiAwarenessAtRuntime()
 {
 	if (const HMODULE user32 = GetModuleHandleW(L"user32.dll"))
 	{
-		typedef BOOL (WINAPI*SetProcessDpiAwarenessContext_t)(HANDLE);
+		typedef BOOL(WINAPI* SetProcessDpiAwarenessContext_t)(HANDLE);
 		const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContext_t>(
 			GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
 

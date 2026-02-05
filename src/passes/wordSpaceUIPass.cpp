@@ -1,5 +1,6 @@
 #include "wordSpaceUIPass.hpp"
 
+#include <algorithm>
 #include <memory>
 
 #include "appConfig.hpp"
@@ -35,7 +36,7 @@ static const QuadVertex verts[4] = {
 	{{1.f, -1.f}, {1.f, 1.f}},
 };
 
-static const uint16_t idx[6] = {0, 1, 2, 0, 2, 3};
+static const uint16_t idx[6] = { 0, 1, 2, 0, 2, 3 };
 
 
 static constexpr D3D11_INPUT_ELEMENT_DESC s_WSUIInputLayoutDesc[] = {
@@ -48,7 +49,11 @@ WorldSpaceUIPass::WorldSpaceUIPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11Dev
 	: BasePass(device, context)
 {
 	m_rtvCollector = std::make_unique<RTVCollector>();
-	m_lightIconTexture = std::make_shared<Texture>(AppConfig::GetResourcePathA("icons/PointLight.png"), m_device);
+	const std::wstring lightIconPath = AppConfig::GetResourcePath(L"icons/PointLight.png");
+	std::string lightIconPathA(lightIconPath.size(), '\0');
+	std::transform(lightIconPath.begin(), lightIconPath.end(), lightIconPathA.begin(),
+		[](wchar_t c) { return static_cast<char>(c); });
+	m_lightIconTexture = std::make_shared<Texture>(lightIconPathA, m_device);
 	m_shaderManager->LoadPixelShader("wordSpaceUIPS", ShaderManager::GetShaderPath(L"wordSpaceUI.hlsl"), "PS");
 	m_shaderManager->LoadVertexShader("wordSpaceUIVS", ShaderManager::GetShaderPath(L"wordSpaceUI.hlsl"), "VS");
 	m_vertexBuffer = createVertexBuffer(sizeof(verts), verts);
@@ -82,9 +87,9 @@ void WorldSpaceUIPass::createOrResize()
 void WorldSpaceUIPass::createInputLayout()
 {
 	HRESULT hr = m_device->CreateInputLayout(s_WSUIInputLayoutDesc, ARRAYSIZE(s_WSUIInputLayoutDesc),
-											 m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferPointer(),
-											 m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferSize(),
-											 &m_inputLayout);
+		m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferPointer(),
+		m_shaderManager->getVertexShaderBlob("wordSpaceUIVS")->GetBufferSize(),
+		&m_inputLayout);
 	assert(SUCCEEDED(hr));
 }
 
@@ -127,9 +132,9 @@ void WorldSpaceUIPass::updateLights(Scene* scene)
 }
 
 void WorldSpaceUIPass::draw(const glm::mat4& view,
-							const glm::mat4& projection,
-							Scene* scene,
-							ComPtr<ID3D11RenderTargetView> objectIDRTV)
+	const glm::mat4& projection,
+	Scene* scene,
+	ComPtr<ID3D11RenderTargetView> objectIDRTV)
 {
 
 	beginDebugEvent(L"WorldSpaceUIPass");
@@ -140,7 +145,7 @@ void WorldSpaceUIPass::draw(const glm::mat4& view,
 	updateConstantBuffer(view, projection, scene);
 	static const UINT stride = sizeof(QuadVertex);
 	static const UINT offset = 0;
-	ID3D11ShaderResourceView* srvs[2] = {m_lightIconTexture->srv.Get(), m_lightsSRV.Get()};
+	ID3D11ShaderResourceView* srvs[2] = { m_lightIconTexture->srv.Get(), m_lightsSRV.Get() };
 	setViewport(AppConfig::viewportWidth, AppConfig::viewportHeight);
 	m_context->IASetInputLayout(m_inputLayout.Get());
 	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
@@ -160,17 +165,17 @@ void WorldSpaceUIPass::draw(const glm::mat4& view,
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	float clearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	m_context->ClearRenderTargetView(m_rtv.Get(), clearColor);
-	ID3D11RenderTargetView* rtvs[2] = {m_rtv.Get(), objectIDRTV.Get()};
+	ID3D11RenderTargetView* rtvs[2] = { m_rtv.Get(), objectIDRTV.Get() };
 	m_context->OMSetRenderTargets(2, rtvs, nullptr);
 
 	m_context->DrawIndexedInstanced(6, (UINT)scene->getLights().size(), 0, 0, 0);
 
 	// Reset states to avoid affecting subsequent passes
-	ID3D11ShaderResourceView* nullSRVs[2] = {nullptr, nullptr};
+	ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
 	ID3D11ShaderResourceView* nullSRV = nullptr;
-	ID3D11RenderTargetView* nullRTVs[2] = {nullptr, nullptr};
+	ID3D11RenderTargetView* nullRTVs[2] = { nullptr, nullptr };
 	m_context->PSSetShaderResources(0, 2, nullSRVs);
 	m_context->VSSetShaderResources(1, 1, &nullSRV);
 	m_context->OMSetRenderTargets(2, nullRTVs, nullptr);

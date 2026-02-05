@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <string>
 
 #include "appConfig.hpp"
 #include "dxDevice.hpp"
@@ -65,14 +66,18 @@ Renderer::Renderer(const HWND& hwnd)
 	m_scene->setActiveCamera(m_camera.get());
 	m_scene->addChild(std::move(m_camera));
 
+	const std::wstring hdriPathW = AppConfig::GetResourcePath(L"citrus_orchard_road_puresky_4k.hdr");
+	std::string hdriPath(hdriPathW.size(), '\0');
+	std::transform(hdriPathW.begin(), hdriPathW.end(), hdriPath.begin(),
+		[](wchar_t c) { return static_cast<char>(c); });
+
 	std::cout << "Number of primitives loaded: " << m_scene->getPrimitiveCount() << std::endl;
 	m_zPrePass = std::make_unique<ZPrePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_gBuffer = std::make_unique<GBuffer>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_objectPicker = std::make_unique<ObjectPicker>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_fsquad = std::make_unique<FSQuad>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_deferredPass = std::make_unique<DeferredPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
-	m_cubeMapPass = std::make_unique<CubeMapPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(),
-		"..\\..\\res\\citrus_orchard_road_puresky_4k.hdr");
+	m_cubeMapPass = std::make_unique<CubeMapPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hdriPath);
 	m_previewGenerator = std::make_unique<PreviewGenerator>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
