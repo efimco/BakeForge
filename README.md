@@ -31,7 +31,7 @@ An open source GPU-accelerated texture baker built with DirectX 11. Bake high-po
 
 ## Screenshots
 
-![alt text](image-1.png)
+![alt text](image.png)
 
 3D Asset is Done by [Igor Oskolskiy](https://www.artstation.com/dark_igorek)
 
@@ -57,6 +57,8 @@ An open source GPU-accelerated texture baker built with DirectX 11. Bake high-po
 
 
 ![alt text](BakeExampleDoor.png)
+
+![alt text](cubeBaked.png)
 
 ## Requirements
 
@@ -132,8 +134,8 @@ Or open `build/TimeToDX.sln` in Visual Studio and build from there.
 
 - [ ] Ambient Occlusion baking
 - [ ] Multi-threaded BVH construction
-- [ ] Batch baking multiple objects
-- [ ] Anti-aliased edge sampling
+- [ ] Paint ray direction map ("skew" paint)
+- [ ] Dialation filter after baking (padding on normal texture for better mip generation)
 - [ ] Vulkan/DX12 backend
 
 ## Dependencies

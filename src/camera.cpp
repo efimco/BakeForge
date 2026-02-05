@@ -3,7 +3,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include "inputEventsHandler.hpp"
-// #include "primitive.hpp"
+#include "primitive.hpp"
 
 static constexpr float YAW = 0.0f;
 static constexpr float PITCH = 0.0f;
@@ -27,14 +27,14 @@ Camera::Camera(const glm::vec3 pos, const std::string_view nodeName)
 
 void Camera::processMovementControls(SceneNode* activeNode)
 {
-	// if (activeNode)
-	// {
-	// 	const auto prim = dynamic_cast<Primitive*>(activeNode);
-	// 	if (prim && InputEvents::isKeyDown(KeyButtons::KEY_F))
-	// 	{
-	// 		// focusOn(prim);
-	// 	}
-	// }
+	if (activeNode)
+	{
+		const auto prim = dynamic_cast<Primitive*>(activeNode);
+		if (prim && InputEvents::isKeyDown(KeyButtons::KEY_F))
+		{
+			focusOn(prim);
+		}
+	}
 
 	if (!InputEvents::getMouseInViewport())
 		return;
@@ -151,18 +151,18 @@ std::unique_ptr<SceneNode> Camera::clone() const
 	return cameraNode;
 }
 
-// void Camera::focusOn(Primitive* primitive)
-// {
-// 	const auto bbox = primitive->getWorldBBox(primitive->getWorldMatrix());
-// 	const auto minPos = glm::vec3(bbox.min.values[0], bbox.min.values[1], bbox.min.values[2]);
-// 	const auto maxPos = glm::vec3(bbox.max.values[0], bbox.max.values[1], bbox.max.values[2]);
-// 	const glm::vec3 center = (minPos + maxPos) * 0.5f;
-// 	const float radius = glm::length(maxPos - minPos);
-// 	orbitPivot = center;
+void Camera::focusOn(Primitive* primitive)
+{
+	const auto bbox = primitive->getWorldBBox();
+	const auto minPos = bbox.min;
+	const auto maxPos = bbox.max;
+	const glm::vec3 center = (minPos + maxPos) * 0.5f;
+	const float radius = glm::length(maxPos - minPos);
+	orbitPivot = center;
 
-// 	// Position camera to see the entire bounding box (Blender-style framing)
-// 	const float distance = radius; // More breathing room like Blender
-// 	distanceToOrbitPivot = distance;
+	// Position camera to see the entire bounding box (Blender-style framing)
+	const float distance = radius; // More breathing room like Blender
+	distanceToOrbitPivot = distance;
 
-// 	updateCameraVectors();
-// }
+	updateCameraVectors();
+}
