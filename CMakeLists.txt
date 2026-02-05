@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.0)
-project(TimeToDX VERSION 0.1.0 LANGUAGES CXX)
+project(BakeForge VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,6 +9,11 @@ add_definitions(-DNOMINMAX)
 
 # Option to enable release mode shader handling (shaders copied next to executable)
 option(RELEASE_BUILD "Build for release with shaders next to executable" OFF)
+
+# Static runtime for distribution (no MSVC redistributable needed)
+if(RELEASE_BUILD AND MSVC)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 file(GLOB SOURCE_FILES
 				"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
@@ -47,20 +52,20 @@ endif()
 add_library(IMGUI STATIC ${IMGUI})
 add_library(DXTEX STATIC ${DXTEX})
 
-add_executable(TimeToDX
+add_executable(BakeForge
 				${SOURCE_FILES}
 				${PASSES}
 				${COMMANDS}
 				${UTILITY})
 
-target_link_libraries(TimeToDX
+target_link_libraries(BakeForge
 				d3d11
 				dxgi
 				d3dcompiler
 				IMGUI
 				DXTEX
 )
-target_include_directories(TimeToDX
+target_include_directories(BakeForge
 				PRIVATE
 				${CMAKE_CURRENT_SOURCE_DIR}/src/
 				${CMAKE_CURRENT_SOURCE_DIR}/src/passes
@@ -71,30 +76,30 @@ target_include_directories(TimeToDX
 
 # Configure shader path based on build type
 if(RELEASE_BUILD)
-	target_compile_definitions(TimeToDX PRIVATE SHADER_PATH=L"shaders/")
-	target_compile_definitions(TimeToDX PRIVATE RESOURCE_PATH=L"res/")
+	target_compile_definitions(BakeForge PRIVATE SHADER_PATH=L"shaders/")
+	target_compile_definitions(BakeForge PRIVATE RESOURCE_PATH=L"res/")
 	
 	# Copy shaders to output directory
 	file(GLOB SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl")
 	
-	add_custom_command(TARGET TimeToDX POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:TimeToDX>/shaders"
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_FILES} "$<TARGET_FILE_DIR:TimeToDX>/shaders/"
+	add_custom_command(TARGET BakeForge POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:BakeForge>/shaders"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_FILES} "$<TARGET_FILE_DIR:BakeForge>/shaders/"
 		COMMENT "Copying shaders to output directory"
 	)
 	
 	# Copy resources to output directory
-	add_custom_command(TARGET TimeToDX POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/res" "$<TARGET_FILE_DIR:TimeToDX>/res"
+	add_custom_command(TARGET BakeForge POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/res" "$<TARGET_FILE_DIR:BakeForge>/res"
 		COMMENT "Copying resources to output directory"
 	)
 else()
 	# Development build - paths relative from build output directory (build/Debug or build/Release)
-	target_compile_definitions(TimeToDX PRIVATE SHADER_PATH=L"../../src/shaders/")
-	target_compile_definitions(TimeToDX PRIVATE RESOURCE_PATH=L"../../res/")
+	target_compile_definitions(BakeForge PRIVATE SHADER_PATH=L"../../src/shaders/")
+	target_compile_definitions(BakeForge PRIVATE RESOURCE_PATH=L"../../res/")
 endif()
 
-set_target_properties(TimeToDX PROPERTIES
+set_target_properties(BakeForge PROPERTIES
 				WIN32_EXECUTABLE TRUE
 				VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )

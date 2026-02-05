@@ -7,7 +7,7 @@ Window::Window(HINSTANCE hInstance)
 	: m_hWindow(NULL)
 {
 	const auto CLASS_NAME = "Sample Window Class";
-	const auto WINDOW_NAME = "TimeToDX";
+	const auto WINDOW_NAME = "BakeForge";
 	m_windClass = {};
 	m_windClass.lpfnWndProc = Window::WindowProc;
 	m_windClass.hInstance = hInstance;
