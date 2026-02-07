@@ -60,7 +60,7 @@ An open source GPU-accelerated texture baker built with DirectX 11. Bake high-po
 
 ## Bake Process
 
-[<video src="bakeProcess.mp4" controls width="100%"></video>](https://github.com/efimco/BakeForge/blob/main/bakeProcess.mp4)
+https://github.com/user-attachments/assets/abc123-xyz.mp4
 
 ## Requirements
 
