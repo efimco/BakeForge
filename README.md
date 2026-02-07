@@ -81,10 +81,10 @@ cmake --preset=default
 cmake --build build --config Release
 
 # Run
-./build/Release/TimeToDX.exe
+./build/Release/BakeForge.exe
 ```
 
-Or open `build/TimeToDX.sln` in Visual Studio and build from there.
+Or open `build/BakeForge.sln` in Visual Studio and build from there.
 
 ## Baking Pipeline
 

@@ -93,10 +93,6 @@ if(RELEASE_BUILD)
 		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/res" "$<TARGET_FILE_DIR:BakeForge>/res"
 		COMMENT "Copying resources to output directory"
 	)
-else()
-	# Development build - paths relative from build output directory (build/Debug or build/Release)
-	target_compile_definitions(BakeForge PRIVATE SHADER_PATH=L"../../src/shaders/")
-	target_compile_definitions(BakeForge PRIVATE RESOURCE_PATH=L"../../res/")
 endif()
 
 set_target_properties(BakeForge PROPERTIES

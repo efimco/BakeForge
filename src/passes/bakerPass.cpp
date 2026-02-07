@@ -40,7 +40,7 @@ static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
 	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{"NORMAL", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"NORMAL", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}, // smooth normal for baking
 };
 
 
@@ -91,7 +91,7 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 		std::cerr << "BakerPass::bake: No output path specified!" << std::endl;
 		return;
 	}
-	if(m_primitivesToBake.first.empty() || m_primitivesToBake.second.empty())
+	if (m_primitivesToBake.first.empty() || m_primitivesToBake.second.empty())
 	{
 		std::cerr << "BakerPass::bake: No primitives to bake!" << std::endl;
 		return;
@@ -484,22 +484,7 @@ void BakerPass::asyncSaveTextureToFile(const std::string& fullPath,
 		return;
 	}
 
-	DirectX::ScratchImage convertedImage;
-	HRESULT hr = DirectX::Convert(
-		*capturedImage.GetImage(0, 0, 0),
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		DirectX::TEX_FILTER_DEFAULT,
-		DirectX::TEX_THRESHOLD_DEFAULT,
-		convertedImage);
-
-	if (FAILED(hr))
-	{
-		std::cerr << "Failed to convert texture format." << std::endl;
-		return;
-	}
-
-
-	m_saveTextureFuture = std::async(std::launch::async, [fullPath, image = std::move(convertedImage)]() mutable
+	m_saveTextureFuture = std::async(std::launch::async, [fullPath, image = std::move(capturedImage)]() mutable
 		{
 
 			if (fullPath.ends_with(".png"))
@@ -601,7 +586,7 @@ void BakerPass::createBakedNormalResources()
 	}
 	std::cout << "Creating baked normal texture of size: " << m_lastWidth << "x" << m_lastHeight << std::endl;
 
-	m_bakedNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_bakedNormalTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R16G16B16A16_UNORM, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_bakedNormalSRV = createShaderResourceView(m_bakedNormalTexture.Get(), SRVPreset::Texture2D);
 	m_bakedNormalUAV = createUnorderedAccessView(m_bakedNormalTexture.Get(), UAVPreset::Texture2D, 0);
 

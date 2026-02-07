@@ -166,7 +166,7 @@ void GBuffer::createOrResize()
 	}
 
 	// albedo
-	t_albedo = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+	t_albedo = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	srv_albedo = createShaderResourceView(t_albedo.Get(), SRVPreset::Texture2D);
 	rtv_albedo = createRenderTargetView(t_albedo.Get(), RTVPreset::Texture2D);
 
@@ -178,13 +178,13 @@ void GBuffer::createOrResize()
 
 	// normal
 
-	t_normal = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R10G10B10A2_UNORM);
+	t_normal = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	srv_normal = createShaderResourceView(t_normal.Get(), SRVPreset::Texture2D);
 	rtv_normal = createRenderTargetView(t_normal.Get(), RTVPreset::Texture2D);
 
 	// position
 
-	t_position = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	t_position = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	srv_position = createShaderResourceView(t_position.Get(), SRVPreset::Texture2D);
 	rtv_position = createRenderTargetView(t_position.Get(), RTVPreset::Texture2D);
 

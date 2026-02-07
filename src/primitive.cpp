@@ -301,31 +301,6 @@ const std::vector<Triangle>& Primitive::getTriangles() const
 	return m_sharedData->triangles;
 }
 
-std::vector<Triangle> Primitive::getWorldSpaceTriangles()
-{
-	std::vector<Triangle> worldTris;
-	worldTris.reserve(m_sharedData->triangles.size());
-
-	glm::mat4 worldMatrix = getWorldMatrix();
-
-	for (const Triangle& tri : m_sharedData->triangles)
-	{
-		Triangle worldTri;
-		worldTri.v0 = glm::vec3(worldMatrix * glm::vec4(tri.v0, 1.0f));
-		worldTri.v1 = glm::vec3(worldMatrix * glm::vec4(tri.v1, 1.0f));
-		worldTri.v2 = glm::vec3(worldMatrix * glm::vec4(tri.v2, 1.0f));
-
-		// Transform normals (ignore translation)
-		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
-		worldTri.n0 = glm::normalize(normalMatrix * tri.n0);
-		worldTri.n1 = glm::normalize(normalMatrix * tri.n1);
-		worldTri.n2 = glm::normalize(normalMatrix * tri.n2);
-
-		worldTris.push_back(worldTri);
-	}
-
-	return worldTris;
-}
 
 const std::vector<uint32_t>& Primitive::getTriangleIndices() const
 {
@@ -428,43 +403,43 @@ void Primitive::GenerateCube(std::vector<Vertex>& outVertices, std::vector<uint3
 		v.tangent = tangent;
 		v.smoothNormal = normal;
 		outVertices.push_back(v);
-	};
+		};
 
 	// Front face (+Z)
-	addVertex({-hs, -hs,  hs}, {0, 0, 1}, {0, 0}, {1, 0, 0});
-	addVertex({ hs, -hs,  hs}, {0, 0, 1}, {1, 0}, {1, 0, 0});
-	addVertex({ hs,  hs,  hs}, {0, 0, 1}, {1, 1}, {1, 0, 0});
-	addVertex({-hs,  hs,  hs}, {0, 0, 1}, {0, 1}, {1, 0, 0});
+	addVertex({ -hs, -hs,  hs }, { 0, 0, 1 }, { 0, 0 }, { 1, 0, 0 });
+	addVertex({ hs, -hs,  hs }, { 0, 0, 1 }, { 1, 0 }, { 1, 0, 0 });
+	addVertex({ hs,  hs,  hs }, { 0, 0, 1 }, { 1, 1 }, { 1, 0, 0 });
+	addVertex({ -hs,  hs,  hs }, { 0, 0, 1 }, { 0, 1 }, { 1, 0, 0 });
 
 	// Back face (-Z)
-	addVertex({ hs, -hs, -hs}, {0, 0, -1}, {0, 0}, {-1, 0, 0});
-	addVertex({-hs, -hs, -hs}, {0, 0, -1}, {1, 0}, {-1, 0, 0});
-	addVertex({-hs,  hs, -hs}, {0, 0, -1}, {1, 1}, {-1, 0, 0});
-	addVertex({ hs,  hs, -hs}, {0, 0, -1}, {0, 1}, {-1, 0, 0});
+	addVertex({ hs, -hs, -hs }, { 0, 0, -1 }, { 0, 0 }, { -1, 0, 0 });
+	addVertex({ -hs, -hs, -hs }, { 0, 0, -1 }, { 1, 0 }, { -1, 0, 0 });
+	addVertex({ -hs,  hs, -hs }, { 0, 0, -1 }, { 1, 1 }, { -1, 0, 0 });
+	addVertex({ hs,  hs, -hs }, { 0, 0, -1 }, { 0, 1 }, { -1, 0, 0 });
 
 	// Top face (+Y)
-	addVertex({-hs,  hs,  hs}, {0, 1, 0}, {0, 0}, {1, 0, 0});
-	addVertex({ hs,  hs,  hs}, {0, 1, 0}, {1, 0}, {1, 0, 0});
-	addVertex({ hs,  hs, -hs}, {0, 1, 0}, {1, 1}, {1, 0, 0});
-	addVertex({-hs,  hs, -hs}, {0, 1, 0}, {0, 1}, {1, 0, 0});
+	addVertex({ -hs,  hs,  hs }, { 0, 1, 0 }, { 0, 0 }, { 1, 0, 0 });
+	addVertex({ hs,  hs,  hs }, { 0, 1, 0 }, { 1, 0 }, { 1, 0, 0 });
+	addVertex({ hs,  hs, -hs }, { 0, 1, 0 }, { 1, 1 }, { 1, 0, 0 });
+	addVertex({ -hs,  hs, -hs }, { 0, 1, 0 }, { 0, 1 }, { 1, 0, 0 });
 
 	// Bottom face (-Y)
-	addVertex({-hs, -hs, -hs}, {0, -1, 0}, {0, 0}, {1, 0, 0});
-	addVertex({ hs, -hs, -hs}, {0, -1, 0}, {1, 0}, {1, 0, 0});
-	addVertex({ hs, -hs,  hs}, {0, -1, 0}, {1, 1}, {1, 0, 0});
-	addVertex({-hs, -hs,  hs}, {0, -1, 0}, {0, 1}, {1, 0, 0});
+	addVertex({ -hs, -hs, -hs }, { 0, -1, 0 }, { 0, 0 }, { 1, 0, 0 });
+	addVertex({ hs, -hs, -hs }, { 0, -1, 0 }, { 1, 0 }, { 1, 0, 0 });
+	addVertex({ hs, -hs,  hs }, { 0, -1, 0 }, { 1, 1 }, { 1, 0, 0 });
+	addVertex({ -hs, -hs,  hs }, { 0, -1, 0 }, { 0, 1 }, { 1, 0, 0 });
 
 	// Right face (+X)
-	addVertex({ hs, -hs,  hs}, {1, 0, 0}, {0, 0}, {0, 0, -1});
-	addVertex({ hs, -hs, -hs}, {1, 0, 0}, {1, 0}, {0, 0, -1});
-	addVertex({ hs,  hs, -hs}, {1, 0, 0}, {1, 1}, {0, 0, -1});
-	addVertex({ hs,  hs,  hs}, {1, 0, 0}, {0, 1}, {0, 0, -1});
+	addVertex({ hs, -hs,  hs }, { 1, 0, 0 }, { 0, 0 }, { 0, 0, -1 });
+	addVertex({ hs, -hs, -hs }, { 1, 0, 0 }, { 1, 0 }, { 0, 0, -1 });
+	addVertex({ hs,  hs, -hs }, { 1, 0, 0 }, { 1, 1 }, { 0, 0, -1 });
+	addVertex({ hs,  hs,  hs }, { 1, 0, 0 }, { 0, 1 }, { 0, 0, -1 });
 
 	// Left face (-X)
-	addVertex({-hs, -hs, -hs}, {-1, 0, 0}, {0, 0}, {0, 0, 1});
-	addVertex({-hs, -hs,  hs}, {-1, 0, 0}, {1, 0}, {0, 0, 1});
-	addVertex({-hs,  hs,  hs}, {-1, 0, 0}, {1, 1}, {0, 0, 1});
-	addVertex({-hs,  hs, -hs}, {-1, 0, 0}, {0, 1}, {0, 0, 1});
+	addVertex({ -hs, -hs, -hs }, { -1, 0, 0 }, { 0, 0 }, { 0, 0, 1 });
+	addVertex({ -hs, -hs,  hs }, { -1, 0, 0 }, { 1, 0 }, { 0, 0, 1 });
+	addVertex({ -hs,  hs,  hs }, { -1, 0, 0 }, { 1, 1 }, { 0, 0, 1 });
+	addVertex({ -hs,  hs, -hs }, { -1, 0, 0 }, { 0, 1 }, { 0, 0, 1 });
 
 	// Indices for all 6 faces (2 triangles per face)
 	for (uint32_t face = 0; face < 6; face++)
@@ -560,13 +535,13 @@ void Primitive::GeneratePlane(std::vector<Vertex>& outVertices, std::vector<uint
 		v.tangent = tangent_;
 		v.smoothNormal = normal_;
 		outVertices.push_back(v);
-	};
+		};
 
 	// 4 vertices for a simple quad
-	addVertex({-hw, 0.0f, -hh}, normal, {0.0f, 0.0f}, tangent);
-	addVertex({ hw, 0.0f, -hh}, normal, {1.0f, 0.0f}, tangent);
-	addVertex({ hw, 0.0f,  hh}, normal, {1.0f, 1.0f}, tangent);
-	addVertex({-hw, 0.0f,  hh}, normal, {0.0f, 1.0f}, tangent);
+	addVertex({ -hw, 0.0f, -hh }, normal, { 0.0f, 0.0f }, tangent);
+	addVertex({ hw, 0.0f, -hh }, normal, { 1.0f, 0.0f }, tangent);
+	addVertex({ hw, 0.0f,  hh }, normal, { 1.0f, 1.0f }, tangent);
+	addVertex({ -hw, 0.0f,  hh }, normal, { 0.0f, 1.0f }, tangent);
 
 	// Two triangles
 	outIndices.push_back(0);

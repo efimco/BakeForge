@@ -452,22 +452,20 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model,
 	const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
 	const unsigned char* dataPtr = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-	const auto floatPtr = reinterpret_cast<const float*>(dataPtr);
 	const size_t vertexCount = accessor.count;
-	const int components = (accessor.type == TINYGLTF_TYPE_VEC3) ? 3 : 0;
+
+	// Use byteStride if specified, otherwise assume tightly packed vec3 floats
+	size_t byteStride = bufferView.byteStride;
+	if (byteStride == 0)
+		byteStride = sizeof(float) * 3;  // tightly packed
 
 	for (size_t i = 0; i < vertexCount; i++)
 	{
-		Normal normal(-INFINITY, -INFINITY, -INFINITY);
-		for (int j = 0; j < components; j++)
-		{
-			if (j == 0)
-				normal.x = floatPtr[i * components + j];
-			else if (j == 1)
-				normal.y = floatPtr[i * components + j];
-			else if (j == 2)
-				normal.z = floatPtr[i * components + j];
-		}
+		const float* floatPtr = reinterpret_cast<const float*>(dataPtr + i * byteStride);
+		Normal normal;
+		normal.x = floatPtr[0];
+		normal.y = floatPtr[1];
+		normal.z = floatPtr[2];
 		normals.push_back(normal);
 	}
 }

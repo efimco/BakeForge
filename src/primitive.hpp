@@ -71,7 +71,6 @@ public:
 	ComPtr<ID3D11ShaderResourceView> getTrisIndicesBufferSRV() const;
 
 	const std::vector<Triangle>& getTriangles() const;
-	std::vector<Triangle> getWorldSpaceTriangles();
 	const std::vector<uint32_t>& getTriangleIndices() const;
 	std::vector<BVH::Node>& getBVHNodes() const;
 	std::vector<BVH::Node> getWorldSpaceBVHNodes();

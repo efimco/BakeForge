@@ -190,11 +190,12 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 
 	float3 N = normalize(worldNormal.xyz);
 	float3 T = normalize(worldTangent.xyz);
+	T = normalize(T - N * dot(N, T));
 	float3 B = cross(N, T);
 
 	// Jitter ray origin in tangent plane (within ~half a texel)
 	float3 jitter = ditherNoise(DTid.xy);
-	float jitterScale = cageOffset * 0.01f; // 1% of cage offset
+	float jitterScale = 0.002f;
 	float3 originJitter = (jitter.x * T + jitter.y * B) * jitterScale;
 
 	Ray ray;
