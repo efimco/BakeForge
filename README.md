@@ -58,7 +58,9 @@ An open source GPU-accelerated texture baker built with DirectX 11. Bake high-po
 
 ![alt text](BakeExampleDoor.png)
 
-![alt text](cubeBaked.png)
+## Bake Process
+
+<video src="bakeProcess.mp4" controls width="100%"></video>
 
 ## Requirements
 
