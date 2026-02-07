@@ -279,7 +279,7 @@ std::future<AsyncTextureResult> Texture::loadTextureAsync(const std::string& fil
 		});
 }
 
-void Texture::finalizeAsyncLoad(AsyncTextureResult&& result, ComPtr<ID3D11DeviceContext> immContext)
+void Texture::finalizeAsyncLoad(AsyncTextureResult result, ComPtr<ID3D11DeviceContext> immContext)
 {
 	if (result.progress && result.progress->hasFailed)
 	{

@@ -58,7 +58,7 @@ struct Texture
 		ComPtr<ID3D11Device> device,
 		std::shared_ptr<TextureLoadProgress> progress = nullptr);
 
-	static void finalizeAsyncLoad(AsyncTextureResult&& result,
+	static void finalizeAsyncLoad(AsyncTextureResult result,
 		ComPtr<ID3D11DeviceContext> immContext);
 
 	ComPtr<ID3D11Device> device;

@@ -60,20 +60,23 @@ struct BLASInstance
 class BakerPass : public BasePass
 {
 public:
-	explicit BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
+	explicit BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene);
 	~BakerPass() override = default;
 
 	std::string name = "Baker Pass";
 
 	void bake(uint32_t width, uint32_t height, float cageOffset, uint32_t useSmoothedNormals);
+	void previewBakedNormal();
 	void drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection);
 	void createOrResize();
 	void setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs);
+	bool bakedNormalExists() const;
 	std::pair<std::vector<Primitive*>, std::vector<Primitive*>> getPrimitivesToBake() const { return m_primitivesToBake; }
 	std::string directory = "";
 	std::string filename = "";
 
 private:
+	Scene* m_scene = nullptr;
 	uint32_t m_lastWidth = 0;
 	uint32_t m_lastHeight = 0;
 

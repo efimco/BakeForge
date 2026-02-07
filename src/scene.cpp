@@ -274,14 +274,15 @@ void Scene::updateAsyncPendingTextureReloads()
 		{
 			auto result = it->future.get();
 
-			if (result.progress->hasFailed && !result.texture)
+
+			ComPtr<ID3D11DeviceContext> immContext;
+			m_device->GetImmediateContext(&immContext);
+			Texture::finalizeAsyncLoad(result, immContext);
+			if (result.progress->hasFailed || !result.texture)
 			{
 				std::cerr << "Failed to reload texture " << it->name << ": " << result.progress->errorMessage << std::endl;
 				continue;
 			}
-			ComPtr<ID3D11DeviceContext> immContext;
-			m_device->GetImmediateContext(&immContext);
-			Texture::finalizeAsyncLoad(std::move(result), immContext);
 
 			auto existingTexture = m_textures[it->name];
 			if (!existingTexture)

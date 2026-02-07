@@ -82,7 +82,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
-	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get());
 
 
 	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hwnd);

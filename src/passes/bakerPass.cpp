@@ -11,6 +11,8 @@
 #include "rtvCollector.hpp"
 #include "scene.hpp"
 #include "shaderManager.hpp"
+#include "material.hpp"
+#include "texture.hpp"
 
 
 #define PROFILE_BAKER_PASS 1
@@ -44,11 +46,12 @@ static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
 };
 
 
-BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
+BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene)
 	: BasePass(device, context)
 {
 	m_device = device;
 	m_context = context;
+	m_scene = scene;
 
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
@@ -125,6 +128,21 @@ void BakerPass::bake(uint32_t width, uint32_t height, float cageOffset, uint32_t
 		m_bakedNormalTexture);
 }
 
+void BakerPass::previewBakedNormal()
+{
+	std::string fullPath = directory + "\\" + filename;
+	std::shared_ptr<Texture> newNormal = std::make_shared<Texture>(fullPath, m_device, m_context);
+	auto material = m_primitivesToBake.first[0]->material;
+	if (!material)
+	{
+		std::cerr << "No material assigned to the first low-poly primitive, cannot set baked normal preview." << std::endl;
+		return;
+	}
+	m_scene->addTexture(newNormal);
+	material->normal = newNormal;
+	material->needsPreviewUpdate = true;
+}
+
 void BakerPass::drawRaycastVisualization(const glm::mat4& view, const glm::mat4& projection)
 {
 	if (m_lastWidth == 0 || m_lastHeight == 0)
@@ -180,6 +198,14 @@ void BakerPass::createOrResize()
 void BakerPass::setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs)
 {
 	m_primitivesToBake = primitivePairs;
+}
+
+bool BakerPass::bakedNormalExists() const
+{
+	if (directory.empty() || filename.empty())
+		return false;
+	std::string fullPath = directory + "\\" + filename;
+	return std::filesystem::exists(fullPath);
 }
 
 CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()

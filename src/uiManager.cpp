@@ -451,7 +451,7 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Baker"))
 			{
-				auto baker = std::make_unique<Baker>("Baker", m_device, m_context);
+				auto baker = std::make_unique<Baker>("Baker", m_device, m_context, m_scene);
 				m_scene->addChild(std::move(baker));
 			}
 			ImGui::EndMenu();
@@ -1496,8 +1496,9 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 		// Filename input
 		char fileNameBuffer[260];
 		strcpy_s(fileNameBuffer, pass->filename.c_str());
-		bool nameChanged = ImGui::InputText("Filename", fileNameBuffer, sizeof(fileNameBuffer));
-
+		ImGui::Text("Filename:");
+		ImGui::SameLine();
+		bool nameChanged = ImGui::InputText("##Filename", fileNameBuffer, sizeof(fileNameBuffer));
 
 		if (dirChanged || nameChanged)
 		{
@@ -1518,10 +1519,19 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 			}
 		}
 
+		if (pass->bakedNormalExists())
+		{
+			if (ImGui::Button("Preview"))
+			{
+				pass->previewBakedNormal();
+			}
+		}
+
+
 		ImGui::Separator();
 		ImGui::PopID();
 	}
-	
+
 	if (ImGui::Button("Start Bake"))
 	{
 		// Check if all passes have valid output paths

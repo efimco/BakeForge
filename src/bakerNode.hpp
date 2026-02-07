@@ -10,6 +10,7 @@ using namespace Microsoft::WRL;
 class BakerPass;
 struct Material;
 class Primitive;
+class Scene;
 
 class BakerNode : public SceneNode
 {
@@ -37,7 +38,7 @@ public:
 class Baker : public BakerNode
 {
 public:
-	explicit Baker(std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
+	explicit Baker(std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene);
 	~Baker() override = default;
 
 	void bake();
@@ -65,6 +66,7 @@ private:
 	bool m_pendingBake = false;
 
 private:
+	Scene* m_scene = nullptr;
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
