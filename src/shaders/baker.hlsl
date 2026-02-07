@@ -13,13 +13,13 @@ cbuffer Constants : register(b0)
 
 struct BLASInstance
 {
-	BBox worldBBox;           // 32 bytes - for early TLAS culling
-	float4x4 worldMatrixInv;  // 64 bytes - transforms ray from world to local space
-	float4x4 normalMatrix;    // 64 bytes - transforms normals from local to world
-	uint triangleOffset;      // offset into combined triangle buffer
-	uint triIndicesOffset;    // offset into combined indices buffer
-	uint bvhNodeOffset;       // offset into combined BVH nodes buffer
-	uint numTriangles;        // number of triangles in this BLAS
+	BBox worldBBox;           // 32 bytes
+	float4x4 worldMatrixInv;
+	float4x4 normalMatrix;
+	uint triangleOffset;
+	uint triIndicesOffset;
+	uint bvhNodeOffset;
+	uint numTriangles;
 };
 
 //those are for actual baking
@@ -32,6 +32,7 @@ Texture2D<float4> gWorldSpacePositions : register(t4);
 Texture2D<float4> gWorldSpaceNormals : register(t5);
 Texture2D<float4> gWorldSpaceTangents : register(t6);
 Texture2D<float4> gWorldSpaceSmoothedNormals : register(t7);
+Texture2D<float> gRayDirectionBlend : register(t8);
 
 
 //this one is for baking output
@@ -184,6 +185,9 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 	float4 worldNormal = gWorldSpaceNormals.Load(int3(DTid.xy, 0));
 	float4 worldTangent = gWorldSpaceTangents.Load(int3(DTid.xy, 0));
 	float4 worldSmoothedNormal = gWorldSpaceSmoothedNormals.Load(int3(DTid.xy, 0));
+	float blendValue = gRayDirectionBlend.Load(int3(DTid.xy, 0)).x;
+
+	float3 blendedNormal = normalize(lerp(worldSmoothedNormal.xyz, worldNormal.xyz, blendValue));
 
 	float bestT = 1e20f;
 	float3 bestN = float3(0.0f, 0.0f, 0.0f);
@@ -200,7 +204,15 @@ void CSBakeNormal(uint3 DTid : SV_DispatchThreadID)
 
 	Ray ray;
 	ray.origin = worldPos.xyz + originJitter;
-	ray.dir = -normalize(useSmoothedNormals != 0 ? worldSmoothedNormal.xyz : worldNormal.xyz);
+	if (useSmoothedNormals == 1)
+	{
+		ray.dir = -blendedNormal;
+	}
+	else
+	{
+		ray.dir = -N;
+	}
+
 	ray.origin -= ray.dir * cageOffset; // offset ray origin back by cage distance
 	ray.invDir = 1.0f / ray.dir;
 

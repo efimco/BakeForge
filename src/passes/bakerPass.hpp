@@ -71,7 +71,12 @@ public:
 	void createOrResize();
 	void setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs);
 	bool bakedNormalExists() const;
-	std::pair<std::vector<Primitive*>, std::vector<Primitive*>> getPrimitivesToBake() const { return m_primitivesToBake; }
+	ComPtr<ID3D11ShaderResourceView> getBlendTextureSRV() const;
+	ComPtr<ID3D11ShaderResourceView> getBakedNormalSRV() const;
+	void paintAtUV(float u, float v, float value, float brushSize);
+	void clearBlendTexture(float value);
+	bool needsRebake = false;
+	const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& getPrimitivesToBake() const;
 	std::string directory = "";
 	std::string filename = "";
 
@@ -86,32 +91,44 @@ private:
 	std::future<void> m_saveTextureFuture;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_rayDirectionBlendCB;
 
 	float m_cageOffset = 0.1f;
 	uint32_t m_useSmoothedNormals = 0;
 
 	CombinedHighPolyBuffers m_combinedHighPolyBuffers;
 
+	// ## Resources for rasterizing UV space of low-poly meshes ##
 	ComPtr<ID3D11Texture2D> m_wsTexelPositionTexture;
 	ComPtr<ID3D11ShaderResourceView> m_wsTexelPositionSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_wsTexelPositionUAV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelPositionRTV;
 
 	ComPtr<ID3D11Texture2D> m_wsTexelNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_wsTexelNormalSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_wsTexelNormalUAV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelNormalRTV;
 
 	ComPtr<ID3D11Texture2D> m_wsTexelTangentTexture;
 	ComPtr<ID3D11ShaderResourceView> m_wsTexelTangentSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_wsTexelTangentUAV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelTangentRTV;
 
 	ComPtr<ID3D11Texture2D> m_wsTexelSmoothedNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_wsTexelSmoothedNormalSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_wsTexelSmoothedNormalUAV;
+	ComPtr<ID3D11RenderTargetView> m_wsTexelSmoothedNormalRTV;
 
+	//  ## Resources for baked normal map ##
 	ComPtr<ID3D11Texture2D> m_bakedNormalTexture;
 	ComPtr<ID3D11ShaderResourceView> m_bakedNormalSRV;
 	ComPtr<ID3D11UnorderedAccessView> m_bakedNormalUAV;
 
+	ComPtr<ID3D11Texture2D> m_rayDirectionBlendTexture;
+	ComPtr<ID3D11ShaderResourceView> m_rayDirectionBlendSRV;
+	ComPtr<ID3D11UnorderedAccessView> m_rayDirectionBlendUAV;
+
+	// ## Resources for raycast visualization ##
 	ComPtr<ID3D11Texture2D> m_raycastVisualizationTexture;
 	ComPtr<ID3D11ShaderResourceView> m_raycastVisualizationSRV;
 	ComPtr<ID3D11RenderTargetView> m_raycastVisualizationRTV;
@@ -126,11 +143,7 @@ private:
 	ComPtr<ID3D11Query> m_startQuery;
 	ComPtr<ID3D11Query> m_endQuery;
 
-	// UV Rasterization resources
-	ComPtr<ID3D11RenderTargetView> m_wsTexelPositionRTV;
-	ComPtr<ID3D11RenderTargetView> m_wsTexelNormalRTV;
-	ComPtr<ID3D11RenderTargetView> m_wsTexelTangentRTV;
-	ComPtr<ID3D11RenderTargetView> m_wsTexelSmoothedNormalRTV;
+	// ## UV Rasterization states ##
 	ComPtr<ID3D11InputLayout> m_uvRasterInputLayout;
 	ComPtr<ID3D11RasterizerState> m_uvRasterRasterizerState;
 	ComPtr<ID3D11DepthStencilState> m_uvRasterDepthStencilState;
@@ -140,6 +153,7 @@ private:
 	void bakeNormals(const CombinedHighPolyBuffers& hpBuffers);
 
 	void updateBakerCB(const CombinedHighPolyBuffers& combinedBuffers);
+	void updateRayDirectionBlendCB(float u, float v, float brushSize, float blendValue);
 
 	void saveToTextureFile();
 	void asyncSaveTextureToFile(const std::string& fullPath,

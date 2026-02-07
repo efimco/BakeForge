@@ -72,6 +72,17 @@ void Baker::processPendingBake()
 		bake();
 		m_pendingBake = false;
 	}
+	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
+	{
+		std::cout << "Baking material: " << materialName << std::endl;
+		if (bakerPass->needsRebake)
+		{
+			bakerPass->bake(textureWidth, textureWidth, cageOffset, useSmoothedNormals);
+			bakerPass->needsRebake = false;
+		}
+		else
+			continue;
+	}
 }
 
 void Baker::copyFrom(const SceneNode& node)

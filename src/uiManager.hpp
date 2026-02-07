@@ -19,6 +19,7 @@ class Light;
 class CommandManager;
 class RTVCollector;
 class BakerNode;
+class BakerPass;
 
 
 #define ICON_FA_CUBE "\xef\x86\xb2"		 // Mesh/Primitive
@@ -69,9 +70,21 @@ private:
 	ImGuiIO* m_io;
 	uint32_t m_mousePos[2];
 	bool m_isMouseInViewport;
+
 	Scene* m_scene;
 	std::shared_ptr<Material> m_highlightedMaterial = nullptr;
 	std::shared_ptr<Material> m_selectedMaterial = nullptr;
+
+	BakerPass* m_blendPaintPass = nullptr;  // Currently active paint window pass
+	bool m_showBlendPaintWindow = false;
+	float m_blendBrushSize = 10.0f;
+
+	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
+	glm::mat4 m_view;
+	glm::mat4 m_projection;
+
+	std::vector<SceneNode*> lastNodesDrawn;
+
 	void showSceneSettings() const;
 	void showMainMenuBar();
 	void showViewport(const ComPtr<ID3D11ShaderResourceView>& srv);
@@ -80,6 +93,7 @@ private:
 	static void showChWImportProgress(std::shared_ptr<ImportProgress> progress);
 	static void showInvisibleDockWindow();
 	void showMaterialBrowser();
+	void showBlendPaintWindow();
 
 	void processInputEvents() const;
 	void processGizmo();
@@ -97,20 +111,12 @@ private:
 
 	void handleNodeMultiSelection(ImGuiMultiSelectIO* multiSelectIO);
 
-	void showProperties() const;
+	void showProperties();
 	void showPrimitiveProperties(Primitive* primitive) const;
 	void showMaterialProperties(std::shared_ptr<Material> material) const;
 	void showLightProperties(Light* light) const;
 	void showCameraProperties(Camera* camera) const;
-	void showBakerProperties(BakerNode* baker) const;
-
-	std::shared_ptr<ImportProgress> m_importProgress = nullptr;
-
+	void showBakerProperties(BakerNode* baker);
 	static FileDialogResult openFileDialog(FileType outFileType, bool saveFile = false);
-
-	glm::mat4 m_view;
-	glm::mat4 m_projection;
-
-	std::vector<SceneNode*> lastNodesDrawn;
 
 };

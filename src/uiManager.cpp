@@ -163,6 +163,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 	showMainMenuBar();
 	showInvisibleDockWindow();
 	showSceneSettings();
+	showBlendPaintWindow();
 	showViewport(srv);
 #ifdef _DEBUG
 	showPassesWindow();
@@ -690,6 +691,107 @@ void UIManager::showMaterialBrowser()
 		}
 	}
 	ImGui::End();
+}
+
+void UIManager::showBlendPaintWindow()
+{
+	if (!m_showBlendPaintWindow || !m_blendPaintPass)
+		return;
+
+	static bool wasPainting = false;
+
+	constexpr float windowSize = 512.0f;
+	constexpr float padding = 20.0f;
+	ImGui::SetNextWindowSize(ImVec2(windowSize + padding, windowSize + padding + 60.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSizeConstraints(
+		ImVec2(256.0f, 256.0f + 60.0f),
+		ImVec2(1024.0f, 1024.0f + 60.0f),
+		[](ImGuiSizeCallbackData* data) { 			// Maintain square aspect ratio for the content area
+			float targetSize = std::max(data->DesiredSize.x, data->DesiredSize.y - 60.0f);
+			data->DesiredSize = ImVec2(targetSize, targetSize + 60.0f);
+		}
+	);
+
+	std::string windowTitle = "Blend Paint - " + m_blendPaintPass->name + "###BlendPaint";
+
+	if (ImGui::Begin(windowTitle.c_str(), &m_showBlendPaintWindow,
+		ImGuiWindowFlags_NoCollapse))
+	{
+		ImVec2 contentSize = ImGui::GetContentRegionAvail();
+		float imageSize = std::min(contentSize.x, contentSize.y - 30.0f); // Reserve space for buttons
+
+		float offsetX = (contentSize.x - imageSize) * 0.5f;
+		if (offsetX > 0)
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
+
+		auto blendSRV = m_blendPaintPass->getBakedNormalSRV();
+		ImVec2 imagePos = ImGui::GetCursorScreenPos();
+
+		ImGui::InvisibleButton("##PaintArea", ImVec2(imageSize, imageSize)); //invisibleButton to capture input without moving window
+		bool isHovered = ImGui::IsItemHovered();
+		bool isActive = ImGui::IsItemActive();
+
+
+		ImGui::GetWindowDrawList()->AddImage( // image on top of the invisible button
+			blendSRV.Get(),
+			imagePos,
+			ImVec2(imagePos.x + imageSize, imagePos.y + imageSize)
+		);
+
+		bool isPainting = false;
+		if (isHovered || isActive)
+		{
+			ImVec2 mousePos = ImGui::GetMousePos();
+			float localX = (mousePos.x - imagePos.x) / imageSize;
+			float localY = (mousePos.y - imagePos.y) / imageSize;
+
+			localX = std::clamp(localX, 0.0f, 1.0f); // Clamp to valid range
+			localY = std::clamp(localY, 0.0f, 1.0f);
+
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+			{
+				m_blendPaintPass->paintAtUV(localX, localY, 1.0f, m_blendBrushSize);
+				isPainting = true;
+			}
+			else if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+			{
+				m_blendPaintPass->paintAtUV(localX, localY, 0.0f, m_blendBrushSize);
+				isPainting = true;
+			}
+
+			ImDrawList* drawList = ImGui::GetWindowDrawList(); // brush preview
+			float brushRadius = (m_blendBrushSize / 100.0f) * imageSize * 0.5f;
+			drawList->AddCircle(mousePos, brushRadius, IM_COL32(255, 255, 0, 200), 32, 2.0f);
+		}
+
+		if (wasPainting && !isPainting)
+		{
+			m_blendPaintPass->needsRebake = true;
+		}
+		wasPainting = isPainting;
+
+		ImGui::Spacing();
+
+		ImGui::SetNextItemWidth(150.0f);
+		ImGui::SliderFloat("Brush Size", &m_blendBrushSize, 1.0f, 50.0f, "%.0f%%");
+
+		ImGui::SameLine();
+		if (ImGui::Button("Clear to White"))
+		{
+			m_blendPaintPass->clearBlendTexture(1.0f);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear to Black"))
+		{
+			m_blendPaintPass->clearBlendTexture(0.0f);
+		}
+	}
+	ImGui::End();
+
+	if (!m_showBlendPaintWindow)
+	{
+		m_blendPaintPass = nullptr;
+	}
 }
 
 void UIManager::processInputEvents() const
@@ -1242,7 +1344,7 @@ void UIManager::showPassesWindow()
 	ImGui::End();
 }
 
-void UIManager::showProperties() const
+void UIManager::showProperties()
 {
 	ImGui::Begin("Properties");
 	if (m_selectedMaterial)
@@ -1438,17 +1540,17 @@ void UIManager::showCameraProperties(Camera* camera) const
 	ImGui::DragFloat("Far Clip", &camera->farPlane, 1.0f, 10.0f, 10000.0f);
 }
 
-void UIManager::showBakerProperties(BakerNode* bakerNode) const
+void UIManager::showBakerProperties(BakerNode* bakerNode)
 {
 	auto baker = dynamic_cast<Baker*>(bakerNode);
 	if (!baker)
 	{
 		return;
 	}
-	constexpr uint32_t minVal = 2;
-	constexpr uint32_t maxVal = 4096;
+
 	static bool showErrorPopup = false;
 	static std::string errorMessage;
+
 	ImGui::Text("Baking Settings:");
 	ImGui::DragFloat("Cage Offset", &baker->cageOffset, 0.01f, 0.0f, 10.0f);
 	bool checkboxValue = baker->useSmoothedNormals;
@@ -1456,28 +1558,21 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 	{
 		baker->useSmoothedNormals = checkboxValue;
 	}
+	constexpr uint32_t minVal = 2;
+	constexpr uint32_t maxVal = 4096;
 	ImGui::DragScalar("Texture Size", ImGuiDataType_U32, &baker->textureWidth, 2.0f, &minVal, &maxVal);
-	for (auto& pass : baker->getPasses())
+
+	for (auto pass : baker->getPasses())
 	{
 		ImGui::PushID(pass);
+
 		ImGui::Text("%s", pass->name.c_str());
-
-		std::string fullPath = pass->directory + "\\" + pass->filename;
-
-		size_t lastSlash = fullPath.find_last_of("\\/");
-		if (lastSlash != std::string::npos)
-		{
-			pass->directory = fullPath.substr(0, lastSlash);
-			pass->filename = fullPath.substr(lastSlash + 1);
-		}
-		else
-		{
-			pass->filename = fullPath;
-		}
 
 		// Directory input with browse button
 		char dirBuffer[260];
-		strcpy_s(dirBuffer, pass->directory.c_str());
+		strcpy_s(dirBuffer, pass->directory.c_str()); // copy to mutable buffer
+		ImGui::Text("Directory:");
+		ImGui::SameLine();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
 		bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
 		ImGui::SameLine();
@@ -1488,6 +1583,14 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 			{
 				strcpy_s(dirBuffer, result.directory.c_str());
 				pass->filename = result.filename;
+				if (pass->filename.find('.') != std::string::npos)
+				{
+					pass->filename = pass->filename.substr(0, pass->filename.find_last_of('.')) + ".png";
+				}
+				else
+				{
+					pass->filename += ".png";
+				}
 				pass->directory = result.directory;
 				dirChanged = true;
 			}
@@ -1517,6 +1620,15 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 			{
 				pass->directory = newDir;
 			}
+
+			if (pass->filename.find('.') != std::string::npos)
+			{
+				pass->filename = pass->filename.substr(0, pass->filename.find_last_of('.')) + ".png";
+			}
+			else
+			{
+				pass->filename += ".png";
+			}
 		}
 
 		if (pass->bakedNormalExists())
@@ -1524,6 +1636,16 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 			if (ImGui::Button("Preview"))
 			{
 				pass->previewBakedNormal();
+			}
+		}
+
+		if (pass->getBlendTextureSRV())
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Paint Blend Rays"))
+			{
+				m_blendPaintPass = pass;
+				m_showBlendPaintWindow = true;
 			}
 		}
 

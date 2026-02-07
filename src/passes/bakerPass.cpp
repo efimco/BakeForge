@@ -36,6 +36,14 @@ struct alignas(16) RaycastVisCB
 	float padding;
 };
 
+struct alignas(16) RayDirectionBlendCB
+{
+	glm::vec2 uv;
+	float brushSize;
+	float blendValue;
+	glm::vec2 dimensions;
+};
+
 // input layout for UV 	ization (matches Vertex struct)
 static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -61,6 +69,7 @@ BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> co
 	m_shaderManager->LoadPixelShader("raycastDebug", ShaderManager::GetShaderPath(L"raycastDebug.hlsl"), "PS");
 	m_shaderManager->LoadVertexShader("uvRasterize", ShaderManager::GetShaderPath(L"uvRasterize.hlsl"), "VS");
 	m_shaderManager->LoadPixelShader("uvRasterize", ShaderManager::GetShaderPath(L"uvRasterize.hlsl"), "PS");
+	m_shaderManager->LoadComputeShader("rayDirectionBlendPainter", ShaderManager::GetShaderPath(L"rayDirectionBlendPainter.hlsl"), "CS");
 
 	m_constantBuffer = createConstantBuffer(sizeof(BakerCB));
 	m_raycastConstantBuffer = createConstantBuffer(sizeof(RaycastVisCB));
@@ -206,6 +215,49 @@ bool BakerPass::bakedNormalExists() const
 		return false;
 	std::string fullPath = directory + "\\" + filename;
 	return std::filesystem::exists(fullPath);
+}
+
+ComPtr<ID3D11ShaderResourceView> BakerPass::getBlendTextureSRV() const
+{
+	if (!m_rayDirectionBlendSRV)
+	{
+		std::cerr << "Blend texture SRV not created yet!" << std::endl;
+		return nullptr;
+	}
+	return m_rayDirectionBlendSRV;
+}
+
+ComPtr<ID3D11ShaderResourceView> BakerPass::getBakedNormalSRV() const
+{
+	if (!m_bakedNormalSRV)
+	{
+		std::cerr << "Baked normal SRV not created yet!" << std::endl;
+		return nullptr;
+	}
+
+	return m_bakedNormalSRV;
+}
+
+void BakerPass::paintAtUV(float u, float v, float value, float brushSize)
+{
+	if (!m_rayDirectionBlendTexture)
+		return;
+
+	updateRayDirectionBlendCB(u, v, brushSize, value);
+	m_context->CSSetShader(m_shaderManager->getComputeShader("rayDirectionBlendPainter"), nullptr, 0);
+	m_context->CSSetConstantBuffers(0, 1, m_rayDirectionBlendCB.GetAddressOf());
+	m_context->CSSetUnorderedAccessViews(0, 1, m_rayDirectionBlendUAV.GetAddressOf(), nullptr);
+	m_context->Dispatch((m_lastWidth + 15) / 16, (m_lastHeight + 15) / 16, 1);
+	unbindComputeUAVs(0, 1);
+}
+
+void BakerPass::clearBlendTexture(float value)
+{
+	if (!m_rayDirectionBlendTexture)
+		return;
+
+	float clearColor[4] = { value, value, value, 1.0f };
+	m_context->ClearUnorderedAccessViewFloat(m_rayDirectionBlendUAV.Get(), clearColor);
 }
 
 const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& BakerPass::getPrimitivesToBake() const
@@ -408,7 +460,7 @@ void BakerPass::bakeNormals(const CombinedHighPolyBuffers& combinedBuffers)
 	ID3D11UnorderedAccessView* bakedNormalUAVs[1] = { m_bakedNormalUAV.Get() };
 	m_context->CSSetUnorderedAccessViews(0, 1, bakedNormalUAVs, nullptr);
 
-	ID3D11ShaderResourceView* hpSRVs[8] = {
+	ID3D11ShaderResourceView* hpSRVs[9] = {
 		combinedBuffers.blasInstancesSRV.Get(),
 		combinedBuffers.trianglesSRV.Get(),
 		combinedBuffers.triIndicesSRV.Get(),
@@ -416,15 +468,16 @@ void BakerPass::bakeNormals(const CombinedHighPolyBuffers& combinedBuffers)
 		m_wsTexelPositionSRV.Get(),
 		m_wsTexelNormalSRV.Get(),
 		m_wsTexelTangentSRV.Get(),
-		m_wsTexelSmoothedNormalSRV.Get()
+		m_wsTexelSmoothedNormalSRV.Get(),
+		m_rayDirectionBlendSRV.Get()
 	};
 
-	m_context->CSSetShaderResources(0, 8, hpSRVs);
+	m_context->CSSetShaderResources(0, 9, hpSRVs);
 	UINT threadGroupX = (m_lastWidth + 15) / 16;
 	UINT threadGroupY = (m_lastHeight + 15) / 16;
 	m_context->Dispatch(threadGroupX, threadGroupY, 1);
 	unbindComputeUAVs(0, 1);
-	unbindShaderResources(0, 8);
+	unbindShaderResources(0, 9);
 
 	endDebugEvent();
 
@@ -465,6 +518,25 @@ void BakerPass::updateBakerCB(const CombinedHighPolyBuffers& combinedBuffers)
 		data->useSmoothedNormals = m_useSmoothedNormals;
 		data->numBLASInstances = combinedBuffers.numBLASInstances;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
+	}
+}
+
+void BakerPass::updateRayDirectionBlendCB(float u, float v, float brushSize, float blendValue)
+{
+	if (!m_rayDirectionBlendCB)
+	{
+		m_rayDirectionBlendCB = createConstantBuffer(sizeof(RayDirectionBlendCB));
+	}
+	RayDirectionBlendCB cbData = {};
+	cbData.uv = glm::vec2(u, v);
+	cbData.brushSize = brushSize;
+	cbData.blendValue = blendValue;
+	cbData.dimensions = glm::vec2(m_lastWidth, m_lastHeight);
+	D3D11_MAPPED_SUBRESOURCE mapped = {};
+	if (SUCCEEDED(m_context->Map(m_rayDirectionBlendCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+	{
+		*static_cast<RayDirectionBlendCB*>(mapped.pData) = cbData;
+		m_context->Unmap(m_rayDirectionBlendCB.Get(), 0);
 	}
 }
 
@@ -557,6 +629,7 @@ void BakerPass::updateRaycastVisualization(const glm::mat4& view, const glm::mat
 
 void BakerPass::createInterpolatedTexturesResources()
 {
+
 	if (m_wsTexelPositionTexture != nullptr)
 	{
 		m_wsTexelPositionTexture.Reset();
@@ -578,6 +651,30 @@ void BakerPass::createInterpolatedTexturesResources()
 		m_wsTexelSmoothedNormalSRV.Reset();
 		m_wsTexelSmoothedNormalUAV.Reset();
 		m_wsTexelSmoothedNormalRTV.Reset();
+	}
+
+
+	bool needsBlendRecreate = (m_rayDirectionBlendTexture == nullptr); // Only recreate blend texture if it doesn't exist or dimensions changed
+	if (!needsBlendRecreate && m_rayDirectionBlendTexture)
+	{
+		D3D11_TEXTURE2D_DESC desc;
+		m_rayDirectionBlendTexture->GetDesc(&desc);
+		needsBlendRecreate = (desc.Width != m_lastWidth || desc.Height != m_lastHeight);
+	}
+
+	if (needsBlendRecreate)
+	{
+		m_rayDirectionBlendTexture.Reset();
+		m_rayDirectionBlendSRV.Reset();
+		m_rayDirectionBlendUAV.Reset();
+
+		m_rayDirectionBlendTexture = createTexture2D(m_lastWidth, m_lastHeight, DXGI_FORMAT_R32_FLOAT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET);
+		m_rayDirectionBlendSRV = createShaderResourceView(m_rayDirectionBlendTexture.Get(), SRVPreset::Texture2D);
+		m_rayDirectionBlendUAV = createUnorderedAccessView(m_rayDirectionBlendTexture.Get(), UAVPreset::Texture2D, 0);
+
+		m_rtvCollector->addRTV(name + "::RayDirectionBlend", m_rayDirectionBlendSRV.Get());
+
+		clearBlendTexture(0.0f); // Initialize to black (use default normals by default)
 	}
 
 	std::cout << "Creating interpolated textures of size: " << m_lastWidth << "x" << m_lastHeight << std::endl;
