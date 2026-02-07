@@ -1447,8 +1447,8 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 	}
 	constexpr uint32_t minVal = 2;
 	constexpr uint32_t maxVal = 4096;
-	static bool showInvalidPathPopup = false;
-	static std::string invalidPathMessage;
+	static bool showErrorPopup = false;
+	static std::string errorMessage;
 	ImGui::Text("Baking Settings:");
 	ImGui::DragFloat("Cage Offset", &baker->cageOffset, 0.01f, 0.0f, 10.0f);
 	bool checkboxValue = baker->useSmoothedNormals;
@@ -1532,11 +1532,18 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 		ImGui::PopID();
 	}
 
+
 	if (ImGui::Button("Start Bake"))
 	{
-		// Check if all passes have valid output paths
 		bool hasInvalidPath = false;
 		std::string invalidPassName;
+
+		if (baker->getPasses().empty())
+		{
+			showErrorPopup = true;
+			errorMessage = "No Primitives Assigned\n\nPlease assign at least one primitive to bake.";
+			return;
+		}
 		for (auto& pass : baker->getPasses())
 		{
 			if (pass->directory.empty() || pass->filename.empty())
@@ -1556,8 +1563,8 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 
 		if (hasInvalidPath)
 		{
-			invalidPathMessage = "Invalid output path for: " + invalidPassName + "\n\nPlease set a valid directory and filename before baking.";
-			showInvalidPathPopup = true;
+			errorMessage = "Invalid output path for: " + invalidPassName + "\n\nPlease set a valid directory and filename before baking.";
+			showErrorPopup = true;
 		}
 		else
 		{
@@ -1567,21 +1574,22 @@ void UIManager::showBakerProperties(BakerNode* bakerNode) const
 
 	// Center the popup on the viewport window
 	ImGuiWindow* viewportWindow = ImGui::FindWindowByName("Viewport");
-	if (viewportWindow)
+	assert(viewportWindow);
+
+	ImVec2 center(viewportWindow->Pos.x + viewportWindow->Size.x * 0.5f,
+		viewportWindow->Pos.y + viewportWindow->Size.y * 0.5f);
+
+	if (showErrorPopup)
 	{
-		ImVec2 center(viewportWindow->Pos.x + viewportWindow->Size.x * 0.5f,
-			viewportWindow->Pos.y + viewportWindow->Size.y);
 		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	}
-	if (showInvalidPathPopup)
-	{
-		ImGui::OpenPopup("Invalid Path##BakeError");
-		showInvalidPathPopup = false;
+		ImGui::SetNextWindowSize(ImVec2(450.0f, 0.0f), ImGuiCond_Always);
+		ImGui::OpenPopup("Error##BakeError");
+		showErrorPopup = false;
 	}
 
-	if (ImGui::BeginPopupModal("Invalid Path##BakeError", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::BeginPopupModal("Error##BakeError", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::TextWrapped("%s", invalidPathMessage.c_str());
+		ImGui::TextWrapped("%s", errorMessage.c_str());
 		ImGui::Spacing();
 		ImGui::Separator();
 		ImGui::Spacing();

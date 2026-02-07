@@ -208,6 +208,11 @@ bool BakerPass::bakedNormalExists() const
 	return std::filesystem::exists(fullPath);
 }
 
+const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& BakerPass::getPrimitivesToBake() const
+{
+	return m_primitivesToBake;
+}
+
 CombinedHighPolyBuffers BakerPass::createCombinedHighPolyBuffers()
 {
 	CombinedHighPolyBuffers combinedBuffers;
