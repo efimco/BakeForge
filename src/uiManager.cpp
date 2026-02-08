@@ -1552,11 +1552,26 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 	static std::string errorMessage;
 
 	ImGui::Text("Baking Settings:");
-	ImGui::DragFloat("Cage Offset", &baker->cageOffset, 0.01f, 0.0f, 10.0f);
+	static bool cageWasChanged = false;
+
+
+	bool isPainting = false;
+	if (ImGui::DragFloat("Cage Offset", &baker->cageOffset, 0.01f, 0.0f, 5.0f))
+	{
+		isPainting = true;
+	}
+
+	if (cageWasChanged && !isPainting)
+	{
+		baker->requestBake();
+	}
+	cageWasChanged = isPainting;
+
 	bool checkboxValue = baker->useSmoothedNormals;
 	if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
 	{
 		baker->useSmoothedNormals = checkboxValue;
+		baker->requestBake();
 	}
 	constexpr uint32_t minVal = 2;
 	constexpr uint32_t maxVal = 4096;
