@@ -1130,6 +1130,12 @@ void UIManager::handleNodeDragDrop(SceneNode* node)
 			if (!moveCommand->isEmpty())
 			{
 				m_commandManager->commitCommand(std::move(moveCommand));
+
+				// Expand tree node upon drag and drop
+				const char* icon = getNodeIcon(node);
+				char label[256];
+				snprintf(label, sizeof(label), "%s %s", icon, node->name.c_str());
+				ImGui::TreeNodeSetOpen(ImGui::GetID(label), true);
 			}
 		}
 		ImGui::EndDragDropTarget();

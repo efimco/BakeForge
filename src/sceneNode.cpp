@@ -163,7 +163,7 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(SceneNode* child)
 	return removedChild;
 }
 
-int SceneNode::getChildIndex(SceneNode* child) const
+int SceneNode::getChildIndex(const SceneNode* child) const
 {
 	int index = 0;
 	for (const auto& c : children)

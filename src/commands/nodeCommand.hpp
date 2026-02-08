@@ -12,21 +12,7 @@ namespace Command
 	class DuplicateSceneNode final : public CommandBase
 	{
 	public:
-		DuplicateSceneNode(Scene* inScene, SceneNode* inSceneNode, const bool reuseNodeHandle = false);
-
-	protected:
-		std::unique_ptr<CommandBase> exec() override;
-
-		Scene* m_scene = nullptr;
-		SceneNodeHandle m_nodeHandle;
-		std::unique_ptr<SceneNode> m_sceneNodeClone = nullptr;
-		bool m_validateName = true;
-	};
-
-	class RestoreSceneNode final : public CommandBase
-	{
-	public:
-		RestoreSceneNode(Scene* inScene, SceneNode* inSceneNode);
+		DuplicateSceneNode(Scene* inScene, SceneNode* inSceneNode, int index = -1, bool isRestoreOp = false);
 
 		void addChild(SceneNode* childNode);
 
@@ -35,8 +21,11 @@ namespace Command
 
 		Scene* m_scene = nullptr;
 		SceneNodeHandle m_nodeHandle;
-		std::vector<SceneNodeHandle> m_childHandles;
+		SceneNodeHandle m_parentHandle;
+		std::vector<std::pair<SceneNodeHandle, int>> m_childHandles;
 		std::unique_ptr<SceneNode> m_sceneNodeClone = nullptr;
+		int m_index = -1;
+		bool m_isRestoreOp = false;
 	};
 
 	class RemoveSceneNode final : public CommandBase
@@ -62,9 +51,6 @@ namespace Command
 		Scene* m_scene = nullptr;
 		SceneNodeHandle m_nodeHandle;
 		SceneNodeHandle m_newParentHandle;
-		SceneNodeHandle m_oldParentHandle;
-		bool m_oldParentIsScene = false;
-		bool m_newParentIsScene = false;
 		int m_index = -1;
 	};
 

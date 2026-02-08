@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 
+#include "sceneNodeHandle.hpp"
 #include "transform.hpp"
 
 class Scene;
@@ -35,12 +36,18 @@ public:
 	virtual void copyFrom(const SceneNode& node);
 	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
-	virtual void addChild(std::unique_ptr<SceneNode>&& child, int index = -1);
-	virtual void clearChildren();
-	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
-	int getChildIndex(SceneNode* child) const;
+
+	int getChildIndex(const SceneNode* child) const;
 	glm::mat4 getWorldMatrix();
+	SceneNodeHandle getNodeHandle() const { return nodeHandle; }
 
 protected:
+	virtual void addChild(std::unique_ptr<SceneNode>&& child, int index = -1);
+	std::unique_ptr<SceneNode> removeChild(SceneNode* child);
+	virtual void clearChildren();
+
 	bool visible = true;
+
+	friend class Scene;
+	SceneNodeHandle nodeHandle = SceneNodeHandle::invalidHandle();
 };

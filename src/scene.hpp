@@ -39,6 +39,7 @@ public:
 	uint32_t& getNameCounter(std::string_view name);
 
 	void addChild(std::unique_ptr<SceneNode>&& child, int index = -1) override;
+	void reparentChild(SceneNode* child, SceneNode* parent, int index = -1);
 
 	SceneUnorderedMap<Primitive*>& getPrimitives();
 	Primitive* getPrimitiveByID(size_t id);
@@ -76,7 +77,10 @@ public:
 	Camera* getActiveCamera() const;
 
 	void deleteNode(SceneNode* node);
-	SceneNode* adoptClonedNode(std::unique_ptr<SceneNode>&& clonedNode, SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle());
+	SceneNode* adoptClonedNode(
+		std::unique_ptr<SceneNode>&& clonedNode,
+		SceneNodeHandle preferredHandle = SceneNodeHandle::invalidHandle(),
+		bool shouldValidateName = true);
 
 	void setReadBackID(float readBackID);
 	float getReadBackID();

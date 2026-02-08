@@ -56,8 +56,9 @@ namespace Snapshot
 
 	SceneNodeTransform::SceneNodeTransform(Scene* inScene, SceneNode* inSceneNode)
 		: m_scene(inScene)
-		, m_nodeHandle(inScene->findHandleOfNode(inSceneNode))
+		, m_nodeHandle(inSceneNode->getNodeHandle())
 	{
+		assert(m_nodeHandle.isValid());
 		m_savedTransform = inSceneNode->transform;
 	}
 

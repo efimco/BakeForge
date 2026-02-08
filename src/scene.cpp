@@ -15,11 +15,15 @@ Scene::Scene(const std::string_view name, ComPtr<ID3D11Device> device)
 {
 	this->name = name;
 	m_device = device;
+	nodeHandle = SceneNodeHandle::generateHandle();
 }
-
 
 SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 {
+	if (node == this)
+	{
+		return nodeHandle;
+	}
 	if (auto prim = dynamic_cast<Primitive*>(node))
 	{
 		const auto it = std::ranges::find_if(
@@ -90,6 +94,10 @@ SceneNodeHandle Scene::findHandleOfNode(SceneNode* node) const
 
 SceneNode* Scene::getNodeByHandle(const SceneNodeHandle handle)
 {
+	if (handle == nodeHandle)
+	{
+		return this;
+	}
 	if (const auto it = m_primitives.find(handle); it != m_primitives.end())
 	{
 		return it->second;
@@ -151,7 +159,22 @@ void Scene::addChild(std::unique_ptr<SceneNode>&& child, int index)
 	{
 		addBakerNode(node);
 	}
+	assert(getNodeByHandle(child->nodeHandle) == child.get());
 	SceneNode::addChild(std::move(child), index);
+}
+
+void Scene::reparentChild(SceneNode* child, SceneNode* parent, int index)
+{
+	// both child and parent should be registered in this scene
+	assert(getNodeByHandle(child->nodeHandle) == child);
+	assert(getNodeByHandle(parent->nodeHandle) == parent);
+	assert(parent->canBecomeParent);
+
+	// if the child does not have a parent - you should use 'adoptClonedNode'
+	assert(child->parent);
+
+	auto movedChild = child->parent->removeChild(child);
+	parent->addChild(std::move(movedChild), index);
 }
 
 void Scene::addPrimitive(Primitive* primitive)
@@ -163,7 +186,10 @@ void Scene::addPrimitive(Primitive* primitive)
 			return;
 	}
 	validateName(primitive);
-	m_primitives.emplace(SceneNodeHandle::generateHandle(), primitive);
+
+	SceneNodeHandle nodeHandle = SceneNodeHandle::generateHandle();
+	primitive->nodeHandle = nodeHandle;
+	m_primitives.emplace(nodeHandle, primitive);
 }
 
 void Scene::addLight(Light* light)
@@ -175,7 +201,10 @@ void Scene::addLight(Light* light)
 			return;
 	}
 	validateName(light);
-	m_lights.emplace(SceneNodeHandle::generateHandle(), light);
+
+	SceneNodeHandle nodeHandle = SceneNodeHandle::generateHandle();
+	light->nodeHandle = nodeHandle;
+	m_lights.emplace(nodeHandle, light);
 	setLightsDirty();
 }
 
@@ -218,13 +247,20 @@ void Scene::addCamera(Camera* camera)
 			return;
 	}
 	validateName(camera);
-	m_cameras.emplace(SceneNodeHandle::generateHandle(), camera);
+
+	SceneNodeHandle nodeHandle = SceneNodeHandle::generateHandle();
+	camera->nodeHandle = nodeHandle;
+	m_cameras.emplace(nodeHandle, camera);
 }
 
 void Scene::addBaker(Baker* baker)
 {
 	validateName(baker);
-	m_bakers.emplace(SceneNodeHandle::generateHandle(), baker);
+
+	SceneNodeHandle nodeHandle = SceneNodeHandle::generateHandle();
+	baker->nodeHandle = nodeHandle;
+	m_bakers.emplace(nodeHandle, baker);
+
 	addBakerNode(baker->lowPoly.get());
 	addBakerNode(baker->highPoly.get());
 }
@@ -305,7 +341,10 @@ void Scene::updateAsyncPendingTextureReloads()
 void Scene::addBakerNode(BakerNode* node)
 {
 	validateName(node);
-	m_bakerNodes.emplace(SceneNodeHandle::generateHandle(), node);
+
+	SceneNodeHandle nodeHandle = SceneNodeHandle::generateHandle();
+	node->nodeHandle = nodeHandle;
+	m_bakerNodes.emplace(nodeHandle, node);
 }
 
 size_t Scene::getPrimitiveCount() const
@@ -440,6 +479,7 @@ void Scene::setActiveCamera(Camera* camera)
 
 void Scene::deleteNode(SceneNode* node)
 {
+	node->nodeHandle = SceneNodeHandle::invalidHandle();
 
 	while (!node->children.empty())
 	{
@@ -502,7 +542,9 @@ void Scene::deleteNode(SceneNode* node)
 }
 
 SceneNode* Scene::adoptClonedNode(
-	std::unique_ptr<SceneNode>&& clonedNode, SceneNodeHandle preferredHandle)
+	std::unique_ptr<SceneNode>&& clonedNode,
+	SceneNodeHandle preferredHandle,
+	bool shouldValidateName)
 {
 	if (!preferredHandle.isValid())
 	{
@@ -515,7 +557,12 @@ SceneNode* Scene::adoptClonedNode(
 	assert(clonedNode->parent == nullptr);
 
 	SceneNode* nodeClone = clonedNode.get();
-	validateName(nodeClone);
+	nodeClone->nodeHandle = preferredHandle;
+
+	if (shouldValidateName)
+	{
+		validateName(nodeClone);
+	}
 
 	if (auto prim = dynamic_cast<Primitive*>(nodeClone))
 	{
@@ -542,8 +589,6 @@ SceneNode* Scene::adoptClonedNode(
 	}
 
 	SceneNode::addChild(std::move(clonedNode));
-
-	setActiveNode(nodeClone);
 	return nodeClone;
 }
 
