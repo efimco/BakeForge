@@ -190,19 +190,19 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 		(UINT)deltaIndices.size());
 	result->m_tileIndices = deltaIndices;
 
-	uint16_t j = 0;
-	for (uint16_t i : result->m_tileIndices)
+	uint16_t subresourceIndex = 0;
+	for (uint16_t tileIndex : result->m_tileIndices)
 	{
-		D3D11_BOX tileBox = makeTileBox(texDesc.Height, texDesc.Width, i);
+		D3D11_BOX tileBox = makeTileBox(texDesc.Height, texDesc.Width, tileIndex);
 		m_context->CopySubresourceRegion(
 			result->m_textureTiles.Get(),
-			D3D11CalcSubresource(0, j, 1),
+			D3D11CalcSubresource(0, subresourceIndex, 1),
 			0, 0, 0,
 			texture.Get(),
 			0,
 			&tileBox
 		);
-		++j;
+		++subresourceIndex;
 	}
 	return result;
 }
@@ -218,10 +218,10 @@ void TextureHistory::applyDelta(
 		return;
 	}
 
-	uint16_t j = 0;
-	for (uint16_t i : textureDelta->m_tileIndices)
+	uint16_t subresourceIndex = 0;
+	for (uint16_t tileIndex : textureDelta->m_tileIndices)
 	{
-		TileDims tileDims = makeTileDims(texDesc.Height, texDesc.Width, i);
+		TileDims tileDims = makeTileDims(texDesc.Height, texDesc.Width, tileIndex);
 		D3D11_BOX box {
 			0, 0, 0,
 			tileDims.sizeX, tileDims.sizeY, 1 };
@@ -230,10 +230,10 @@ void TextureHistory::applyDelta(
 			0,
 			tileDims.offsetX, tileDims.offsetY, 0,
 			textureDelta->m_textureTiles.Get(),
-			j,
+			D3D11CalcSubresource(0, subresourceIndex, 1),
 			&box
 		);
-		++j;
+		++subresourceIndex;
 	}
 }
 
@@ -257,13 +257,13 @@ TextureHistory::GridDims TextureHistory::makeGridDims(UINT height, UINT width)
 	return result;
 }
 
-TextureHistory::TileDims TextureHistory::makeTileDims(UINT height, UINT width, UINT i)
+TextureHistory::TileDims TextureHistory::makeTileDims(UINT height, UINT width, UINT tileIndex)
 {
 	GridDims gridDims = makeGridDims(height, width);
 	UINT modX = width  % k_textureHistoryTileSize;
 	UINT modY = height % k_textureHistoryTileSize;
-	UINT numX = i % gridDims.tileNumX;
-	UINT numY = i / gridDims.tileNumX;
+	UINT numX = tileIndex % gridDims.tileNumX;
+	UINT numY = tileIndex / gridDims.tileNumX;
 
 	TileDims tileDims;
 	tileDims.offsetX = numX * k_textureHistoryTileSize;
@@ -273,9 +273,9 @@ TextureHistory::TileDims TextureHistory::makeTileDims(UINT height, UINT width, U
 	return tileDims;
 }
 
-D3D11_BOX TextureHistory::makeTileBox(UINT height, UINT width, UINT i)
+D3D11_BOX TextureHistory::makeTileBox(UINT height, UINT width, UINT tileIndex)
 {
-	TileDims tileDims = makeTileDims(height, width, i);
+	TileDims tileDims = makeTileDims(height, width, tileIndex);
 	return D3D11_BOX {
 		tileDims.offsetX,                  // left
 		tileDims.offsetY,                  // top

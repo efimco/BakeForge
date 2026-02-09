@@ -91,8 +91,8 @@ private:
 	};
 
 	static GridDims makeGridDims(UINT height, UINT width);
-	static TileDims makeTileDims(UINT height, UINT width, UINT i);
-	static D3D11_BOX makeTileBox(UINT height, UINT width, UINT i);
+	static TileDims makeTileDims(UINT height, UINT width, UINT tileIndex);
+	static D3D11_BOX makeTileBox(UINT height, UINT width, UINT tileIndex);
 
 	//  ## Resources for paint history ##
 
