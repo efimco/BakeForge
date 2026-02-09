@@ -8,16 +8,16 @@ class BakerPass;
 class SceneNode;
 class Scene;
 
-namespace Command
+namespace BKRCommand
 {
 
 	static constexpr std::string_view k_blendPaintName { "BlendPaint" };
 
 	// This command would apply provided TextureDelta on exec()
-	class BakerBlendMaskApplyDeltaCommand final : public CommandBase
+	class BlendMaskApplyDeltaCommand final : public CommandBase
 	{
 	public:
-		BakerBlendMaskApplyDeltaCommand(
+		BlendMaskApplyDeltaCommand(
 			std::shared_ptr<TextureHistory> textureHistory,
 			std::shared_ptr<TextureDelta> textureDelta,
 			std::shared_ptr<BakerPass> bakerPass);
@@ -32,10 +32,10 @@ namespace Command
 
 	// This command would create a delta for a blend mask in normal map baker,
 	// undo operation on this command would restore texture snapshot.
-	class BakerBlendMaskCreateDeltaCommand final : public CommandBase
+	class BlendMaskCreateDeltaCommand final : public CommandBase
 	{
 	public:
-		BakerBlendMaskCreateDeltaCommand(
+		BlendMaskCreateDeltaCommand(
 			std::shared_ptr<TextureHistory> textureHistory,
 			std::shared_ptr<BakerPass> bakerPass);
 
@@ -49,7 +49,10 @@ namespace Command
 	class ToggleSmoothNormalsCommand final : public CommandBase
 	{
 	public:
-		ToggleSmoothNormalsCommand(Scene* inScene, SceneNode* inSceneNode, bool newValue);
+		ToggleSmoothNormalsCommand(
+			Scene* inScene,
+			SceneNode* inSceneNode,
+			bool newValue);
 
 	protected:
 		std::unique_ptr<CommandBase> exec() override;
@@ -57,6 +60,24 @@ namespace Command
 		Scene* m_scene = nullptr;
 		SceneNodeHandle m_nodeHandle;
 		bool m_newValue = false;
+	};
+
+	class SelectOutputCommand final : public CommandBase
+	{
+	public:
+		SelectOutputCommand(
+			Scene* inScene,
+			std::shared_ptr<BakerPass> bakerPass,
+			std::string filename,
+			std::string directory);
+
+	protected:
+		std::unique_ptr<CommandBase> exec() override;
+
+		Scene* m_scene = nullptr;
+		std::shared_ptr<BakerPass> m_bakerPass;
+		std::string m_filename;
+		std::string m_directory;
 	};
 
 }
