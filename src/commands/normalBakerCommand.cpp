@@ -73,8 +73,8 @@ namespace BKRCommand
 	SelectOutputCommand::SelectOutputCommand(
 		Scene* inScene,
 		std::shared_ptr<BakerPass> bakerPass,
-		std::string filename,
-		std::string directory)
+		std::string_view filename,
+		std::string_view directory)
 		: m_scene(inScene)
 		, m_bakerPass(bakerPass)
 		, m_filename(filename)

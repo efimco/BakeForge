@@ -79,9 +79,9 @@ void Baker::processPendingBake()
 	}
 	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
 	{
-		std::cout << "Baking material: " << materialName << std::endl;
 		if (bakerPass->needsRebake)
 		{
+			std::cout << "Baking material: " << materialName << std::endl;
 			bakerPass->bake(textureWidth, textureWidth, cageOffset, useSmoothedNormals);
 			bakerPass->needsRebake = false;
 		}

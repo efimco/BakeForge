@@ -1623,26 +1623,24 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 
 		ImGui::Text("%s", pass->name.c_str());
 
-		std::string pendingFilename;
-		std::string pendingDirectory;
+		// To interact with ImGui those strings are treated as c-strings.
+		// Avoid using ops that might change size, like assignment operator or '.append()'.
+		std::string filenameBuffer;
+		std::string directoryBuffer;
 
-		static constexpr uint32_t k_maxFilenameLength = 2048;
-		static constexpr uint32_t k_maxDirectoryLength = 2048;
-		pendingFilename.reserve(k_maxFilenameLength);
-		pendingDirectory.reserve(k_maxDirectoryLength);
+		static constexpr size_t k_maxFilenameLength = 2048;
+		static constexpr size_t k_maxDirectoryLength = 2048;
+		filenameBuffer.resize(std::max(k_maxFilenameLength, pass->filename.size()));
+		directoryBuffer.resize(std::max(k_maxDirectoryLength, pass->directory.size()));
 
-		pendingFilename.append(pass->filename);
-		pendingDirectory.append(pass->directory);
+		std::ranges::copy(pass->filename, filenameBuffer.begin());
+		std::ranges::copy(pass->directory, directoryBuffer.begin());
 
 		// Directory input with browse button
 		ImGui::Text("Directory:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
-		bool dirChanged = ImGui::InputText("##Dir", pendingDirectory.data(), pendingDirectory.capacity());
-		if (dirChanged)
-		{
-			pendingDirectory.resize(strnlen(pendingDirectory.data(), pendingDirectory.capacity()));
-		}
+		bool dirChanged = ImGui::InputText("##Dir", directoryBuffer.data(), directoryBuffer.size());
 
 		ImGui::SameLine();
 		if (ImGui::Button("..."))
@@ -1650,8 +1648,12 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 			FileDialogResult result = openFileDialog(FileType::UNKNOWN, true);
 			if (result)
 			{
-				pendingDirectory = result.directory;
-				pendingFilename = result.filename;
+				filenameBuffer.clear();
+				directoryBuffer.clear();
+				filenameBuffer.resize(std::max(k_maxFilenameLength, result.filename.size()));
+				directoryBuffer.resize(std::max(k_maxDirectoryLength, result.directory.size()));
+				std::ranges::copy(result.filename, filenameBuffer.begin());
+				std::ranges::copy(result.directory, directoryBuffer.begin());
 				dirChanged = true;
 			}
 		}
@@ -1659,29 +1661,22 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 		// Filename input
 		ImGui::Text("Filename:");
 		ImGui::SameLine();
-		bool nameChanged = ImGui::InputText("##Filename", pendingFilename.data(), pendingFilename.capacity());
-		if (nameChanged)
-		{
-			pendingFilename.resize(strnlen(pendingFilename.data(), pendingFilename.capacity()));
-		}
+		bool nameChanged = ImGui::InputText("##Filename", filenameBuffer.data(), filenameBuffer.size());
 
 		if (dirChanged || nameChanged)
 		{
-			if (!pass->filename.empty())
+			if (strnlen_s(filenameBuffer.data(), filenameBuffer.size()) > 0)
 			{
-				if (pass->filename.find('.') != std::string::npos)
+				if (char* foundChar = strchr(filenameBuffer.data(), '.'))
 				{
-					pass->filename = pass->filename.substr(0, pass->filename.find_last_of('.')) + ".png";
+					(*foundChar) = 0;
 				}
-				else
-				{
-					pass->filename += ".png";
-				}
+				strncat_s(filenameBuffer.data(), filenameBuffer.size(), ".png", sizeof("png"));
 			}
 
 			m_commandManager->commitCommand(
 				std::make_unique<BKRCommand::SelectOutputCommand>(
-					m_scene, pass, pendingFilename, pendingDirectory));
+					m_scene, pass, filenameBuffer.c_str(), directoryBuffer.c_str()));
 		}
 
 		if (pass->bakedNormalExists())
