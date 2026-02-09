@@ -13,6 +13,7 @@
 #include "shaderManager.hpp"
 #include "material.hpp"
 #include "texture.hpp"
+#include "textureHistory.hpp"
 
 
 #define PROFILE_BAKER_PASS 1
@@ -54,12 +55,17 @@ static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
 };
 
 
-BakerPass::BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene)
+BakerPass::BakerPass(
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> context,
+	Scene* scene,
+	std::shared_ptr<TextureHistory> textureHistory)
 	: BasePass(device, context)
 {
 	m_device = device;
 	m_context = context;
 	m_scene = scene;
+	m_textureHistory = textureHistory;
 
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
@@ -215,6 +221,16 @@ bool BakerPass::bakedNormalExists() const
 		return false;
 	std::string fullPath = directory + "\\" + filename;
 	return std::filesystem::exists(fullPath);
+}
+
+ComPtr<ID3D11Texture2D> BakerPass::getBlendTexture() const
+{
+	if (!m_rayDirectionBlendTexture)
+	{
+		std::cerr << "Blend texture not created yet!" << std::endl;
+		return nullptr;
+	}
+	return m_rayDirectionBlendTexture;
 }
 
 ComPtr<ID3D11ShaderResourceView> BakerPass::getBlendTextureSRV() const

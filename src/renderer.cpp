@@ -26,15 +26,18 @@
 #include "passes/wordSpaceUIPass.hpp"
 #include "passes/bakerPass.hpp"
 
+#include "utility/rdocHelpers.hpp"
 
 #include "camera.hpp"
 #include "light.hpp"
 #include "scene.hpp"
+#include "textureHistory.hpp"
 
 #define DRAW_DEBUG_BVH 0
 
-#define ENABLE_RENDERDOC_CAPTURE 0
-
+#if defined(_DEBUG) && ENABLE_RENDERDOC_CAPTURE
+RENDERDOC_API_1_1_2* g_rdocAPI;
+#endif
 
 Renderer::Renderer(const HWND& hwnd)
 {
@@ -48,6 +51,7 @@ Renderer::Renderer(const HWND& hwnd)
 		if (RENDERDOC_GetAPI)
 		{
 			RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, reinterpret_cast<void**>(&m_rdocAPI));
+			g_rdocAPI = m_rdocAPI;
 		}
 	}
 #endif
@@ -82,10 +86,11 @@ Renderer::Renderer(const HWND& hwnd)
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
-	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get());
+	m_textureHistory = std::make_shared<TextureHistory>(m_dxDevice->getDevice(), m_dxDevice->getContext());
+	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get(), m_textureHistory);
 
 
-	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hwnd);
+	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_textureHistory, hwnd);
 	resize();
 }
 

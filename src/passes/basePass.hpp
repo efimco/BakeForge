@@ -124,6 +124,7 @@ protected:
 		DXGI_FORMAT format,
 		UINT bindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
 		UINT mipLevels = 1,
+		UINT arraySize = 1,
 		D3D11_USAGE usage = D3D11_USAGE_DEFAULT,
 		UINT cpuAccessFlags = 0,
 		UINT miscFlags = 0) const;

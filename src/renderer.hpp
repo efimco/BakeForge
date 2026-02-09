@@ -25,6 +25,7 @@ class PreviewGenerator;
 class RayTracePass;
 class BVHDebugPass;
 class BakerPass;
+class TextureHistory;
 
 using namespace Microsoft::WRL;
 
@@ -73,6 +74,9 @@ private:
 	std::unique_ptr<RayTracePass> m_rayTracePass;
 	std::unique_ptr<BVHDebugPass> m_bvhDebugPass;
 	std::unique_ptr<BakerPass> m_bakerPass;
+
+	// texture history
+	std::shared_ptr<TextureHistory> m_textureHistory;
 
 	RENDERDOC_API_1_1_2* m_rdocAPI = nullptr;
 };

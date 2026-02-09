@@ -4,6 +4,7 @@
 #include <wrl.h>
 
 #include "sceneNode.hpp"
+#include "textureHistory.hpp"
 
 using namespace Microsoft::WRL;
 
@@ -11,6 +12,7 @@ class BakerPass;
 struct Material;
 class Primitive;
 class Scene;
+class TextureHistory;
 
 class BakerNode : public SceneNode
 {
@@ -38,7 +40,12 @@ public:
 class Baker : public BakerNode
 {
 public:
-	explicit Baker(std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene);
+	explicit Baker(
+		std::string_view nodeName,
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> context,
+		Scene* scene,
+		std::shared_ptr<TextureHistory> textureHistory);
 	~Baker() override = default;
 
 	void bake();
@@ -69,6 +76,7 @@ private:
 	Scene* m_scene = nullptr;
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
+	std::shared_ptr<TextureHistory> m_textureHistory;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
 	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>>> m_materialsPrimitivesMap;
 	std::unordered_map<std::string, std::unique_ptr<BakerPass>> m_materialsBakerPasses;

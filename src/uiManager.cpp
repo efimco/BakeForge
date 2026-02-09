@@ -34,6 +34,7 @@
 #include "commands/nodeSnapshot.hpp"
 #include "commands/commandGroup.hpp"
 #include "commands/scopedTransaction.hpp"
+#include "commands/normalBakerCommand.hpp"
 
 #include "passes/bakerPass.hpp"
 
@@ -56,7 +57,11 @@ static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
 static glm::ivec3 gSnapRotate = { 15, 15, 15 };
 static glm::ivec3 gSnapScale = { 1, 1, 1 };
 
-UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
+UIManager::UIManager(
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> deviceContext,
+	std::shared_ptr<TextureHistory> textureHistory,
+	const HWND& hwnd)
 	: m_commandManager(std::make_unique<CommandManager>())
 	, m_hwnd(hwnd)
 	, m_mousePos{}
@@ -64,6 +69,7 @@ UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> de
 {
 	m_device = device;
 	m_context = deviceContext;
+	m_textureHistory = textureHistory;
 	m_rtvCollector = std::make_unique<RTVCollector>();
 	ImGui_ImplWin32_EnableDpiAwareness();
 	const float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
@@ -452,7 +458,7 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Baker"))
 			{
-				auto baker = std::make_unique<Baker>("Baker", m_device, m_context, m_scene);
+				auto baker = std::make_unique<Baker>("Baker", m_device, m_context, m_scene, m_textureHistory);
 				m_scene->addChild(std::move(baker));
 			}
 			ImGui::EndMenu();
@@ -741,6 +747,14 @@ void UIManager::showBlendPaintWindow()
 		bool isPainting = false;
 		if (isHovered || isActive)
 		{
+			bool isActivelyPainting =
+				ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
+				ImGui::IsMouseDown(ImGuiMouseButton_Right);
+			if (isActivelyPainting && !m_textureHistory->HasSnapshot(Command::k_blendPaintName))
+			{
+				m_textureHistory->StartSnapshot(Command::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+			}
+
 			ImVec2 mousePos = ImGui::GetMousePos();
 			float localX = (mousePos.x - imagePos.x) / imageSize;
 			float localY = (mousePos.y - imagePos.y) / imageSize;
@@ -767,6 +781,14 @@ void UIManager::showBlendPaintWindow()
 		if (wasPainting && !isPainting)
 		{
 			m_blendPaintPass->needsRebake = true;
+
+			if (m_textureHistory->HasSnapshot(Command::k_blendPaintName))
+			{
+				m_commandManager->commitCommand(std::make_unique<Command::BakerBlendMaskCreateDeltaCommand>(
+					m_textureHistory,
+					m_blendPaintPass));
+				m_textureHistory->EndSnapshot(Command::k_blendPaintName);
+			}
 		}
 		wasPainting = isPainting;
 

@@ -34,7 +34,12 @@ std::unique_ptr<SceneNode> HighPolyNode::clone() const
 	return newNode;
 }
 
-Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene)
+Baker::Baker(
+	const std::string_view nodeName,
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> context,
+	Scene* scene,
+	std::shared_ptr<TextureHistory> textureHistory)
 {
 	name = nodeName;
 	movable = false;
@@ -47,6 +52,7 @@ Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPt
 	cageOffset = 0.1f;
 	useSmoothedNormals = 0;
 	m_scene = scene;
+	m_textureHistory = textureHistory;
 }
 
 void Baker::bake()
@@ -127,7 +133,12 @@ bool Baker::differsFrom(const SceneNode& node) const
 
 std::unique_ptr<SceneNode> Baker::clone() const
 {
-	std::unique_ptr<Baker> baker = std::make_unique<Baker>(name, m_device, m_context, m_scene);
+	std::unique_ptr<Baker> baker = std::make_unique<Baker>(
+		name,
+		m_device,
+		m_context,
+		m_scene,
+		m_textureHistory);
 	baker->copyFrom(*this);
 	return baker;
 }
@@ -201,7 +212,11 @@ void Baker::createOrUpdateBakerPasses()
 		}
 		if (m_materialsBakerPasses[material->name] == nullptr)
 		{
-			auto bakerPass = std::make_unique<BakerPass>(m_device, m_context, m_scene);
+			auto bakerPass = std::make_unique<BakerPass>(
+				m_device,
+				m_context,
+				m_scene,
+				m_textureHistory);
 			bakerPass->name = "BKR for " + material->name;
 			m_materialsBakerPasses[material->name] = std::move(bakerPass);
 		}

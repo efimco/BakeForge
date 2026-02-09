@@ -186,6 +186,7 @@ ComPtr<ID3D11Texture2D> BasePass::createTexture2D(UINT width,
 	DXGI_FORMAT format,
 	UINT bindFlags,
 	UINT mipLevels,
+	UINT arraySize,
 	D3D11_USAGE usage,
 	UINT cpuAccessFlags,
 	UINT miscFlags) const
@@ -209,7 +210,7 @@ ComPtr<ID3D11Texture2D> BasePass::createTexture2D(UINT width,
 	desc.Width = width;
 	desc.Height = height;
 	desc.MipLevels = mipLevels;
-	desc.ArraySize = 1;
+	desc.ArraySize = arraySize;
 	desc.Format = format;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
