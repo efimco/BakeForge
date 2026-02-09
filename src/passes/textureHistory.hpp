@@ -65,7 +65,7 @@ public:
 
 	std::shared_ptr<TextureDelta> createDelta(
 		ComPtr<ID3D11Texture2D> texture,
-		std::vector<uint16_t>& indices);
+		std::vector<uint16_t>& deltaIndices);
 
 	void applyDelta(
 		ComPtr<ID3D11Texture2D> texture,

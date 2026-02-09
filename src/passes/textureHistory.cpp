@@ -138,8 +138,8 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 
 	m_context->CopyResource(snapshot->m_tileStagingBuffer.Get(), snapshot->m_tileIndexBuffer.Get());
 
-	std::vector<uint16_t> indices;
-	indices.reserve(gridDims.numTiles);
+	std::vector<uint16_t> deltaIndices;
+	deltaIndices.reserve(gridDims.numTiles);
 	D3D11_MAPPED_SUBRESOURCE mapped{};
 	{
 		HRESULT hr = m_context->Map(snapshot->m_tileStagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
@@ -147,13 +147,13 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 		const uint32_t* tileDiff = static_cast<const uint32_t*>(mapped.pData);
 		std::copy_if(
 			tileDiff, tileDiff + gridDims.numTiles,
-			std::back_inserter(indices),
+			std::back_inserter(deltaIndices),
 			[](uint32_t i) { return i != 0; }
 		);
 		m_context->Unmap(snapshot->m_tileStagingBuffer.Get(), 0);
 	}
 
-	if (indices.empty())
+	if (deltaIndices.empty())
 	{
 		// Diff is empty
 		std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
@@ -162,19 +162,19 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 		return result;
 	}
 
-	return createDelta(snapshot->m_textureCopy, indices);
+	return createDelta(snapshot->m_textureCopy, deltaIndices);
 }
 
 std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 	ComPtr<ID3D11Texture2D> texture,
-	std::vector<uint16_t>& indices)
+	std::vector<uint16_t>& deltaIndices)
 {
 	std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
 
 	D3D11_TEXTURE2D_DESC texDesc;
 	texture->GetDesc(&texDesc);
 
-	if (indices.empty())
+	if (deltaIndices.empty())
 	{
 		return result;
 	}
@@ -187,8 +187,8 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 		DXGI_FORMAT_R32_FLOAT,
 		0,
 		1,
-		(UINT)indices.size());
-	result->m_tileIndices = indices;
+		(UINT)deltaIndices.size());
+	result->m_tileIndices = deltaIndices;
 
 	uint16_t j = 0;
 	for (uint16_t i : result->m_tileIndices)
