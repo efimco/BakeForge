@@ -66,7 +66,6 @@ void Baker::bake()
 
 void Baker::requestBake()
 {
-
 	m_pendingBake = true;
 }
 
@@ -144,12 +143,12 @@ std::unique_ptr<SceneNode> Baker::clone() const
 }
 
 
-std::vector<BakerPass*> Baker::getPasses()
+std::vector<std::shared_ptr<BakerPass>> Baker::getPasses()
 {
-	std::vector<BakerPass*> passes;
+	std::vector<std::shared_ptr<BakerPass>> passes;
 	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
 	{
-		passes.push_back(bakerPass.get());
+		passes.push_back(bakerPass);
 	}
 	return passes;
 }

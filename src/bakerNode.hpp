@@ -56,7 +56,7 @@ public:
 	bool differsFrom(const SceneNode& node) const override;
 	std::unique_ptr<SceneNode> clone() const override;
 
-	std::vector<BakerPass*> getPasses();
+	std::vector<std::shared_ptr<BakerPass>> getPasses();
 
 	std::unique_ptr<LowPolyNode> lowPoly;
 	std::unique_ptr<HighPolyNode> highPoly;
@@ -79,5 +79,5 @@ private:
 	std::shared_ptr<TextureHistory> m_textureHistory;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
 	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>>> m_materialsPrimitivesMap;
-	std::unordered_map<std::string, std::unique_ptr<BakerPass>> m_materialsBakerPasses;
+	std::unordered_map<std::string, std::shared_ptr<BakerPass>> m_materialsBakerPasses;
 };

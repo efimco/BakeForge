@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sceneNodeHandle.hpp"
 #include "snapshotBase.hpp"
 #include "textureHistory.hpp"
 
@@ -19,14 +20,14 @@ namespace Command
 		BakerBlendMaskApplyDeltaCommand(
 			std::shared_ptr<TextureHistory> textureHistory,
 			std::shared_ptr<TextureDelta> textureDelta,
-			BakerPass* bakerPass);
+			std::shared_ptr<BakerPass> bakerPass);
 
 	protected:
 		virtual std::unique_ptr<CommandBase> exec() override;
 
 		std::shared_ptr<TextureHistory> m_textureHistory;
 		std::shared_ptr<TextureDelta> m_textureDelta;
-		BakerPass* m_bakerPass = nullptr;
+		std::shared_ptr<BakerPass> m_bakerPass = nullptr;
 	};
 
 	// This command would create a delta for a blend mask in normal map baker,
@@ -36,13 +37,26 @@ namespace Command
 	public:
 		BakerBlendMaskCreateDeltaCommand(
 			std::shared_ptr<TextureHistory> textureHistory,
-			BakerPass* bakerPass);
+			std::shared_ptr<BakerPass> bakerPass);
 
 	protected:
 		virtual std::unique_ptr<CommandBase> exec() override;
 
 		std::shared_ptr<TextureHistory> m_textureHistory;
-		BakerPass* m_bakerPass = nullptr;
+		std::shared_ptr<BakerPass> m_bakerPass = nullptr;
+	};
+
+	class ToggleSmoothNormalsCommand final : public CommandBase
+	{
+	public:
+		ToggleSmoothNormalsCommand(Scene* inScene, SceneNode* inSceneNode, bool newValue);
+
+	protected:
+		std::unique_ptr<CommandBase> exec() override;
+
+		Scene* m_scene = nullptr;
+		SceneNodeHandle m_nodeHandle;
+		bool m_newValue = false;
 	};
 
 }

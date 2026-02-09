@@ -80,7 +80,7 @@ private:
 	std::shared_ptr<Material> m_highlightedMaterial = nullptr;
 	std::shared_ptr<Material> m_selectedMaterial = nullptr;
 
-	BakerPass* m_blendPaintPass = nullptr;  // Currently active paint window pass
+	std::shared_ptr<BakerPass> m_blendPaintPass;  // Currently active paint window pass
 	bool m_showBlendPaintWindow = false;
 	float m_blendBrushSize = 10.0f;
 

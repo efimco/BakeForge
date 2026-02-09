@@ -800,12 +800,24 @@ void UIManager::showBlendPaintWindow()
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to White"))
 		{
+			m_textureHistory->startSnapshot(Command::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(1.0f);
+			m_commandManager->commitCommand(std::make_unique<Command::BakerBlendMaskCreateDeltaCommand>(
+				m_textureHistory,
+				m_blendPaintPass));
+			m_textureHistory->endSnapshot(Command::k_blendPaintName);
+			m_blendPaintPass->needsRebake = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to Black"))
 		{
+			m_textureHistory->startSnapshot(Command::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(0.0f);
+			m_commandManager->commitCommand(std::make_unique<Command::BakerBlendMaskCreateDeltaCommand>(
+				m_textureHistory,
+				m_blendPaintPass));
+			m_textureHistory->endSnapshot(Command::k_blendPaintName);
+			m_blendPaintPass->needsRebake = true;
 		}
 	}
 	ImGui::End();
@@ -1598,8 +1610,8 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 	bool checkboxValue = baker->useSmoothedNormals;
 	if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
 	{
-		baker->useSmoothedNormals = checkboxValue;
-		baker->requestBake();
+		m_commandManager->commitCommand(
+			std::make_unique<Command::ToggleSmoothNormalsCommand>(m_scene, baker, checkboxValue));
 	}
 	constexpr uint32_t minVal = 2;
 	constexpr uint32_t maxVal = 4096;
@@ -1607,7 +1619,7 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 
 	for (auto pass : baker->getPasses())
 	{
-		ImGui::PushID(pass);
+		ImGui::PushID(pass.get());
 
 		ImGui::Text("%s", pass->name.c_str());
 
