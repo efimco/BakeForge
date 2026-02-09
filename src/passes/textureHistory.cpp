@@ -44,20 +44,20 @@ std::shared_ptr<TextureSnapshot> TextureHistory::startSnapshot(
 		result->m_textureCopySRV = createShaderResourceView(result->m_textureCopy.Get(), SRVPreset::Texture2D);
 
 		GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
-		if (gridDims.maxNumTiles > 0)
+		if (gridDims.numTiles > 0)
 		{
 			result->m_tileIndexBuffer = createStructuredBuffer(
 				sizeof(uint32_t),
-				gridDims.maxNumTiles,
+				gridDims.numTiles,
 				SBPreset::Default);
 			result->m_tileIndexUAV = createUnorderedAccessView(
 				result->m_tileIndexBuffer.Get(),
 				UAVPreset::StructuredBuffer,
 				0,
-				gridDims.maxNumTiles);
+				gridDims.numTiles);
 			result->m_tileStagingBuffer = createStructuredBuffer(
 				sizeof(uint32_t),
-				gridDims.maxNumTiles,
+				gridDims.numTiles,
 				SBPreset::CpuRead);
 		}
 		else
@@ -122,7 +122,7 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 	textureHistoryCB.tileSize = k_textureHistoryTileSize;
 	textureHistoryCB.tileNumX = gridDims.tileNumX;
 	textureHistoryCB.tileNumY = gridDims.tileNumY;
-	textureHistoryCB.numTiles = gridDims.maxNumTiles;
+	textureHistoryCB.numTiles = gridDims.numTiles;
 	updateConstantBuffer(textureHistoryCB);
 
 	m_context->CSSetShader(m_shaderManager->getComputeShader("textureHistoryDifference"), nullptr, 0);
@@ -139,14 +139,14 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 	m_context->CopyResource(snapshot->m_tileStagingBuffer.Get(), snapshot->m_tileIndexBuffer.Get());
 
 	std::vector<uint16_t> indices;
-	indices.reserve(gridDims.maxNumTiles);
+	indices.reserve(gridDims.numTiles);
 	D3D11_MAPPED_SUBRESOURCE mapped{};
 	{
 		HRESULT hr = m_context->Map(snapshot->m_tileStagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
 		assert(SUCCEEDED(hr));
 		const uint32_t* tileDiff = static_cast<const uint32_t*>(mapped.pData);
 		std::copy_if(
-			tileDiff, tileDiff + gridDims.maxNumTiles,
+			tileDiff, tileDiff + gridDims.numTiles,
 			std::back_inserter(indices),
 			[](uint32_t i) { return i != 0; }
 		);
@@ -253,7 +253,7 @@ TextureHistory::GridDims TextureHistory::makeGridDims(UINT height, UINT width)
 	GridDims result;
 	result.tileNumX = (width  + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
 	result.tileNumY = (height + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
-	result.maxNumTiles = result.tileNumX * result.tileNumY;
+	result.numTiles = result.tileNumX * result.tileNumY;
 	return result;
 }
 

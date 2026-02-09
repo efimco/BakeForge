@@ -77,9 +77,9 @@ private:
 
 	struct GridDims
 	{
-		UINT maxNumTiles;
 		uint16_t tileNumX;
 		uint16_t tileNumY;
+		UINT numTiles;
 	};
 
 	struct TileDims
