@@ -26,13 +26,13 @@ void CS(uint3 GTid : SV_GroupThreadID,
 		uint3 Gid  : SV_GroupID)
 {
 	// Pixels per thread
-	uint px = TileSize / 8;
+	uint pxPerThread = TileSize / 8;
 
 	// Tile origin in pixel coordinates
 	uint2 tileOrigin = Gid.xy * TileSize;
 
 	// Each thread handles an px x px tile
-	uint2 threadOrigin = tileOrigin + GTid.xy * px;
+	uint2 threadOrigin = tileOrigin + GTid.xy * pxPerThread;
 
 	// Initialize shared tileDiff once per group
 	if (all(GTid.xy == 0))
@@ -40,9 +40,9 @@ void CS(uint3 GTid : SV_GroupThreadID,
 
 	GroupMemoryBarrierWithGroupSync();
 
-	for (uint y = 0; y < px; ++y)
+	for (uint y = 0; y < pxPerThread; ++y)
 	{
-		for (uint x = 0; x < px; ++x)
+		for (uint x = 0; x < pxPerThread; ++x)
 		{
 			uint2 pixel = threadOrigin + uint2(x, y);
 

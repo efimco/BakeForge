@@ -20,7 +20,6 @@ class CommandManager;
 class RTVCollector;
 class BakerNode;
 class BakerPass;
-class TextureHistory;
 
 #define ICON_FA_CUBE "\xef\x86\xb2"		 // Mesh/Primitive
 #define ICON_FA_LIGHTBULB "\xef\x83\xab" // Light
@@ -57,7 +56,6 @@ public:
 	explicit UIManager(
 		ComPtr<ID3D11Device> device,
 		ComPtr<ID3D11DeviceContext> deviceContext,
-		std::shared_ptr<TextureHistory> textureHistory,
 		const HWND& hwnd);
 	~UIManager();
 
@@ -68,7 +66,6 @@ public:
 private:
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
-	std::shared_ptr<TextureHistory> m_textureHistory;
 	std::unique_ptr<CommandManager> m_commandManager;
 	std::unique_ptr<RTVCollector> m_rtvCollector;
 	const HWND& m_hwnd;

@@ -43,13 +43,12 @@ std::shared_ptr<TextureSnapshot> TextureHistory::startSnapshot(
 			D3D11_BIND_SHADER_RESOURCE);
 		result->m_textureCopySRV = createShaderResourceView(result->m_textureCopy.Get(), SRVPreset::Texture2D);
 
-		UINT maxNumTiles = (texDesc.Width * texDesc.Height) / (k_textureHistoryTileSize * k_textureHistoryTileSize);
-		if (maxNumTiles > 0)
+		GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
+		if (gridDims.maxNumTiles > 0)
 		{
-			GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
 			result->m_tileIndexBuffer = createStructuredBuffer(
 				sizeof(uint32_t),
-				maxNumTiles,
+				gridDims.maxNumTiles,
 				SBPreset::Default);
 			result->m_tileIndexUAV = createUnorderedAccessView(
 				result->m_tileIndexBuffer.Get(),
@@ -58,7 +57,7 @@ std::shared_ptr<TextureSnapshot> TextureHistory::startSnapshot(
 				gridDims.maxNumTiles);
 			result->m_tileStagingBuffer = createStructuredBuffer(
 				sizeof(uint32_t),
-				maxNumTiles,
+				gridDims.maxNumTiles,
 				SBPreset::CpuRead);
 		}
 		else
@@ -241,7 +240,6 @@ void TextureHistory::applyDelta(
 void TextureHistory::updateConstantBuffer(
 	TextureHistoryCB& cb)
 {
-	// Update constant buffer with numBLASInstances
 	D3D11_MAPPED_SUBRESOURCE mapped = {};
 	if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
 	{

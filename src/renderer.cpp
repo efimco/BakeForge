@@ -31,7 +31,6 @@
 #include "camera.hpp"
 #include "light.hpp"
 #include "scene.hpp"
-#include "textureHistory.hpp"
 
 #define DRAW_DEBUG_BVH 0
 
@@ -86,11 +85,9 @@ Renderer::Renderer(const HWND& hwnd)
 	m_worldSpaceUIPass = std::make_unique<WorldSpaceUIPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
-	m_textureHistory = std::make_shared<TextureHistory>(m_dxDevice->getDevice(), m_dxDevice->getContext());
-	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get(), m_textureHistory);
+	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get());
 
-
-	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_textureHistory, hwnd);
+	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hwnd);
 	resize();
 }
 

@@ -58,14 +58,13 @@ static constexpr D3D11_INPUT_ELEMENT_DESC uvRasterInputLayoutDesc[] = {
 BakerPass::BakerPass(
 	ComPtr<ID3D11Device> device,
 	ComPtr<ID3D11DeviceContext> context,
-	Scene* scene,
-	std::shared_ptr<TextureHistory> textureHistory)
+	Scene* scene)
 	: BasePass(device, context)
 {
 	m_device = device;
 	m_context = context;
 	m_scene = scene;
-	m_textureHistory = textureHistory;
+	m_textureHistory = std::make_shared<TextureHistory>(device, context);
 
 	m_rtvCollector = std::make_unique<RTVCollector>();
 
@@ -252,6 +251,11 @@ ComPtr<ID3D11ShaderResourceView> BakerPass::getBakedNormalSRV() const
 	}
 
 	return m_bakedNormalSRV;
+}
+
+std::shared_ptr<TextureHistory> BakerPass::getTextureHistory() const
+{
+	return m_textureHistory;
 }
 
 void BakerPass::paintAtUV(float u, float v, float value, float brushSize)

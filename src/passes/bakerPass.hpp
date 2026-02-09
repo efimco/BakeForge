@@ -64,8 +64,7 @@ public:
 	explicit BakerPass(
 		ComPtr<ID3D11Device> device,
 		ComPtr<ID3D11DeviceContext> context,
-		Scene* scene,
-		std::shared_ptr<TextureHistory> textureHistory);
+		Scene* scene);
 	~BakerPass() override = default;
 
 	std::string name = "Baker Pass";
@@ -79,6 +78,7 @@ public:
 	ComPtr<ID3D11Texture2D> getBlendTexture() const;
 	ComPtr<ID3D11ShaderResourceView> getBlendTextureSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getBakedNormalSRV() const;
+	std::shared_ptr<TextureHistory> getTextureHistory() const;
 	void paintAtUV(float u, float v, float value, float brushSize);
 	void clearBlendTexture(float value);
 	bool needsRebake = false;

@@ -60,7 +60,6 @@ static glm::ivec3 gSnapScale = { 1, 1, 1 };
 UIManager::UIManager(
 	ComPtr<ID3D11Device> device,
 	ComPtr<ID3D11DeviceContext> deviceContext,
-	std::shared_ptr<TextureHistory> textureHistory,
 	const HWND& hwnd)
 	: m_commandManager(std::make_unique<CommandManager>())
 	, m_hwnd(hwnd)
@@ -69,7 +68,6 @@ UIManager::UIManager(
 {
 	m_device = device;
 	m_context = deviceContext;
-	m_textureHistory = textureHistory;
 	m_rtvCollector = std::make_unique<RTVCollector>();
 	ImGui_ImplWin32_EnableDpiAwareness();
 	const float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
@@ -458,7 +456,7 @@ void UIManager::showMainMenuBar()
 			}
 			if (ImGui::MenuItem("Baker"))
 			{
-				auto baker = std::make_unique<Baker>("Baker", m_device, m_context, m_scene, m_textureHistory);
+				auto baker = std::make_unique<Baker>("Baker", m_device, m_context, m_scene);
 				m_scene->addChild(std::move(baker));
 			}
 			ImGui::EndMenu();
@@ -704,6 +702,8 @@ void UIManager::showBlendPaintWindow()
 	if (!m_showBlendPaintWindow || !m_blendPaintPass)
 		return;
 
+	auto textureHistory = m_blendPaintPass->getTextureHistory();
+
 	static bool wasPainting = false;
 
 	constexpr float windowSize = 512.0f;
@@ -750,9 +750,9 @@ void UIManager::showBlendPaintWindow()
 			bool isActivelyPainting =
 				ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
 				ImGui::IsMouseDown(ImGuiMouseButton_Right);
-			if (isActivelyPainting && !m_textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
+			if (isActivelyPainting && !textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
 			{
-				m_textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+				textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			}
 
 			ImVec2 mousePos = ImGui::GetMousePos();
@@ -782,12 +782,12 @@ void UIManager::showBlendPaintWindow()
 		{
 			m_blendPaintPass->needsRebake = true;
 
-			if (m_textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
+			if (textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
 			{
 				m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
-					m_textureHistory,
+					textureHistory,
 					m_blendPaintPass));
-				m_textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+				textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
 			}
 		}
 		wasPainting = isPainting;
@@ -800,23 +800,23 @@ void UIManager::showBlendPaintWindow()
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to White"))
 		{
-			m_textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+			textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(1.0f);
 			m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
-				m_textureHistory,
+				textureHistory,
 				m_blendPaintPass));
-			m_textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+			textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
 			m_blendPaintPass->needsRebake = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to Black"))
 		{
-			m_textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+			textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(0.0f);
 			m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
-				m_textureHistory,
+				textureHistory,
 				m_blendPaintPass));
-			m_textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+			textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
 			m_blendPaintPass->needsRebake = true;
 		}
 	}

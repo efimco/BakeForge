@@ -38,8 +38,7 @@ Baker::Baker(
 	const std::string_view nodeName,
 	ComPtr<ID3D11Device> device,
 	ComPtr<ID3D11DeviceContext> context,
-	Scene* scene,
-	std::shared_ptr<TextureHistory> textureHistory)
+	Scene* scene)
 {
 	name = nodeName;
 	movable = false;
@@ -52,7 +51,6 @@ Baker::Baker(
 	cageOffset = 0.1f;
 	useSmoothedNormals = 0;
 	m_scene = scene;
-	m_textureHistory = textureHistory;
 }
 
 void Baker::bake()
@@ -136,8 +134,7 @@ std::unique_ptr<SceneNode> Baker::clone() const
 		name,
 		m_device,
 		m_context,
-		m_scene,
-		m_textureHistory);
+		m_scene);
 	baker->copyFrom(*this);
 	return baker;
 }
@@ -214,8 +211,7 @@ void Baker::createOrUpdateBakerPasses()
 			auto bakerPass = std::make_unique<BakerPass>(
 				m_device,
 				m_context,
-				m_scene,
-				m_textureHistory);
+				m_scene);
 			bakerPass->name = "BKR for " + material->name;
 			m_materialsBakerPasses[material->name] = std::move(bakerPass);
 		}
