@@ -38,7 +38,11 @@ public:
 class Baker : public BakerNode
 {
 public:
-	explicit Baker(std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene);
+	explicit Baker(
+		std::string_view nodeName,
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> context,
+		Scene* scene);
 	~Baker() override = default;
 
 	void bake();
@@ -49,7 +53,7 @@ public:
 	bool differsFrom(const SceneNode& node) const override;
 	std::unique_ptr<SceneNode> clone() const override;
 
-	std::vector<BakerPass*> getPasses();
+	std::vector<std::shared_ptr<BakerPass>> getPasses();
 
 	std::unique_ptr<LowPolyNode> lowPoly;
 	std::unique_ptr<HighPolyNode> highPoly;
@@ -71,5 +75,5 @@ private:
 	ComPtr<ID3D11DeviceContext> m_context;
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
 	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>>> m_materialsPrimitivesMap;
-	std::unordered_map<std::string, std::unique_ptr<BakerPass>> m_materialsBakerPasses;
+	std::unordered_map<std::string, std::shared_ptr<BakerPass>> m_materialsBakerPasses;
 };

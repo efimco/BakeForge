@@ -34,7 +34,11 @@ std::unique_ptr<SceneNode> HighPolyNode::clone() const
 	return newNode;
 }
 
-Baker::Baker(const std::string_view nodeName, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene)
+Baker::Baker(
+	const std::string_view nodeName,
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> context,
+	Scene* scene)
 {
 	name = nodeName;
 	movable = false;
@@ -60,7 +64,6 @@ void Baker::bake()
 
 void Baker::requestBake()
 {
-
 	m_pendingBake = true;
 }
 
@@ -74,9 +77,9 @@ void Baker::processPendingBake()
 	}
 	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
 	{
-		std::cout << "Baking material: " << materialName << std::endl;
 		if (bakerPass->needsRebake)
 		{
+			std::cout << "Baking material: " << materialName << std::endl;
 			bakerPass->bake(textureWidth, textureWidth, cageOffset, useSmoothedNormals);
 			bakerPass->needsRebake = false;
 		}
@@ -127,18 +130,22 @@ bool Baker::differsFrom(const SceneNode& node) const
 
 std::unique_ptr<SceneNode> Baker::clone() const
 {
-	std::unique_ptr<Baker> baker = std::make_unique<Baker>(name, m_device, m_context, m_scene);
+	std::unique_ptr<Baker> baker = std::make_unique<Baker>(
+		name,
+		m_device,
+		m_context,
+		m_scene);
 	baker->copyFrom(*this);
 	return baker;
 }
 
 
-std::vector<BakerPass*> Baker::getPasses()
+std::vector<std::shared_ptr<BakerPass>> Baker::getPasses()
 {
-	std::vector<BakerPass*> passes;
+	std::vector<std::shared_ptr<BakerPass>> passes;
 	for (const auto& [materialName, bakerPass] : m_materialsBakerPasses)
 	{
-		passes.push_back(bakerPass.get());
+		passes.push_back(bakerPass);
 	}
 	return passes;
 }
@@ -201,7 +208,10 @@ void Baker::createOrUpdateBakerPasses()
 		}
 		if (m_materialsBakerPasses[material->name] == nullptr)
 		{
-			auto bakerPass = std::make_unique<BakerPass>(m_device, m_context, m_scene);
+			auto bakerPass = std::make_unique<BakerPass>(
+				m_device,
+				m_context,
+				m_scene);
 			bakerPass->name = "BKR for " + material->name;
 			m_materialsBakerPasses[material->name] = std::move(bakerPass);
 		}

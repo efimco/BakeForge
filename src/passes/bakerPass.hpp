@@ -8,6 +8,7 @@
 #include "bvhNode.hpp"
 
 
+class TextureHistory;
 class Scene;
 class RTVCollector;
 class Primitive;
@@ -60,7 +61,10 @@ struct BLASInstance
 class BakerPass : public BasePass
 {
 public:
-	explicit BakerPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context, Scene* scene);
+	explicit BakerPass(
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> context,
+		Scene* scene);
 	~BakerPass() override = default;
 
 	std::string name = "Baker Pass";
@@ -71,8 +75,10 @@ public:
 	void createOrResize();
 	void setPrimitivesToBake(const std::pair<std::vector<Primitive*>, std::vector<Primitive*>>& primitivePairs);
 	bool bakedNormalExists() const;
+	ComPtr<ID3D11Texture2D> getBlendTexture() const;
 	ComPtr<ID3D11ShaderResourceView> getBlendTextureSRV() const;
 	ComPtr<ID3D11ShaderResourceView> getBakedNormalSRV() const;
+	std::shared_ptr<TextureHistory> getTextureHistory() const;
 	void paintAtUV(float u, float v, float value, float brushSize);
 	void clearBlendTexture(float value);
 	bool needsRebake = false;
@@ -87,7 +93,7 @@ private:
 
 	std::pair<std::vector<Primitive*>, std::vector<Primitive*>> m_primitivesToBake;
 
-
+	std::shared_ptr<TextureHistory> m_textureHistory;
 	std::future<void> m_saveTextureFuture;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;

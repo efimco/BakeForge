@@ -21,7 +21,6 @@ class RTVCollector;
 class BakerNode;
 class BakerPass;
 
-
 #define ICON_FA_CUBE "\xef\x86\xb2"		 // Mesh/Primitive
 #define ICON_FA_LIGHTBULB "\xef\x83\xab" // Light
 #define ICON_FA_FOLDER "\xef\x81\xbb"	 // Folder/Group
@@ -54,7 +53,10 @@ struct FileDialogResult
 class UIManager
 {
 public:
-	explicit UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd);
+	explicit UIManager(
+		ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> deviceContext,
+		const HWND& hwnd);
 	~UIManager();
 
 	void
@@ -75,7 +77,7 @@ private:
 	std::shared_ptr<Material> m_highlightedMaterial = nullptr;
 	std::shared_ptr<Material> m_selectedMaterial = nullptr;
 
-	BakerPass* m_blendPaintPass = nullptr;  // Currently active paint window pass
+	std::shared_ptr<BakerPass> m_blendPaintPass;  // Currently active paint window pass
 	bool m_showBlendPaintWindow = false;
 	float m_blendBrushSize = 10.0f;
 

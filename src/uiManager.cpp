@@ -34,6 +34,7 @@
 #include "commands/nodeSnapshot.hpp"
 #include "commands/commandGroup.hpp"
 #include "commands/scopedTransaction.hpp"
+#include "commands/normalBakerCommand.hpp"
 
 #include "passes/bakerPass.hpp"
 
@@ -56,7 +57,10 @@ static glm::ivec3 gSnapTranslate = { 1, 1, 1 };
 static glm::ivec3 gSnapRotate = { 15, 15, 15 };
 static glm::ivec3 gSnapScale = { 1, 1, 1 };
 
-UIManager::UIManager(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, const HWND& hwnd)
+UIManager::UIManager(
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> deviceContext,
+	const HWND& hwnd)
 	: m_commandManager(std::make_unique<CommandManager>())
 	, m_hwnd(hwnd)
 	, m_mousePos{}
@@ -698,6 +702,8 @@ void UIManager::showBlendPaintWindow()
 	if (!m_showBlendPaintWindow || !m_blendPaintPass)
 		return;
 
+	auto textureHistory = m_blendPaintPass->getTextureHistory();
+
 	static bool wasPainting = false;
 
 	constexpr float windowSize = 512.0f;
@@ -741,6 +747,14 @@ void UIManager::showBlendPaintWindow()
 		bool isPainting = false;
 		if (isHovered || isActive)
 		{
+			bool isActivelyPainting =
+				ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
+				ImGui::IsMouseDown(ImGuiMouseButton_Right);
+			if (isActivelyPainting && !textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
+			{
+				textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+			}
+
 			ImVec2 mousePos = ImGui::GetMousePos();
 			float localX = (mousePos.x - imagePos.x) / imageSize;
 			float localY = (mousePos.y - imagePos.y) / imageSize;
@@ -767,6 +781,14 @@ void UIManager::showBlendPaintWindow()
 		if (wasPainting && !isPainting)
 		{
 			m_blendPaintPass->needsRebake = true;
+
+			if (textureHistory->hasSnapshot(BKRCommand::k_blendPaintName))
+			{
+				m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
+					textureHistory,
+					m_blendPaintPass));
+				textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+			}
 		}
 		wasPainting = isPainting;
 
@@ -778,12 +800,24 @@ void UIManager::showBlendPaintWindow()
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to White"))
 		{
+			textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(1.0f);
+			m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
+				textureHistory,
+				m_blendPaintPass));
+			textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+			m_blendPaintPass->needsRebake = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear to Black"))
 		{
+			textureHistory->startSnapshot(BKRCommand::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			m_blendPaintPass->clearBlendTexture(0.0f);
+			m_commandManager->commitCommand(std::make_unique<BKRCommand::BlendMaskCreateDeltaCommand>(
+				textureHistory,
+				m_blendPaintPass));
+			textureHistory->endSnapshot(BKRCommand::k_blendPaintName);
+			m_blendPaintPass->needsRebake = true;
 		}
 	}
 	ImGui::End();
@@ -1576,8 +1610,8 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 	bool checkboxValue = baker->useSmoothedNormals;
 	if (ImGui::Checkbox("Use Smoothed Normals", &checkboxValue))
 	{
-		baker->useSmoothedNormals = checkboxValue;
-		baker->requestBake();
+		m_commandManager->commitCommand(
+			std::make_unique<BKRCommand::ToggleSmoothNormalsCommand>(m_scene, baker, checkboxValue));
 	}
 	constexpr uint32_t minVal = 2;
 	constexpr uint32_t maxVal = 4096;
@@ -1585,71 +1619,64 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 
 	for (auto pass : baker->getPasses())
 	{
-		ImGui::PushID(pass);
+		ImGui::PushID(pass.get());
 
 		ImGui::Text("%s", pass->name.c_str());
 
+		// To interact with ImGui those strings are treated as c-strings.
+		// Avoid using ops that might change size, like assignment operator or '.append()'.
+		std::string filenameBuffer;
+		std::string directoryBuffer;
+
+		static constexpr size_t k_maxFilenameLength = 2048;
+		static constexpr size_t k_maxDirectoryLength = 2048;
+		filenameBuffer.resize(std::max(k_maxFilenameLength, pass->filename.size()));
+		directoryBuffer.resize(std::max(k_maxDirectoryLength, pass->directory.size()));
+
+		std::ranges::copy(pass->filename, filenameBuffer.begin());
+		std::ranges::copy(pass->directory, directoryBuffer.begin());
+
 		// Directory input with browse button
-		char dirBuffer[260];
-		strcpy_s(dirBuffer, pass->directory.c_str()); // copy to mutable buffer
 		ImGui::Text("Directory:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100.0f);
-		bool dirChanged = ImGui::InputText("##Dir", dirBuffer, sizeof(dirBuffer));
+		bool dirChanged = ImGui::InputText("##Dir", directoryBuffer.data(), directoryBuffer.size());
+
 		ImGui::SameLine();
 		if (ImGui::Button("..."))
 		{
 			FileDialogResult result = openFileDialog(FileType::UNKNOWN, true);
 			if (result)
 			{
-				strcpy_s(dirBuffer, result.directory.c_str());
-				pass->filename = result.filename;
-				if (pass->filename.find('.') != std::string::npos)
-				{
-					pass->filename = pass->filename.substr(0, pass->filename.find_last_of('.')) + ".png";
-				}
-				else
-				{
-					pass->filename += ".png";
-				}
-				pass->directory = result.directory;
+				filenameBuffer.clear();
+				directoryBuffer.clear();
+				filenameBuffer.resize(std::max(k_maxFilenameLength, result.filename.size()));
+				directoryBuffer.resize(std::max(k_maxDirectoryLength, result.directory.size()));
+				std::ranges::copy(result.filename, filenameBuffer.begin());
+				std::ranges::copy(result.directory, directoryBuffer.begin());
 				dirChanged = true;
 			}
 		}
 
 		// Filename input
-		char fileNameBuffer[260];
-		strcpy_s(fileNameBuffer, pass->filename.c_str());
 		ImGui::Text("Filename:");
 		ImGui::SameLine();
-		bool nameChanged = ImGui::InputText("##Filename", fileNameBuffer, sizeof(fileNameBuffer));
+		bool nameChanged = ImGui::InputText("##Filename", filenameBuffer.data(), filenameBuffer.size());
 
 		if (dirChanged || nameChanged)
 		{
-			std::string newDir = dirBuffer;
-			std::string newName = fileNameBuffer;
-			if (!newDir.empty() && !newName.empty())
+			if (strnlen_s(filenameBuffer.data(), filenameBuffer.size()) > 0)
 			{
-				pass->directory = newDir;
-				pass->filename = newName;
-			}
-			else if (!newName.empty())
-			{
-				pass->filename = newName;
-			}
-			else
-			{
-				pass->directory = newDir;
+				if (char* foundChar = strchr(filenameBuffer.data(), '.'))
+				{
+					(*foundChar) = 0;
+				}
+				strncat_s(filenameBuffer.data(), filenameBuffer.size(), ".png", sizeof("png"));
 			}
 
-			if (pass->filename.find('.') != std::string::npos)
-			{
-				pass->filename = pass->filename.substr(0, pass->filename.find_last_of('.')) + ".png";
-			}
-			else
-			{
-				pass->filename += ".png";
-			}
+			m_commandManager->commitCommand(
+				std::make_unique<BKRCommand::SelectOutputCommand>(
+					m_scene, pass, filenameBuffer.c_str(), directoryBuffer.c_str()));
 		}
 
 		if (pass->bakedNormalExists())
@@ -1669,7 +1696,6 @@ void UIManager::showBakerProperties(BakerNode* bakerNode)
 				m_showBlendPaintWindow = true;
 			}
 		}
-
 
 		ImGui::Separator();
 		ImGui::PopID();
