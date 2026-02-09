@@ -48,22 +48,26 @@ public:
 	TextureHistory(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~TextureHistory() override = default;
 
-	bool HasSnapshot(std::string_view name) const;
+	bool hasSnapshot(std::string_view name) const;
 
-	std::shared_ptr<TextureSnapshot> StartSnapshot(
+	std::shared_ptr<TextureSnapshot> startSnapshot(
 		std::string_view name,
 		ComPtr<ID3D11Texture2D> texture,
 		bool forceFresh = false);
 
-	void EndSnapshot(
+	void endSnapshot(
 		std::string_view name);
 
-	std::shared_ptr<TextureDelta> CreateDelta(
+	std::shared_ptr<TextureDelta> createDelta(
 		std::string_view name,
 		ComPtr<ID3D11Texture2D> texture,
 		ComPtr<ID3D11ShaderResourceView> textureSRV);
 
-	void ApplyDelta(
+	std::shared_ptr<TextureDelta> createDelta(
+		ComPtr<ID3D11Texture2D> texture,
+		std::vector<uint16_t>& indices);
+
+	void applyDelta(
 		ComPtr<ID3D11Texture2D> texture,
 		std::shared_ptr<TextureDelta> textureDelta);
 
@@ -71,10 +75,29 @@ private:
 	void updateConstantBuffer(
 		TextureHistoryCB& cb);
 
+	struct GridDims
+	{
+		UINT maxNumTiles;
+		uint16_t tileNumX;
+		uint16_t tileNumY;
+	};
+
+	struct TileDims
+	{
+		UINT offsetX;
+		UINT offsetY;
+		UINT sizeX;
+		UINT sizeY;
+	};
+
+	static GridDims makeGridDims(UINT height, UINT width);
+	static TileDims makeTileDims(UINT height, UINT width, UINT i);
+	static D3D11_BOX makeTileBox(UINT height, UINT width, UINT i);
+
 	//  ## Resources for paint history ##
 
 	// Size of a history tile - cannot be smaller than 8
-	static constexpr uint32_t k_textureHistoryTileSize     = 64;
+	static constexpr uint32_t k_textureHistoryTileSize = 64;
 	static constexpr uint32_t k_textureHistoryTileSizeMOne = k_textureHistoryTileSize - 1;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;

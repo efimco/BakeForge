@@ -15,19 +15,19 @@ TextureHistory::TextureHistory(
 		ShaderManager::GetShaderPath(L"textureHistoryDifference.hlsl"), "CS");
 }
 
-bool TextureHistory::HasSnapshot(std::string_view name) const
+bool TextureHistory::hasSnapshot(std::string_view name) const
 {
 	return m_snapshots.contains(name);
 }
 
-std::shared_ptr<TextureSnapshot> TextureHistory::StartSnapshot(
+std::shared_ptr<TextureSnapshot> TextureHistory::startSnapshot(
 	std::string_view name,
 	ComPtr<ID3D11Texture2D> texture,
 	bool forceFresh)
 {
 	if (forceFresh)
 	{
-		EndSnapshot(name);
+		endSnapshot(name);
 	}
 
 	D3D11_TEXTURE2D_DESC texDesc;
@@ -46,9 +46,20 @@ std::shared_ptr<TextureSnapshot> TextureHistory::StartSnapshot(
 		UINT maxNumTiles = (texDesc.Width * texDesc.Height) / (k_textureHistoryTileSize * k_textureHistoryTileSize);
 		if (maxNumTiles > 0)
 		{
-			result->m_tileIndexBuffer = createStructuredBuffer(sizeof(uint32_t), maxNumTiles, SBPreset::Default);
-			result->m_tileIndexUAV = createUnorderedAccessView(result->m_tileIndexBuffer.Get(), UAVPreset::StructuredBuffer, 0, maxNumTiles);
-			result->m_tileStagingBuffer = createStructuredBuffer(sizeof(uint32_t), maxNumTiles, SBPreset::CpuRead);
+			GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
+			result->m_tileIndexBuffer = createStructuredBuffer(
+				sizeof(uint32_t),
+				maxNumTiles,
+				SBPreset::Default);
+			result->m_tileIndexUAV = createUnorderedAccessView(
+				result->m_tileIndexBuffer.Get(),
+				UAVPreset::StructuredBuffer,
+				0,
+				gridDims.maxNumTiles);
+			result->m_tileStagingBuffer = createStructuredBuffer(
+				sizeof(uint32_t),
+				maxNumTiles,
+				SBPreset::CpuRead);
 		}
 		else
 		{
@@ -81,44 +92,38 @@ std::shared_ptr<TextureSnapshot> TextureHistory::StartSnapshot(
 	return result;
 }
 
-void TextureHistory::EndSnapshot(std::string_view name)
+void TextureHistory::endSnapshot(std::string_view name)
 {
 	m_snapshots.erase(name.data());
 }
 
-std::shared_ptr<TextureDelta> TextureHistory::CreateDelta(
+std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 	std::string_view name,
 	ComPtr<ID3D11Texture2D> texture,
 	ComPtr<ID3D11ShaderResourceView> textureSRV)
 {
-	std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
+	D3D11_TEXTURE2D_DESC texDesc;
+	texture->GetDesc(&texDesc);
+
 	auto snapshotIt = m_snapshots.find(name);
 	if (snapshotIt == m_snapshots.end())
 	{
+		// Cannot compute the diff - we had no snapshots for this texture
+		std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
+		result->m_height = texDesc.Height;
+		result->m_width  = texDesc.Width;
 		return result;
 	}
 	std::shared_ptr<TextureSnapshot> snapshot = snapshotIt->second;
 
-	D3D11_TEXTURE2D_DESC texDesc;
-	texture->GetDesc(&texDesc);
-
-	UINT maxNumTiles = (texDesc.Width * texDesc.Height) / (k_textureHistoryTileSize * k_textureHistoryTileSize);
-
-	std::vector<uint32_t> indices;
-	indices.resize(maxNumTiles);
-
-	uint16_t tileNumX = (texDesc.Width  + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
-	uint16_t tileNumY = (texDesc.Height + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
-	UINT modX = texDesc.Width  % k_textureHistoryTileSize;
-	UINT modY = texDesc.Height % k_textureHistoryTileSize;
-
+	GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
 	TextureHistoryCB textureHistoryCB;
 	textureHistoryCB.width    = texDesc.Width;
 	textureHistoryCB.height   = texDesc.Height;
 	textureHistoryCB.tileSize = k_textureHistoryTileSize;
-	textureHistoryCB.tileNumX = tileNumX;
-	textureHistoryCB.tileNumY = tileNumY;
-	textureHistoryCB.numTiles = maxNumTiles;
+	textureHistoryCB.tileNumX = gridDims.tileNumX;
+	textureHistoryCB.tileNumY = gridDims.tileNumY;
+	textureHistoryCB.numTiles = gridDims.maxNumTiles;
 	updateConstantBuffer(textureHistoryCB);
 
 	m_context->CSSetShader(m_shaderManager->getComputeShader("textureHistoryDifference"), nullptr, 0);
@@ -134,19 +139,41 @@ std::shared_ptr<TextureDelta> TextureHistory::CreateDelta(
 
 	m_context->CopyResource(snapshot->m_tileStagingBuffer.Get(), snapshot->m_tileIndexBuffer.Get());
 
+	std::vector<uint16_t> indices;
+	indices.reserve(gridDims.maxNumTiles);
 	D3D11_MAPPED_SUBRESOURCE mapped{};
 	{
 		HRESULT hr = m_context->Map(snapshot->m_tileStagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
 		assert(SUCCEEDED(hr));
-		memcpy(indices.data(), mapped.pData, maxNumTiles * sizeof(uint32_t));
+		const uint32_t* tileDiff = static_cast<const uint32_t*>(mapped.pData);
+		std::copy_if(
+			tileDiff, tileDiff + gridDims.maxNumTiles,
+			std::back_inserter(indices),
+			[](uint32_t i) { return i != 0; }
+		);
 		m_context->Unmap(snapshot->m_tileStagingBuffer.Get(), 0);
 	}
 
-	auto middle = std::partition(indices.begin(), indices.end(), [](uint32_t x)
+	if (indices.empty())
 	{
-		return x > 0;
-	});
-	indices.resize(std::distance(indices.begin(), middle));
+		// Diff is empty
+		std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
+		result->m_height = texDesc.Height;
+		result->m_width  = texDesc.Width;
+		return result;
+	}
+
+	return createDelta(snapshot->m_textureCopy, indices);
+}
+
+std::shared_ptr<TextureDelta> TextureHistory::createDelta(
+	ComPtr<ID3D11Texture2D> texture,
+	std::vector<uint16_t>& indices)
+{
+	std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
+
+	D3D11_TEXTURE2D_DESC texDesc;
+	texture->GetDesc(&texDesc);
 
 	if (indices.empty())
 	{
@@ -156,39 +183,32 @@ std::shared_ptr<TextureDelta> TextureHistory::CreateDelta(
 	result->m_height = texDesc.Height;
 	result->m_width = texDesc.Width;
 	result->m_textureTiles = createTexture2D(
-		texDesc.Width,
-		texDesc.Height,
+		k_textureHistoryTileSize,
+		k_textureHistoryTileSize,
 		DXGI_FORMAT_R32_FLOAT,
 		0,
 		1,
 		(UINT)indices.size());
-	result->m_tileIndices.insert(result->m_tileIndices.end(), indices.begin(), indices.end());
+	result->m_tileIndices = indices;
 
-	for (UINT i : result->m_tileIndices)
+	uint16_t j = 0;
+	for (uint16_t i : result->m_tileIndices)
 	{
-		UINT numX = i % tileNumX;
-		UINT numY = i / tileNumX;
-		UINT offX = numX * k_textureHistoryTileSize;
-		UINT offY = numY * k_textureHistoryTileSize;
-		UINT sizeX = numX != tileNumX || modX == 0 ? k_textureHistoryTileSize : modX;
-		UINT sizeY = numY != tileNumY || modX == 0 ? k_textureHistoryTileSize : modY;
-		D3D11_BOX box {
-			offX, offY, 0,
-			offX + sizeX, offY + sizeY, 1 };
+		D3D11_BOX tileBox = makeTileBox(texDesc.Height, texDesc.Width, i);
 		m_context->CopySubresourceRegion(
-			snapshot->m_textureCopy.Get(),
-			i,
+			result->m_textureTiles.Get(),
+			D3D11CalcSubresource(0, j, 1),
 			0, 0, 0,
 			texture.Get(),
 			0,
-			&box
+			&tileBox
 		);
+		++j;
 	}
-
 	return result;
 }
 
-void TextureHistory::ApplyDelta(
+void TextureHistory::applyDelta(
 	ComPtr<ID3D11Texture2D> texture,
 	std::shared_ptr<TextureDelta> textureDelta)
 {
@@ -199,27 +219,17 @@ void TextureHistory::ApplyDelta(
 		return;
 	}
 
-	uint16_t tileNumX = (texDesc.Width  + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
-	uint16_t tileNumY = (texDesc.Height + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
-	UINT modX = texDesc.Width  % k_textureHistoryTileSize;
-	UINT modY = texDesc.Height % k_textureHistoryTileSize;
-
 	uint16_t j = 0;
 	for (uint16_t i : textureDelta->m_tileIndices)
 	{
-		UINT numX = i % tileNumX;
-		UINT numY = i / tileNumX;
-		UINT offX = numX * k_textureHistoryTileSize;
-		UINT offY = numY * k_textureHistoryTileSize;
-		UINT sizeX = numX != tileNumX || modX == 0 ? k_textureHistoryTileSize : modX;
-		UINT sizeY = numY != tileNumY || modX == 0 ? k_textureHistoryTileSize : modY;
+		TileDims tileDims = makeTileDims(texDesc.Height, texDesc.Width, i);
 		D3D11_BOX box {
 			0, 0, 0,
-			sizeX, sizeY, 1 };
+			tileDims.sizeX, tileDims.sizeY, 1 };
 		m_context->CopySubresourceRegion(
 			texture.Get(),
 			0,
-			offX, offY, 0,
+			tileDims.offsetX, tileDims.offsetY, 0,
 			textureDelta->m_textureTiles.Get(),
 			j,
 			&box
@@ -238,4 +248,42 @@ void TextureHistory::updateConstantBuffer(
 		memcpy(mapped.pData, &cb, sizeof(TextureHistoryCB));
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
+}
+
+TextureHistory::GridDims TextureHistory::makeGridDims(UINT height, UINT width)
+{
+	GridDims result;
+	result.tileNumX = (width  + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
+	result.tileNumY = (height + k_textureHistoryTileSizeMOne) / k_textureHistoryTileSize;
+	result.maxNumTiles = result.tileNumX * result.tileNumY;
+	return result;
+}
+
+TextureHistory::TileDims TextureHistory::makeTileDims(UINT height, UINT width, UINT i)
+{
+	GridDims gridDims = makeGridDims(height, width);
+	UINT modX = width  % k_textureHistoryTileSize;
+	UINT modY = height % k_textureHistoryTileSize;
+	UINT numX = i % gridDims.tileNumX;
+	UINT numY = i / gridDims.tileNumX;
+
+	TileDims tileDims;
+	tileDims.offsetX = numX * k_textureHistoryTileSize;
+	tileDims.offsetY = numY * k_textureHistoryTileSize;
+	tileDims.sizeX = (numX != gridDims.tileNumX - 1) || modX == 0 ? k_textureHistoryTileSize : modX;
+	tileDims.sizeY = (numY != gridDims.tileNumY - 1) || modY == 0 ? k_textureHistoryTileSize : modY;
+	return tileDims;
+}
+
+D3D11_BOX TextureHistory::makeTileBox(UINT height, UINT width, UINT i)
+{
+	TileDims tileDims = makeTileDims(height, width, i);
+	return D3D11_BOX {
+		tileDims.offsetX,                  // left
+		tileDims.offsetY,                  // top
+		0,                                 // front
+		tileDims.offsetX + tileDims.sizeX, // right
+		tileDims.offsetY + tileDims.sizeY, // bottom
+		1                                  // back
+	};
 }

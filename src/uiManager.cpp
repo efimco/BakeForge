@@ -750,9 +750,9 @@ void UIManager::showBlendPaintWindow()
 			bool isActivelyPainting =
 				ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
 				ImGui::IsMouseDown(ImGuiMouseButton_Right);
-			if (isActivelyPainting && !m_textureHistory->HasSnapshot(Command::k_blendPaintName))
+			if (isActivelyPainting && !m_textureHistory->hasSnapshot(Command::k_blendPaintName))
 			{
-				m_textureHistory->StartSnapshot(Command::k_blendPaintName, m_blendPaintPass->getBlendTexture());
+				m_textureHistory->startSnapshot(Command::k_blendPaintName, m_blendPaintPass->getBlendTexture());
 			}
 
 			ImVec2 mousePos = ImGui::GetMousePos();
@@ -782,12 +782,12 @@ void UIManager::showBlendPaintWindow()
 		{
 			m_blendPaintPass->needsRebake = true;
 
-			if (m_textureHistory->HasSnapshot(Command::k_blendPaintName))
+			if (m_textureHistory->hasSnapshot(Command::k_blendPaintName))
 			{
 				m_commandManager->commitCommand(std::make_unique<Command::BakerBlendMaskCreateDeltaCommand>(
 					m_textureHistory,
 					m_blendPaintPass));
-				m_textureHistory->EndSnapshot(Command::k_blendPaintName);
+				m_textureHistory->endSnapshot(Command::k_blendPaintName);
 			}
 		}
 		wasPainting = isPainting;
